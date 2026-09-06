@@ -1,0 +1,1367 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marathon Build — 11 October</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --paper:#E4E7E9; --card:#FAFBFB; --card2:#F0F3F4;
+  --ink:#131C22; --soft:#63737D; --faint:#8D9AA2; --rule:#CBD2D6;
+  --z1:#6E9DC2; --z2:#2F7F60; --z3:#B98A22; --z4:#B34E1C; --z5:#8E2521;
+  --rest:#A7B0B5; --flag:#8E2521;
+  --shadow:0 1px 2px rgba(19,28,34,.06),0 4px 14px rgba(19,28,34,.05);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:'IBM Plex Sans',system-ui,sans-serif;
+  font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:820px;margin:0 auto;padding:0 16px 72px}
+.mono{font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.cond{font-family:'Barlow Condensed','IBM Plex Sans',sans-serif}
+
+/* ---------- hero ---------- */
+.hero{padding:34px 0 22px;border-bottom:2px solid var(--ink)}
+.eyebrow{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--soft);margin:0 0 6px
+}
+.count{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.count .n{
+  font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:clamp(76px,20vw,132px);line-height:.82;letter-spacing:-.02em
+}
+.count .lbl{font-family:'Barlow Condensed',sans-serif;font-weight:600;
+  font-size:clamp(19px,4.4vw,26px);line-height:1.05;text-transform:uppercase;
+  letter-spacing:.03em;padding-bottom:8px;max-width:190px}
+.count .lbl small{display:block;font-family:'IBM Plex Mono',monospace;
+  font-size:10.5px;font-weight:400;letter-spacing:.12em;color:var(--soft);
+  text-transform:uppercase;margin-top:5px}
+.targets{display:flex;gap:22px;flex-wrap:wrap;margin-top:20px}
+.targ{border-left:2px solid var(--rule);padding-left:11px}
+.targ b{display:block;font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:600}
+.targ span{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--soft)}
+
+/* ---------- progress ---------- */
+.prog{margin-top:20px}
+.prog-bar{height:5px;background:var(--rule);border-radius:3px;overflow:hidden}
+.prog-bar i{display:block;height:100%;background:var(--z2);width:0;
+  transition:width .45s cubic-bezier(.2,.7,.3,1)}
+.prog-txt{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--soft);margin-top:7px;display:flex;
+  justify-content:space-between;gap:10px}
+.reset{background:none;border:none;color:var(--faint);font:inherit;font-size:10.5px;
+  font-family:'IBM Plex Mono',monospace;letter-spacing:.1em;text-transform:uppercase;
+  cursor:pointer;padding:0;text-decoration:underline;text-underline-offset:3px}
+.reset:hover{color:var(--flag)}
+
+/* ---------- tabs ---------- */
+nav{position:sticky;top:0;z-index:20;background:var(--paper);
+  border-bottom:1px solid var(--rule);margin-top:4px;
+  display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{
+  background:none;border:none;border-bottom:2px solid transparent;
+  font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:16px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--soft);
+  padding:13px 13px 10px;cursor:pointer;white-space:nowrap;margin-bottom:-1px
+}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+nav button:focus-visible{outline:2px solid var(--z4);outline-offset:-3px}
+
+/* ---------- week card ---------- */
+.week{background:var(--card);border:1px solid var(--rule);border-radius:3px;
+  margin-top:16px;box-shadow:var(--shadow);overflow:hidden}
+.week.peak{border-color:var(--z4);border-width:1.5px}
+.wk-head{padding:15px 16px 13px;border-bottom:1px solid var(--rule);
+  display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.wk-head h2{margin:0;font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  font-size:25px;letter-spacing:.01em;text-transform:uppercase;line-height:1}
+.wk-head .dates{font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--soft);margin-top:5px}
+.wk-out{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--soft);text-align:right;white-space:nowrap;flex-shrink:0}
+.wk-out b{display:block;font-family:'Barlow Condensed',sans-serif;font-size:22px;
+  font-weight:700;letter-spacing:0;color:var(--ink);line-height:1}
+.tagline{padding:9px 16px;background:var(--card2);border-bottom:1px solid var(--rule);
+  font-size:13px;color:var(--soft)}
+.tagline b{color:var(--ink);font-weight:600}
+
+/* signature: intensity load strip */
+.strip{display:flex;height:9px;gap:1.5px;padding:11px 16px 0}
+.strip i{display:block;border-radius:1px;min-width:2px}
+.strip-key{padding:6px 16px 12px;display:flex;gap:11px;flex-wrap:wrap;
+  font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--faint)}
+.strip-key span{display:flex;align-items:center;gap:4px}
+.strip-key b{width:7px;height:7px;border-radius:1px;display:block}
+
+/* ---------- sessions ---------- */
+.sess{display:flex;gap:12px;padding:12px 16px;border-top:1px solid var(--rule);
+  cursor:pointer;align-items:flex-start;transition:background .12s}
+.sess:hover{background:var(--card2)}
+.sess.on{background:#EEF3F0}
+.sess.on .body{opacity:.5}
+.sess.on .title{text-decoration:line-through;text-decoration-thickness:1px}
+.box{flex-shrink:0;width:19px;height:19px;border:1.5px solid var(--rule);
+  border-radius:2px;background:#fff;margin-top:2px;position:relative;transition:.14s}
+.sess.on .box{background:var(--z2);border-color:var(--z2)}
+.box::after{content:"";position:absolute;left:5.5px;top:1.5px;width:5px;height:10px;
+  border:solid #fff;border-width:0 2px 2px 0;transform:rotate(43deg) scale(0);
+  transition:transform .16s cubic-bezier(.3,1.5,.5,1)}
+.sess.on .box::after{transform:rotate(43deg) scale(1)}
+.day{flex-shrink:0;width:34px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+  font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--soft);
+  margin-top:3px;border-left:2.5px solid var(--rest);padding-left:7px}
+.body{flex:1;min-width:0}
+.title{font-weight:600;font-size:14.5px;line-height:1.35}
+.title .tag{font-family:'IBM Plex Mono',monospace;font-size:9.5px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;padding:2px 5px;border-radius:2px;
+  vertical-align:2px;margin-left:6px;color:#fff}
+.detail{font-size:13px;color:var(--soft);margin-top:3px}
+.hr{margin-top:6px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+  border-left:2px solid var(--rule);padding-left:8px}
+.hr b{font-family:'IBM Plex Mono',monospace;font-size:13.5px;font-weight:600;
+  letter-spacing:.02em;white-space:nowrap}
+.hr b::before{content:"♥ ";font-size:10px;vertical-align:1px;color:var(--flag)}
+.hr span{font-size:12px;color:var(--faint);line-height:1.4}
+.note{margin-top:7px;width:100%;font-size:12.5px;font-family:'IBM Plex Mono',monospace;
+  padding:5px 7px;border:1px dashed var(--rule);border-radius:2px;background:transparent;color:var(--ink)}
+.note::placeholder{color:#AEB8BE}
+.note:focus{outline:none;border-style:solid;border-color:var(--z4);background:#fff}
+select.daysel{-webkit-appearance:none;appearance:none;background:transparent;
+  font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--soft);border:none;border-left:2.5px solid var(--rest);
+  padding:0 0 0 7px;margin-top:3px;width:44px;flex-shrink:0;cursor:pointer;border-radius:0}
+select.daysel:focus{outline:2px solid var(--z4);outline-offset:2px}
+.detail em{font-style:normal;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink)}
+
+/* ---------- generic content ---------- */
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:3px;
+  margin-top:16px;box-shadow:var(--shadow);overflow:hidden}
+.panel > h3{margin:0;padding:14px 16px 12px;font-family:'Barlow Condensed',sans-serif;
+  font-weight:700;font-size:22px;text-transform:uppercase;letter-spacing:.02em;
+  border-bottom:1px solid var(--rule);background:var(--card2)}
+.pc{padding:15px 16px}
+.pc + .pc{border-top:1px solid var(--rule)}
+.pc h4{margin:0 0 7px;font-family:'Barlow Condensed',sans-serif;font-weight:600;
+  font-size:17px;text-transform:uppercase;letter-spacing:.04em}
+.pc p{margin:0 0 9px}
+.pc p:last-child{margin-bottom:0}
+.pc ul{margin:0 0 9px;padding-left:19px}
+.pc ul:last-child{margin-bottom:0}
+.pc li{margin-bottom:5px}
+.pc li:last-child{margin-bottom:0}
+.k{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;
+  background:var(--card2);padding:1px 5px;border-radius:2px;white-space:nowrap}
+.rule-hi{border-left:3px solid var(--flag);padding:11px 13px;background:#FBF3F2;
+  border-radius:0 2px 2px 0;font-size:13.5px}
+.rule-hi b{display:block;font-family:'Barlow Condensed',sans-serif;font-size:15px;
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;color:var(--flag)}
+.note{border-left:3px solid var(--z2);padding:11px 13px;background:#F1F6F3;
+  border-radius:0 2px 2px 0;font-size:13.5px}
+.note b{display:block;font-family:'Barlow Condensed',sans-serif;font-size:15px;
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;color:var(--z2)}
+
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-family:'IBM Plex Mono',monospace;font-size:9.5px;
+  letter-spacing:.11em;text-transform:uppercase;color:var(--soft);font-weight:500;
+  padding:0 8px 6px 0;border-bottom:1px solid var(--rule)}
+td{padding:7px 8px 7px 0;border-bottom:1px solid #E4E9EB;vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- log ---------- */
+.log-row{display:grid;grid-template-columns:1fr 78px 74px;gap:8px;align-items:center;
+  padding:11px 16px;border-top:1px solid var(--rule)}
+.log-row:first-of-type{border-top:none}
+.log-row .lr-name{font-size:13.5px;font-weight:600;line-height:1.25}
+.log-row .lr-name small{display:block;font-family:'IBM Plex Mono',monospace;
+  font-size:10px;font-weight:400;color:var(--soft);letter-spacing:.06em;
+  text-transform:uppercase;margin-top:2px}
+input[type=text]{width:100%;font-family:'IBM Plex Mono',monospace;font-size:13px;
+  padding:7px 8px;border:1px solid var(--rule);border-radius:2px;background:#fff;
+  color:var(--ink);min-width:0}
+input[type=text]:focus{outline:2px solid var(--z4);outline-offset:-1px;border-color:var(--z4)}
+.log-head{display:grid;grid-template-columns:1fr 78px 74px;gap:8px;padding:10px 16px 6px;
+  font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--soft);border-bottom:1px solid var(--rule)}
+
+.saving{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(70px);
+  background:var(--ink);color:#fff;font-family:'IBM Plex Mono',monospace;font-size:11px;
+  letter-spacing:.1em;text-transform:uppercase;padding:8px 15px;border-radius:3px;
+  transition:transform .3s cubic-bezier(.2,.8,.3,1);z-index:60;pointer-events:none}
+.saving.show{transform:translateX(-50%) translateY(0)}
+.saving.err{background:var(--flag)}
+
+/* ---- dashboard ---- */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 10px}
+.stats>div{border-left:2px solid var(--rule);padding-left:10px}
+.stats b{display:block;font-family:'Barlow Condensed',sans-serif;font-size:23px;font-weight:700;line-height:1.05}
+.stats span{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--soft)}
+/* ---- week bar ---- */
+.wkbar{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--rule);
+  font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--soft);flex-wrap:wrap}
+.wkbar i{flex:1;min-width:70px;height:4px;background:var(--rule);border-radius:2px;overflow:hidden}
+.wkbar u{display:block;height:100%;text-decoration:none}
+button.ghost{background:none;border:1px solid var(--rule);border-radius:2px;color:var(--soft);
+  font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 8px;cursor:pointer}
+button.ghost:hover{border-color:var(--flag);color:var(--flag)}
+/* ---- advisories ---- */
+.adv{padding:12px 16px;border-bottom:1px solid var(--rule);font-size:13.5px;
+  border-left:3px solid var(--z3);background:#FCF8EF}
+.adv.warn{border-left-color:var(--flag);background:#FBF3F2}
+.adv p{margin:0}
+.adv-btn{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+.adv-btn button{background:var(--ink);color:#fff;border:none;border-radius:2px;
+  font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  padding:6px 10px;cursor:pointer}
+.adv-btn button.ghost{background:none;color:var(--soft);border:1px solid var(--rule)}
+/* ---- log box ---- */
+.sessw{border-top:1px solid var(--rule)}
+.sessw .sess{border-top:none}
+button.exp{flex-shrink:0;align-self:flex-start;background:none;border:1px solid var(--rule);
+  border-radius:2px;width:26px;height:26px;font-size:15px;line-height:1;color:var(--soft);
+  cursor:pointer;margin-top:1px}
+.logbox{padding:0 16px 14px 60px;background:var(--card2)}
+.logbox.shut{display:none}
+.pa{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--soft);padding:10px 0 8px}
+.pa em{font-style:normal;color:var(--flag)}
+.fields{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.fields.four{grid-template-columns:repeat(4,1fr)}
+@media (max-width:430px){.fields.four{grid-template-columns:repeat(2,1fr)}}
+.fields label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.09em;
+  text-transform:uppercase;color:var(--soft);display:block}
+.fields input{width:100%;margin-top:3px;font-family:'IBM Plex Mono',monospace;font-size:13px;
+  padding:6px 7px;border:1px solid var(--rule);border-radius:2px;background:#fff;color:var(--ink)}
+.modes{display:flex;gap:6px;margin-top:9px}
+.modes button{flex:1;background:#fff;border:1px solid var(--rule);border-radius:2px;
+  font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+  padding:6px 0;color:var(--soft);cursor:pointer}
+.modes button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.feel{display:flex;gap:6px;margin-top:6px}
+.feel button{flex:1;background:#fff;border:1px solid var(--rule);border-radius:2px;
+  font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  padding:6px 0;color:var(--soft);cursor:pointer}
+.feel button.on{background:var(--z2);border-color:var(--z2);color:#fff}
+.note-b{border-left:3px solid var(--z2);padding:11px 13px;background:#F1F6F3;
+  border-radius:0 2px 2px 0;font-size:13.5px;margin-bottom:12px}
+.note-b b{display:block;font-family:'Barlow Condensed',sans-serif;font-size:15px;
+  text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;color:var(--z2)}
+@media (max-width:520px){ .logbox{padding-left:16px} }
+
+.dbtn{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.dbtn button{background:var(--ink);color:#fff;border:none;border-radius:2px;
+  font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  padding:8px 12px;cursor:pointer}
+.dbtn button.ghost{background:none;color:var(--soft);border:1px solid var(--rule)}
+#dataBox{width:100%;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.5;
+  padding:9px;border:1px solid var(--rule);border-radius:2px;background:#fff;color:var(--ink);resize:vertical}
+#dataBox:focus{outline:2px solid var(--z4);outline-offset:-1px}
+.yg{margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:6px}
+.yg b{width:7px;height:7px;border-radius:50%;display:block;flex-shrink:0}
+.ylist{margin:0;padding:0;list-style:none}
+.ylist li{border-top:1px solid #EAEEEF}
+.ylist li:first-child{border-top:none}
+.ylist a{display:block;padding:9px 16px;color:var(--ink);text-decoration:none;font-size:13.5px}
+.ylist a:hover{background:var(--card2);text-decoration:underline}
+.ylist a.p::before{content:"\2605  ";color:var(--z3)}
+.ycount{float:right;font-family:'IBM Plex Mono',monospace;font-size:11px;opacity:.75}
+.hidden{display:none}
+@media (max-width:520px){
+  .day{width:30px;font-size:10px}
+  .log-row,.log-head{grid-template-columns:1fr 66px 64px;gap:6px}
+  .targets{gap:14px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Marathon build · Plovdiv</p>
+    <div class="count">
+      <div class="n mono" id="days">—</div>
+      <div class="lbl">Days to<br>the start line<small id="racedate">Sunday 11 October 2026</small></div>
+    </div>
+    <div class="targets">
+      <div class="targ"><b>4:50:00</b><span>Target finish</span></div>
+      <div class="targ"><b>6:45–6:50</b><span>Race pace /km</span></div>
+      <div class="targ"><b>158–166</b><span>Race HR bpm</span></div>
+      <div class="targ"><b>210 / 182</b><span>HRmax / LTHR</span></div>
+    </div>
+    <div class="prog">
+      <div class="prog-bar"><i id="pbar"></i></div>
+      <div class="prog-txt">
+        <span id="ptxt">Loading…</span>
+        <span id="storemode" style="color:var(--faint)"></span>
+        <button class="reset" id="reset">Clear all ticks</button>
+      </div>
+    </div>
+  </header>
+
+  <nav role="tablist">
+    <button role="tab" aria-selected="true" data-tab="plan">Plan</button>
+    <button role="tab" aria-selected="false" data-tab="fuel">Fuel</button>
+    <button role="tab" aria-selected="false" data-tab="recovery">Recovery</button>
+    <button role="tab" aria-selected="false" data-tab="raceday">Race day</button>
+    <button role="tab" aria-selected="false" data-tab="strength">Strength</button>
+    <button role="tab" aria-selected="false" data-tab="yoga">Yoga</button>
+    <button role="tab" aria-selected="false" data-tab="log">Log</button>
+  </nav>
+
+  <section id="tab-plan"></section>
+  <section id="tab-fuel" class="hidden"></section>
+  <section id="tab-recovery" class="hidden"></section>
+  <section id="tab-raceday" class="hidden"></section>
+  <section id="tab-strength" class="hidden"></section>
+  <section id="tab-yoga" class="hidden"></section>
+  <section id="tab-log" class="hidden"></section>
+</div>
+
+<template id="zonesrc"><div class="panel"><h3>Heart rate zones · HRmax 210 · LTHR 182</h3>
+   <div class="pc" style="padding-bottom:8px">
+    <table>
+     <tr><th style="width:8px"></th><th>Zone</th><th>BPM</th><th>% max</th><th>What it is for</th></tr>
+     <tr><td style="background:var(--z1);border-radius:2px"></td><td><b>Recovery</b></td><td class="num">&lt;148</td><td class="num">&lt;70%</td><td>Shakeouts, the day after a long run</td></tr>
+     <tr><td style="background:var(--z2);border-radius:2px"></td><td><b>Easy</b></td><td class="num">148–160</td><td class="num">70–76%</td><td>Long runs and every easy run — 80% of the plan</td></tr>
+     <tr><td style="background:var(--z3);border-radius:2px"></td><td><b>Marathon</b></td><td class="num">158–168</td><td class="num">75–80%</td><td>Race effort and race-pace blocks</td></tr>
+     <tr><td style="background:var(--z4);border-radius:2px"></td><td><b>Threshold</b></td><td class="num">172–182</td><td class="num">82–87%</td><td>Tuesday intervals in Weeks 3 and 6</td></tr>
+     <tr><td style="background:var(--z5);border-radius:2px"></td><td><b>Hard</b></td><td class="num">183–195</td><td class="num">87–93%</td><td>The Norwegian session, once, on 22 Sep</td></tr>
+    </table>
+   </div>
+   <div class="pc">
+    <h4>Four rules for reading the number</h4>
+    <ul>
+     <li><b>Cardiac drift is normal.</b> HR climbs 5–10 bpm over two hours at identical pace. Set your target on the <b>first half</b> of a long run and let the second half drift within the ceiling.</li>
+     <li><b>Heat adds 10–15 bpm</b> at the same pace. Above 25 °C, obey the heart rate and let the pace go entirely.</li>
+     <li><b>Run-walk to hold the running HR down</b>, never to average it down. A pre-set 9:1 or 4:1 that keeps the <em>running</em> segments in zone is real easy running. Sprinting then recovering to a nice mean is not.</li>
+     <li><b>Check the sensor before you trust it.</b> Several of your easy runs show spikes to 200+ while averaging 167 — almost certainly wrist-optical cadence lock. Confirm with a chest strap before restructuring a session around one reading.</li>
+    </ul>
+    <div class="note-b"><b>Time, not distance</b>Every easy run is a duration — run 45 minutes, stop, go home. Long runs carry a distance for rehearsal purposes but the elapsed-time cap overrules it. Only the race-pace blocks are fixed distances, because those are measurements. Always log <b>elapsed</b> time.</div>
+    <div class="rule-hi"><b>The morning check</b>Resting HR 7+ bpm above your normal means the session becomes a rest day. That is not weakness — it is the single most reliable early warning you have, and it is free.</div>
+   </div>
+  </div></template>
+
+<div class="saving" id="toast">Saved</div>
+
+<script>
+const KEY = 'marathon-11-oct-2026';
+const RACE = new Date('2026-10-11T09:00:00');
+let state = { checks:{}, logs:{}, days:{}, notes:{}, act:{}, ov:{}, dis:{} };
+
+/* ---------------- zone colours ---------------- */
+const Z = {
+  rest:{c:'var(--rest)', n:'Rest'},
+  z1:{c:'var(--z1)', n:'Recovery'},
+  z2:{c:'var(--z2)', n:'Easy'},
+  z3:{c:'var(--z3)', n:'Marathon pace'},
+  z4:{c:'var(--z4)', n:'Threshold'},
+  z5:{c:'var(--z5)', n:'Hard'},
+  str:{c:'#5A6B75', n:'Strength'}
+};
+
+/* ---------------- the plan ---------------- */
+/* planned distance in km, for drift comparison only */
+const KM = {
+ 'w1-1':6.5,'w1-2':8.5,'w1-3':4,'w1-4':18,'w1-5':3.5,
+ 'w2-0':13.5,'w2-1':6.5,'w2-2':4,
+ 'w3-1':9,'w3-2':8.5,'w3-3':8,'w3-4':24,'w3-5':3.5,
+ 'w4-1':8.5,'w4-2':8,'w4-4':28,'w4-5':3,
+ 'w5-1':8.5,'w5-2':8,'w5-3':4,'w5-4':22,'w5-5':3.5,
+ 'w6-1':8.5,'w6-2':7.5,'w6-3':4,'w6-4':16,'w6-5':3,
+ 'w7-1':7,'w7-2':5.5,'w7-3':3,'w7-4':4.5,'w7-6':42.2
+};
+/* intensity weight for load calculation */
+const ZW = {rest:0,z1:0.8,z2:1.0,z3:1.3,z4:1.5,z5:1.7,str:0};
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const LOCKED = {'w4-4':190};
+
+const YV=[["30 Minute Restorative Fascia Release Yoga (Great for Runners!)","g",1],["Anterior Pelvis Tilt? Try This Hip Mobility Routine","g",1],["Basic Spine Mobility Exercises for Every Body","g",1],["Basic Toe Mobility Routine | Breathe and Flow Yoga","g",1],["Can't Touch Your Toes? Try This Hip Flexion Mobility Work","g",1],["Feel Better in 15 Minutes with This Gentle Morning Yoga for Hips and Full Body","g",1],["Free Up Tight Hips with This 20 Min Yoga for Jiu Jitsu Mobility","g",1],["Hip Internal Rotation in 10 Minutes | FRC Mobility Hack","g",1],["Improve Your Ankle Mobility with This 20 Min Routine for Better Squats","g",1],["Increase Hip Rotation Without Traditional Stretching","g",1],["Knee Strengthening Exercises for External Rotation Mobility","g",1],["Knee Strengthening Exercises for Internal Rotation Mobility","g",1],["Most Hip Mobility Videos Aren’t Actually Training Mobility","g",1],["Myofascial Release and Yoga Movement Practice: The Perfect Combination for Better Posture","g",1],["The 3 Most Effective Rollouts | Remove Pain with Myofascial Release (MFR)","g",1],["Wrist and Forearm Rollout | Remove Tightness with Myofascial Release (MFR)","g",1],["Your Knees Need More Than Just Stretching","g",1],["10 Minute Guided Meditation To Let Go | Breathe and Flow Yoga","g",0],["11 Minute Guided Meditation for More Peace | Breathe and Flow Yoga","g",0],["11 Minute Yoga for Beginners at Home | Breathe and Flow Yoga","g",0],["12 Minute Full Body Warm Up Routine | Breathe and Flow Yoga for BJJ","g",0],["15 Min Yoga for Your Lunch & Office Break | Breathe and Flow Yoga","g",0],["15 Minutes to Stop Feeling Stiff and Half Asleep","g",0],["20 Minute Gentle Yoga Flow for Athletes (And Beginners)","g",0],["A Guided Meditation at Machu Picchu for Peace, Joy and Calm","g",0],["All Levels Vinyasa To Release Internal Tension","g",0],["Best Exercise for Wrist Mobility! Strong and Healthy Wrist Extension","g",0],["Do This After Training So Your Body Actually Recovers","g",0],["Do This After Training to Recover Faster","g",0],["Do This Before Bed So Tomorrow Feels Easier","g",0],["Do This Before Bed When Your Body Won’t Let Go","g",0],["Do This Before Bed When Your Mind Won’t Switch Off","g",0],["Do This Before Bed When You’re Too Tense to Fall Asleep","g",0],["Do This When You Feel Scattered and Need to Reset","g",0],["Do This in the Morning When Your Body Feels Stiff and Half Asleep","g",0],["Energizing and Cleansing Breathwork: Kapalbhati | Breathe and Flow Yoga","g",0],["Feel Better on Your Period with This 30 Min Gentle Yoga for Cramps and Bloating","g",0],["Feel More Open and Balanced with This 20 Min Gentle Vinyasa Yoga Flow","g",0],["Follow Along Yoga Breathwork: Sama Vritti | Breathe and Flow Yoga","g",0],["Four Breathing Exercises in One | Pranayama with Breathe and Flow","g",0],["Gentle Vinyasa Flow Yoga and Meditation | Breathe and Flow Yoga","g",0],["Gentle Yoga Flow for Inner Peace and Joy (20 Minutes Follow Along)","g",0],["Get Stronger Without Sacrificing Your Mobility","g",0],["Guided Intermediate Breathwork Practice: Visama Vritti | Breathe and Flow Yoga","g",0],["Guided Meditation for Less Stress and Better Sleep","g",0],["Guided Meditation for Peace, Love and Joy (with gentle Breathing Exercise!)","g",0],["Guided Meditation to Feel Grounded & Confident","g",0],["Let Go and Slow Down with This 25 Min Yin Yoga for Deep Relaxation","g",0],["Let Go of Stress with This 20 Min Yin Yoga and Breathwork Practice","g",0],["Loving Kindness Guided Meditation | Breathe and Flow Yoga","g",0],["Move Every Joint in Your Body in 10 Minutes (Full Body CARS)","g",0],["Peaceful Nights in 7 Days: Bre's Sleep Yoga","g",0],["Recover From Hard Training Without Losing Momentum","g",0],["Release the Day with This 20 Min Evening Restorative Yoga for Better Sleep","g",0],["Shoulder Internal Rotation Mobility Training","g",0],["Silent Full Body Morning Stretch Yoga for Athlete Flexibility","g",0],["Silent Full Body Yoga Stretching Routine for Post Workout","g",0],["Simple 25 Minute Vinyasa Yoga Class for Beginners | Breathe and Flow Yoga","g",0],["Simple Guided Meditation to be more Mindful | Breathe and Flow Yoga","g",0],["Start Here If Yoga Has Always Felt Intimidating","g",0],["Super Slow Breathe and Flow Yoga Practice for Stillness","g",0],["The 15 Minute Reset Your Body Needs After Pushing Hard","g",0],["The Mobility Secret Top BJJ Players Don't Talk About","g",0],["The Recovery Practice Your Strength Training Is Missing","g",0],["The Ultimate End of Work Office Yoga Routine (At Your Desk!) | Breathe and Flow Yoga","g",0],["The Ultimate Mid Work Office Yoga Routine (At Your Desk!) | Breathe and Flow Yoga","g",0],["This Quick Yoga Practice Will Make You Sleep So Much Better (Take Action Now)","g",0],["Transformative Breathwork and Meditation to Contemplate on Self","g",0],["Uddiyana Bandha Kriya - This Powerful Breathwork Practice Creates an Intense Internal Shift","g",0],["Upper Body Yin Yoga for Deep Relaxation and Flexibility","g",0],["Who Are You? | A Guided Meditation","g",0],["Yin Yoga for Full Relaxation Chill Mode","g",0],["Yoga for Men | Episode 24 - 25 Minutes to Find Out How Calm You Are Under Pressure","g",0],["Yoga for Travel | Stretches on a Roadtrip","g",0],["Your Body Needs This Between Hard Training Days","g",0],["Your Body Needs This on Rest Days","g",0],["Your Rest Day Should Make You Better at Training","g",0],["Your Rest Day Should Make You Feel Better Not Lazy","g",0],["Finally Fix Your Back Pain - The Ultimate Guide","a",1],["Get Stronger Without Letting Your Hips Get Tight","a",1],["How I Healed My Back Pain and Sciatic Nerve Pain (Sciatica)","a",1],["Routine for Healthy Hips & Feet | Breathe and Flow Yoga for BJJ","a",1],["Simple Daily Routine to Keep Your Spine Healthy | Breathe and Flow Yoga for BJJ","a",1],["Your Hips Need This After a Week of Pushing Hard","a",1],["Your Jiu Jitsu Training Is Beating Up Your Hips and Knees","a",1],["Your Knees Need More Than Just Protection","a",1],["10 Minutes to Feel Stronger and Fully Awake","a",0],["10 Minutes to Wake Up Your Body and Clear Your Head","a",0],["15 Minute Every Day Energizing Morning Yoga Practice","a",0],["15 Minute Total Body Yoga Class For Busy People","a",0],["15 Minutes in the Morning Can Change Your Entire Day","a",0],["15 Minutes to Feel Stronger Calmer and More Like Yourself","a",0],["15 Minutes to Find Out How Good Your Balance Really Is","a",0],["15 Minutes to Turn Low Energy Into Full Body Momentum","a",0],["20 Minute Effective Morning Yoga For A Fantastic Day","a",0],["20 Minutes to Feel Strong Grounded and Fully Awake","a",0],["20 Minutes to Go From Morning Stiffness to Ready for the Day","a",0],["22 Minute Short and Sweet Energizing Morning Flow","a",0],["25 Min Postnatal Yoga for Upper Body - Postpartum Yoga | Breathe and Flow","a",0],["25 Minute Backbend Vinyasa Yoga Class - Open Your heart!","a",0],["25 Minute Express Vinyasa Flow Yoga Practice","a",0],["30 Min Vinyasa to Enter Flow State Fast","a",0],["30 Minute Strong Slow Yoga for Stability and Presence","a",0],["30 Minutes Yoga with Focus on Full Eagle & Side Planks","a",0],["30 minute father and son yoga practice","a",0],["6 Natural Movements You Must Know","a",0],["Build the Kind of Strength That Moves With You","a",0],["Couple sits at fireplace in complete silence","a",0],["Creative and Strong 30 Minute Vinyasa Yoga Class","a",0],["Do This After BJJ When Your Whole Body Feels Wrecked","a",0],["Do This After Every Jiu-Jitsu Training! | Breathe and Flow Yoga for BJJ","a",0],["Do This After Waking Up to Feel Ready for Anything","a",0],["Do This Every Day When Your Whole Body Feels Tight","a",0],["Do This Every Morning to Feel More Awake in Your Body","a",0],["Do This When Sitting All Day Makes Your Body Feel Stuck","a",0],["Do This When Your Back Feels Compressed and Tired","a",0],["Do This When Your Neck and Shoulders Feel Stuck","a",0],["Do This When Your Whole Body Feels Tight","a",0],["Do This in the Morning to Feel Strong All Day","a",0],["Do This in the Morning to Feel Strong and Clear All Day","a",0],["Effective routine when working from home | Breathe and Flow Yoga","a",0],["Effortless Control Fluid Vinyasa Flow Practice","a",0],["Embody Your Strength: Vinyasa Flow Class for Mind and Body","a",0],["Energizing 22 Min Full Body Vinyasa Yoga | Breathe and Flow Yoga","a",0],["Feel Better Fast with This 15 Min Full Body Morning Yoga Flow","a",0],["Feel Calm and Supported with This 15 Min Prenatal Yoga for Everyday Relief","a",0],["Full Body All Levels | Vinyasa Flow Yoga Class","a",0],["Full Body Intermediate Morning Yoga | 15 Minute Breathe and Flow Yoga","a",0],["Get Out of Your Head and Feel Better in Your Body","a",0],["Get Stronger While Remembering What Actually Matters","a",0],["Get Stronger Without Losing the Way Your Body Moves","a",0],["Get Stronger Without Pushing Your Body Too Hard","a",0],["Get Stronger Without Starting Your Day Exhausted","a",0],["How to Meditate | Breathe and Flow Yoga","a",0],["How to Stay Strong When Your Upper Body Needs a Break","a",0],["Improve Your Guard Game in Jiu-Jitsu | Breathe and Flow Yoga for BJJ","a",0],["Intermediate Energizing Functional Flow Yoga by Breathe and Flow","a",0],["Intermediate Vinyasa Flow Practice | Breathe and Flow","a",0],["Keep Rolling Longer by Training What Jiu Jitsu Is Missing","a",0],["Loosen Up Fast with This 20 Min Morning Yoga Flow","a",0],["Minimalist Vinyasa Yoga Class | Breathe and Flow Yoga","a",0],["Move Better and Build Control with This 25 Min Animal Flow Yoga for BJJ","a",0],["Move Your Body in Every Direction Before the Day Stiffens You Up","a",0],["Move Your Body in Ways Your Training Is Missing","a",0],["No Time for Yoga This 15 Minute Flow Is Enough","a",0],["Quick 11 Minute Morning Movement Routine | Breathe and Flow Yoga","a",0],["Start Your Day Strong Without Starting It Stressed","a",0],["Start Your Day With 20 Minutes That Make Everything Feel Easier","a",0],["Start Your Day with This 15 Min Morning Movement Routine","a",0],["Stay Calm While Your Body Is Working This Hard","a",0],["Stay Strong When Your Upper Body Needs Time Off","a",0],["The 3 Best Breathing Techniques for Jiu-Jitsu | Breathe and Flow Yoga for BJJ","a",0],["The 30 Minute Practice That Makes Your Whole Body Feel Stronger","a",0],["The 5 Ancient Movements That Wake Up Your Entire Body (Five Tibetan Rites)","a",0],["The Days You Don’t Want to Practice Matter the Most","a",0],["This 20 Minute Flow Gets Your Body Moving and Your Mind Quiet","a",0],["This 20 Minute Flow Is Hard Enough to Quiet Your Mind","a",0],["This 25 Minute Flow Builds the Strength You Can Actually Control","a",0],["This 30 Minute Flow Makes Your Whole Body Work Together","a",0],["This 30 Minute Flow Will Make Your Whole Body Work","a",0],["This Ancient Breathing Practice Changes How You Feel in 20 Minutes","a",0],["Train Your Body to Move Better for Any Sport - Animal Flow","a",0],["Wake Up Your Body Fast with This 20 Min Primal Vinyasa Yoga Flow","a",0],["When Your Mind Feels Complicated Come Back to This","a",0],["Why Your Body Feels Stiff and Heavy All the Time","a",0],["Yoga Class with Long Strong Holds and Breathing Exercises: Be Calm & Strong","a",0],["Yoga For Busy People | Full Body Flow to Start Your Day","a",0],["Yoga for People Who Can’t Shut Their Brain Off","a",0],["Your Body Was Built to Move Like This","a",0],["Your New Everyday Vinyasa Flow Yoga Class","a",0],["Your Shoulders Are Tight - Here's What To Do","a",0],["Your Whole Body Will Feel Better After This","a",0],["Feel Stronger Head to Toe With This 12 Minute Full Body Yoga Workout","r",1],["10 Minute Bodyweight Workout | Breathe and Flow","r",0],["10 Minutes to Build a Core That Actually Makes You Stronger","r",0],["13 Minutes to Find Out How Strong Your Core Really Is","r",0],["15 Minutes to Find Out How Strong You Really Are","r",0],["25 Minute Power Yoga Class with Bre","r",0],["30 Minutes to Find Out How Strong You Really Are","r",0],["At Home 10 Minute Functional Yoga Based Core Activation Workout","r",0],["Build Strength Fast with This 20 Min Slow Vinyasa Yoga Challenge","r",0],["Build Upper Body Strength with This 25 Min Yoga Workout","r",0],["Build a Strong Core Fast with This 10 Min Yoga Ab Workout","r",0],["Challenge Your Body and Breath with This 35 Min Minimal Cue Vinyasa Yoga Flow","r",0],["Challenge Your Core with This 10 Min Yoga Ab Workout","r",0],["Crazy Handstand Balance Routine: Do This to Take Your Handstand Practice to the Next Level","r",0],["Full Body Vinyasa Handstand Warmup Sequence | Breathe and Flow Yoga","r",0],["Get Serious Handstand Balance! 5 Rounds Of 30","r",0],["Is it Crow Pose or Crane Pose? | Breathe and Flow Yoga","r",0],["Peacock Pose Tutorial (Mayurasana) Advanced Arm Balances | Breathe and Flow Yoga","r",0],["Shake Off Morning Stiffness with This 15 Min Primal Movement Yoga","r",0],["Strong Vinyasa Flow For Dads","r",0],["The Strength Practice Every Busy Dad Needs","r",0],["This 15 Minute Flow Gets Hard Fast","r",0],["This 20 Minute Flow Gets Hard Enough to Change Your Headspace","r",0],["This 20 Minute Workout Is Harder Than It Looks","r",0],["This 25 Minute Workout Will Make Your Whole Body Shake","r",0],["This 25 Minute Workout Will Push Your Strength to the Limit","r",0],["This 30 Minute Workout Will Humble Your Entire Body","r",0],["This 35 Minute Flow Forces You to Think About Every Move","r",0],["This Flow Will Test How Well You Move Under Pressure","r",0],["This Yoga Flow Builds the Kind of Strength Most People Avoid","r",0],["Train Your Real Core with This 25 Min Yoga Anatomy and Strength Practice","r",0],["Yoga Teachers Explain Side Crow and Eka Pada Koundinyasana 1","r",0],["Yoga for Men | Episode 22","r",0],["Yoga for Men | Episode 29","r",0],["Yoga for Men | Episode 31","r",0],["Your First One Handed Arm Balance: Croc & One Handed Peacock Pose Yoga","r",0]];
+
+/* which yoga is appropriate on a given day */
+function yogaFor(w,i){
+  const id=sid(w,i), x=w.s[i];
+  if(w.id==='w7') return ['g','Sleep or breathwork only — no flows this week'];
+  if(w.vac)       return ['g','Green, 15–20 min — heat permitting'];
+  const day=state.days[id]||x.d, di=DAYS.indexOf(day);
+  const li=w.s.findIndex(y=>y.min>=120);
+  const ldi = li>=0 ? DAYS.indexOf(state.days[sid(w,li)]||w.s[li].d) : -1;
+  if(li>=0 && i===li)             return ['g','Restorative or fascia release, evening'];
+  if(ldi>=0 && di>=0 && ldi-di===1) return ['g','Green only — light, no deep hip openers'];
+  if((x.z==='z4'||x.z==='z5') && ldi>=0 && di>=0 && ldi-di>=2)
+                                   return ['r','Red session allowed today — once a week max'];
+  if(x.min===0)                    return ['g','Green or amber — a good day for mobility'];
+  return ['g','Green, 15–25 min'];
+}
+const YCOL={g:'var(--z2)',a:'var(--z3)',r:'var(--flag)'};
+const YNAME={g:'Green',a:'Amber',r:'Red'};
+function ylink(t){ return 'https://www.youtube.com/results?search_query='+encodeURIComponent('Breathe and Flow '+t); }
+
+/* per-session HR targets — [range, note] */
+const HR = {
+ 'w1-1':['≤ 148','Very easy. First 10 minutes under 140 — start slower than feels natural.'],
+ 'w1-2':['145–158','Strides are neuromuscular: ignore what HR does during them.'],
+ 'w1-3':['≤ 145','If you cannot hold this without walking, take the rest day instead.'],
+ 'w1-4':['145–158','Ceiling 165. Set the target on the first 9 km; allow drift after that.'],
+ 'w1-5':['≤ 145','If it climbs past 150 you are jogging, not shaking out.'],
+
+ 'w2-0':['148–158','Hard cap 160. In 30 °C expect +10–15 bpm at the same pace — obey the HR, abandon the pace.'],
+ 'w2-1':['≤ 158','Before 08:00 or after 19:00 only.'],
+ 'w2-2':['≤ 150','Bonus session. Keep it genuinely light.'],
+ 'w2-5':['—','Also note resting HR each morning. 7+ bpm above normal = do not run that day.'],
+
+ 'w3-1':['176–182 in the reps','Reps only — expect to arrive there by minute 2. Jog recoveries down toward 150. Warm-up ≤ 150.'],
+ 'w3-2':['145–158','Conversational in full sentences.'],
+ 'w3-3':['≤ 145',''],
+ 'w3-4':['145–158 → 164','First 16 km at 145–158, final 8 km up to 164 is fine. Hard ceiling 166.'],
+ 'w3-5':['≤ 145',''],
+
+ 'w4-1':['145–158','Nothing above 160 all day. Friday is the session.'],
+ 'w4-2':['145–158',''],
+ 'w4-4':['145–156 → 163','First 20 km at 145–156. Hard ceiling 166 — if you hit it before 24 km, add walk breaks or stop. The cap wins.'],
+ 'w4-5':['≤ 145',''],
+
+ 'w5-1':['180–188 in the reps','May touch 190 on the last two. Recoveries back to ~155 before starting the next.'],
+ 'w5-2':['145–158',''],
+ 'w5-3':['≤ 145',''],
+ 'w5-4':['148–158 easy · 158–166 block','The 10 km block average is the number that decides the target. Log it.'],
+ 'w5-5':['≤ 145',''],
+
+ 'w6-1':['165–172','Comfortably brisk, not threshold. If you are over 175 the pace is too quick.'],
+ 'w6-2':['145–158',''],
+ 'w6-3':['≤ 145',''],
+ 'w6-4':['148–158 easy · 158–166 block','Race rehearsal. Should feel repeatable, not earned.'],
+ 'w6-5':['≤ 145',''],
+
+ 'w7-1':['158–166','Exact race effort. Learn what it feels like on fresh legs.'],
+ 'w7-2':['≤ 155',''],
+ 'w7-3':['≤ 142','Heavy legs this week are normal. Do not test yourself.'],
+ 'w7-4':['≤ 142',''],
+ 'w7-6':['&lt;158 → 164 → 168','Under 158 for the first 10 km. 158–164 to 25 km. 164–168 to 32 km. After that, whatever you have.']
+};
+
+const WEEKS = [
+{ id:'w1', start:'2026-08-24', n:'Week 1', dates:'24 – 30 Aug', out:'48–42',
+  tag:'Rebuild after Sunday night\'s 21.1 km in 34°C. <b>No hard running this week.</b>',
+  s:[
+   {d:'Mon',z:'rest',min:0,t:'Full rest',x:'Rehydrate deliberately — electrolytes, not just water. Eat properly. Light roll on calves and quads. No swim, no gym.'},
+   {d:'Tue',z:'z2',min:45,t:'45 min very easy',x:'HR under 150. No strides — you are 36 h off a 2 h 20 effort with sleep debt on top.'},
+   {d:'Wed',z:'z2',min:60,t:'60 min easy + strides',x:'6 × 20 s strides at the end. Then <em>Strength A</em>.'},
+   {d:'Thu',z:'z1',min:30,t:'30 min very easy — or rest',x:'This is the first session to drop if legs are heavy or sleep was short.'},
+   {d:'Fri',z:'z2',min:130,t:'Long run — 2:10',tag:'LONG',x:'<em>2:10 elapsed, all easy</em> — roughly 18 km, but the clock is the target. Practise fuelling: one gel or jelly every 25–30 min from the 30-minute mark. Rise 2 for this one.'},
+   {d:'Sat',z:'z1',min:25,t:'Optional 25 min shakeout or swim',x:'Plus <em>Strength B</em> (upper body and core). Skip entirely if flat.'},
+   {d:'Sun',z:'rest',min:0,t:'Full rest',x:'Non-negotiable. Family day.'}
+  ]},
+
+{ id:'w2', start:'2026-08-31', n:'Week 2', dates:'31 Aug – 6 Sep', out:'41–35', vac:true,
+  tag:'<b>Vacation · 30 °C+ · sand.</b> Do these in order, as many as the week allows. Get the long one done early, before plans eat the days.',
+  s:[
+   {d:'P1',z:'z2',min:100,t:'Long run — 90 to 110 minutes',tag:'PRIORITY',x:'Distance is irrelevant. Time on feet is the point. <em>Cap HR at 160</em> and let pace drift to 7:20–7:50/km. Do not defend a pace number.'},
+   {d:'P2',z:'z2',min:48,t:'Easy run — 45 to 50 minutes',x:'Before 08:00 or after 19:00. Carry fluid with an electrolyte tab in it.'},
+   {d:'P3',z:'z1',min:30,t:'Easy run — 30 minutes',x:'Bonus only. If the week gives you nothing else, P1 is the one that matters.'},
+   {d:'—',z:'rest',min:0,t:'Heat rules',x:'Never run midday. Add 20–40 s/km to everything and stop looking at pace. Carry fluid on anything over 45 min.'},
+   {d:'—',z:'rest',min:0,t:'Sand rules',x:'<em>Firm wet sand only</em>, shoes on, never barefoot, never dry soft sand. Cap sand at 25–30 min and turn round halfway so both legs get both sides of the camber. Anything longer goes on roads.'},
+   {d:'—',z:'z1',min:0,t:'Sweat test on the long run',x:'Weigh yourself before and after. Every 1 kg lost = ~1 litre you did not replace. That number sets your race-day fluid plan — log it in the Log tab.'},
+   {d:'—',z:'rest',min:0,t:'Sea swims count as recovery, not training',x:'And be honest about sleep and alcohol. They will do more to Week 3\'s long run than the running will.'}
+  ]},
+
+{ id:'w3', start:'2026-09-07', n:'Week 3', dates:'7 – 13 Sep', out:'34–28',
+  tag:'Back to structure. Friday is the <b>full dress rehearsal</b> — every piece of race kit tested.',
+  s:[
+   {d:'Mon',z:'rest',min:0,t:'Rest or 20–30 min easy swim',x:'Mobility routine in the evening.'},
+   {d:'Tue',z:'z4',min:55,t:'Threshold — 4 × 5 min',x:'<em>By heart rate: 176–182.</em> 90 s jog between. Let the pace land where it lands — expect 5:30–5:50/km. Do not chase 4:58. ~9 km total with warm-up and cool-down. Then <em>Strength A</em>.'},
+   {d:'Wed',z:'z2',min:60,t:'60 min easy',x:'HR under 158. Conversational the whole way.'},
+   {d:'Thu',z:'z1',min:55,t:'55 min easy — 1080 break-in',tag:'SHOES',x:'<b>Not optional this week.</b> Shoes arrive Wed 9 Sep — this is their only run before tomorrow\'s 24 km. Easy, roads, runner\'s loop lacing. If calves feel tight or the toe rubs at all, tomorrow goes in the Rise 2 instead.'},
+   {d:'Fri',z:'z2',min:172,t:'Long run — 2:55',tag:'REHEARSAL',x:'<em>2:55 elapsed, all easy</em>. Distance matters here — this is a rehearsal, so aim to cover ~24 km within the cap. If the clock gets there first, the clock wins. Race shoes, race belt or vest, the exact gels you will use. Practise drinking from a cup on the move. Solve the carry problem today, not in October. <b>First long run in the 1080</b>, with only ~8 km on them. Run by HR, not pace. Abort to walk breaks if calves tighten — a full week to the peak run is enough to recover, but only if you stop early.'},
+   {d:'Sat',z:'z1',min:25,t:'25 min easy or swim',x:'Plus <em>Strength B</em>.'},
+   {d:'Sun',z:'rest',min:0,t:'Full rest',x:''}
+  ]},
+
+{ id:'w4', start:'2026-09-14', n:'Week 4', dates:'14 – 20 Sep', out:'27–21', peak:true,
+  tag:'<b>Peak week.</b> Everything exists to protect Friday. Move photography off that day if you can.',
+  s:[
+   {d:'Mon',z:'rest',min:0,t:'Rest or easy swim',x:''},
+   {d:'Tue',z:'z2',min:60,t:'60 min easy + 6 × 20 s strides',x:'Deliberately no hard work — this week\'s quality is the long run. <em>Strength A, light legs only.</em>'},
+   {d:'Wed',z:'z2',min:55,t:'55 min easy',x:''},
+   {d:'Thu',z:'rest',min:0,t:'Full rest',x:'Non-negotiable this week. Sleep is the session.'},
+   {d:'Fri',z:'z2',min:190,t:'PEAK LONG RUN — 3:10',tag:'PEAK',x:'<em>3:10 elapsed. A hard cap, not a goal.</em> ~28 km if conditions allow — but at 3:10 you stop wherever you are, even at 25 km. All easy. Full race simulation: shoes, kit, gels, fluid. <b>The shoe decision closes today.</b> Whatever runs this one runs the marathon.'},
+   {d:'Sat',z:'z1',min:20,t:'20 min very easy or swim',x:'No leg strength. Roll and Theragun lightly — this is a comfort session, not a treatment.'},
+   {d:'Sun',z:'rest',min:0,t:'Full rest',x:''}
+  ]},
+
+{ id:'w5', start:'2026-09-21', n:'Week 5', dates:'21 – 27 Sep', out:'20–14',
+  tag:'Friday is the <b>decision session</b>. It tells us whether 4:50 stands or 4:35–4:40 comes into play.',
+  s:[
+   {d:'Mon',z:'rest',min:0,t:'Rest or easy swim',x:''},
+   {d:'Tue',z:'z5',min:55,t:'Norwegian — 5 × 4 min hard',x:'3 min easy jog between. <em>HR 180–188.</em> Controlled hard, not a race — finish knowing you could do a sixth. Then <em>Strength A</em>.'},
+   {d:'Wed',z:'z2',min:55,t:'55 min easy',x:''},
+   {d:'Thu',z:'z1',min:30,t:'30 min very easy — or rest',x:''},
+   {d:'Fri',z:'z3',min:155,t:'2:35 — easy, then 10 km at race pace',tag:'DECISION',x:'<em>≤ 2:35 elapsed.</em> Easy until the block, then <b>10 km at 6:45–6:50/km</b> — that distance is fixed, because the block is the measurement. Log its average HR. Under 162 and controlled → the target moves. 168+ → 4:50 was right and we stop thinking about it. Test caffeine today, not on race day.'},
+   {d:'Sat',z:'z1',min:25,t:'25 min easy or swim',x:'Plus <em>Strength B</em>.'},
+   {d:'Sun',z:'rest',min:0,t:'Full rest',x:''}
+  ]},
+
+{ id:'w6', start:'2026-09-28', n:'Week 6', dates:'28 Sep – 4 Oct', out:'13–7',
+  tag:'Taper begins. Volume falls, rhythm stays. <b>No fitness can be gained from here — only lost.</b>',
+  s:[
+   {d:'Mon',z:'rest',min:0,t:'Rest or easy swim',x:''},
+   {d:'Tue',z:'z3',min:52,t:'4 × 1 km at 6:35–6:45',x:'2 min jog between. Should feel comfortably brisk. <em>Last leg strength session of the build — light, no failure.</em>'},
+   {d:'Wed',z:'z2',min:50,t:'50 min easy',x:''},
+   {d:'Thu',z:'z1',min:30,t:'Rest or 30 min easy',x:''},
+   {d:'Fri',z:'z3',min:112,t:'1:50 — easy, then 6 km at race pace',x:'Easy until the block, then <b>6 km at race pace</b>. Last meaningful session — should feel like a rehearsal, not a test.'},
+   {d:'Sat',z:'z1',min:20,t:'20 min easy + 4 strides',x:'Core only. No legs.'},
+   {d:'Sun',z:'rest',min:0,t:'Full rest',x:''}
+  ]},
+
+{ id:'w7', start:'2026-10-05', n:'Race week', dates:'5 – 11 Oct', out:'6–0', peak:true,
+  tag:'The goal is to arrive fresh, fuelled and slightly impatient. <b>Heavy legs on Thursday are normal</b> — that is the taper working.',
+  s:[
+   {d:'Mon',z:'rest',min:0,t:'Rest or 20 min easy swim',x:''},
+   {d:'Tue',z:'z3',min:48,t:'50 min with 3 × 1 km at race pace',x:'Full easy recovery between. Just a reminder of the rhythm.'},
+   {d:'Wed',z:'z2',min:38,t:'40 min easy',x:'Start dropping fibre from meals today.'},
+   {d:'Thu',z:'z1',min:22,t:'Rest or 20–25 min easy jog',x:'<em>Carb load day 1</em> — 7–8 g/kg (≈ 600–690 g).'},
+   {d:'Fri',z:'z1',min:28,t:'30 min very easy + 4 strides',x:'<em>Carb load day 2.</em> Lay out every piece of kit tonight. Nothing new.'},
+   {d:'Sat',z:'rest',min:0,t:'Full rest',x:'<em>Carb load day 3</em> — low fibre, low fat, familiar food only. Early night. Expect poor sleep and do not worry about it; Friday\'s sleep is the one that counts.'},
+   {d:'Sun',z:'z3',min:290,t:'MARATHON — 42.195 km',tag:'RACE',x:'See the Race day tab. Trust the first 10 km discipline.'}
+  ]}
+];
+
+/* ---------------- rendering ---------------- */
+function esc(s){return s;}
+
+/* ================= engine ================= */
+function pmin(v){
+  if(v==null) return 0; v=String(v).trim(); if(!v) return 0;
+  const p=v.replace(/[.,]/g,':').split(':').map(Number); if(p.some(x=>isNaN(x))) return 0;
+  if(p.length===1) return p[0];
+  if(p.length===3) return p[0]*60+p[1]+p[2]/60;
+  return p[0]>=10 ? p[0]+p[1]/60 : p[0]*60+p[1];
+}
+function fmt(m){ m=Math.round(m); return Math.floor(m/60)+':'+String(m%60).padStart(2,'0'); }
+function sid(w,i){ return w.id+'-'+i; }
+function plannedMin(w,i){ const id=sid(w,i); return (state.ov[id]&&state.ov[id].capMin)||w.s[i].min; }
+function sessDate(w,i){
+  const base=new Date(w.start+'T12:00:00');
+  const d=state.days[sid(w,i)]||w.s[i].d;
+  let k=DAYS.indexOf(d);
+  if(k<0) k=[1,3,5][i]||2;               // vacation P1/P2/P3 → Tue/Thu/Sat
+  base.setDate(base.getDate()+k); return base;
+}
+function actual(w,i){ return state.act[sid(w,i)]||{}; }
+function elMin(a){                       // null = nothing entered; 0 = explicitly zero
+  const has=(a.eh!=null&&a.eh!=='')||(a.em!=null&&a.em!=='');
+  if(has) return (+a.eh||0)*60 + (+a.em||0);
+  if(a.el!=null&&String(a.el).trim()!=='') return pmin(a.el);
+  return null;
+}
+function doneMin(w,i){
+  const a=actual(w,i);
+  if(a.mode==='other'||a.mode==='skip') return 0;   // cross-training or skipped: no running load
+  const t=elMin(a);
+  if(t!==null) return t;
+  return state.checks[sid(w,i)] ? plannedMin(w,i) : 0;
+}
+function allSessions(){
+  const out=[];
+  WEEKS.forEach(w=>w.s.forEach((x,i)=>{ if(x.min>0) out.push({w,i,x,id:sid(w,i),date:sessDate(w,i)}); }));
+  return out;
+}
+function loadStats(){
+  const now=new Date(), day=864e5, list=allSessions();
+  const since=n=>list.filter(o=>(now-o.date)>=0 && (now-o.date)<n*day);
+  const wsum=arr=>arr.reduce((t,o)=>t+doneMin(o.w,o.i)*(ZW[o.x.z]||1),0);
+  const rsum=arr=>arr.reduce((t,o)=>t+doneMin(o.w,o.i),0);
+  const acute=rsum(since(7)), chronic=rsum(since(28))/4;      // raw time, for display
+  const wa=wsum(since(7)), wc=wsum(since(28))/4;              // weighted, for the ratio
+  const long21=since(21).filter(o=>o.x.min>=60).reduce((m,o)=>Math.max(m,doneMin(o.w,o.i)),0);
+  const logged=since(28).filter(o=>doneMin(o.w,o.i)>0).length;
+  return {acute,chronic,ratio:wc>0?wa/wc:0,wa,wc,long21,logged};
+}
+function nextLong(){
+  const now=new Date();
+  return allSessions().filter(o=>o.x.min>=120 && o.date>=now-864e5).sort((a,b)=>a.date-b.date)[0];
+}
+
+/* ---- rules ---- */
+function advisories(w){
+  const out=[], now=new Date(), st=loadStats();
+  const wi=WEEKS.indexOf(w), end=new Date(w.start+'T12:00:00'); end.setDate(end.getDate()+6);
+  const past=end<now;
+  const key=k=>w.id+':'+k;
+  const live=k=>!state.dis[key(k)];
+
+  // R1 — week overshoot
+  const pl=w.s.reduce((t,x,i)=>t+plannedMin(w,i),0);
+  const ac=w.s.reduce((t,x,i)=>t+doneMin(w,i),0);
+  if(past && pl>0 && ac>pl*1.15 && live('R1'))
+    out.push({k:'R1',lvl:'info',t:`This week ran ${Math.round((ac/pl-1)*100)}% over plan (${fmt(ac)} vs ${fmt(pl)}). Feeling fine during isn't the signal — if the next 48 h are heavy, drop Thursday.`});
+
+  // R2 — acute:chronic
+  if(wi===WEEKS.findIndex(x=>new Date(x.start+'T12:00:00')<=now && new Date(x.start+'T12:00:00')>new Date(now-7*864e5))){
+    if(st.logged>=8 && st.chronic>0){
+      if(st.ratio>1.3 && live('R2'))
+        out.push({k:'R2',lvl:'warn',t:`Load ratio ${st.ratio.toFixed(2)} — you're ramping faster than your body has adapted to. Above 1.3 is where injuries cluster. Hold this week flat.`});
+      else if(st.ratio<0.8 && live('R2b'))
+        out.push({k:'R2b',lvl:'info',t:`Load ratio ${st.ratio.toFixed(2)} — running below your recent average. Fine after a hard week; worth noticing if it repeats.`});
+    }
+  }
+
+  // R3 — next long run too big a jump
+  const nl=nextLong();
+  if(nl && nl.w===w && st.long21>0 && live('R3')){
+    const cap=plannedMin(nl.w,nl.i);
+    if(cap>st.long21*1.15 && !LOCKED[nl.id] && sessDate(nl.w,nl.i)<new Date('2026-09-28'))
+      out.push({k:'R3',lvl:'warn',t:`${nl.x.t} is ${Math.round((cap/st.long21-1)*100)}% longer than anything in the last 21 days (${fmt(st.long21)}).`,
+        act:{label:`Cap at ${fmt(st.long21*1.15)}`, id:nl.id, capMin:Math.round(st.long21*1.15), why:'capped after a 21-day gap'}});
+  }
+
+  // R4 — quality too close to the long run
+  const longIdx=w.s.findIndex(x=>x.min>=120);
+  if(longIdx>=0){
+    const ld=sessDate(w,longIdx);
+    w.s.forEach((x,i)=>{
+      if(i===longIdx||!(x.z==='z4'||x.z==='z5')) return;
+      const gap=(ld-sessDate(w,i))/36e5;
+      if(gap>0 && gap<48 && live('R4'+i))
+        out.push({k:'R4'+i,lvl:'warn',t:`${x.t} sits only ${Math.round(gap)} h before the long run. Move it earlier — hard work inside 48 h costs you the session that matters.`});
+    });
+  }
+
+  // R5 — long run missed or cut short
+  w.s.forEach((x,i)=>{
+    if(x.min<120) return;
+    const d=sessDate(w,i); if(d>=now) return;
+    const got=doneMin(w,i), planned=plannedMin(w,i);
+    if(got>0 && got<planned*0.75 && live('R5'+i)){
+      const n2=nextLong();
+      if(n2 && !LOCKED[n2.id])
+        out.push({k:'R5'+i,lvl:'warn',t:`Long run came in at ${fmt(got)} against ${fmt(planned)} planned. Don't jump back to the full progression next week.`,
+          act:{label:`Cap next long at ${fmt(got*1.1)}`, id:n2.id, capMin:Math.round(got*1.1), why:'stepped back after a short long run'}});
+    }
+    if(got===0 && live('R5m'+i))
+      out.push({k:'R5m'+i,lvl:'info',t:`Long run not logged. If it was missed rather than just unrecorded, the next one steps up by 10%, not to the planned figure.`});
+  });
+
+  // R7 — taper is one-directional
+  if(new Date(w.start+'T12:00:00')>=new Date('2026-09-28') && live('R7'))
+    out.push({k:'R7',lvl:'info',t:`Taper. No fitness can be added now, only lost. Every suggestion to do more is wrong from here.`});
+
+  return out;
+}
+
+/* ================= render ================= */
+function renderPlan(){
+  const el=document.getElementById('tab-plan');
+  const st=loadStats();
+  const ratioTxt = st.logged<8 ? 'Not enough logged yet'
+    : st.chronic<=0 ? '—'
+    : st.ratio.toFixed(2)+(st.ratio>1.3?' · ramping fast':st.ratio<0.8?' · easing off':' · in range');
+  const ratioCol = st.logged<8||st.chronic<=0 ? 'var(--soft)' : st.ratio>1.3?'var(--flag)':st.ratio<0.8?'var(--z3)':'var(--z2)';
+
+  const dash=`<div class="panel"><h3>Where you actually are</h3>
+   <div class="pc" style="padding-bottom:12px">
+    <div class="stats">
+     <div><b>${fmt(st.acute)}</b><span>Last 7 days · time</span></div>
+     <div><b>${fmt(st.chronic)}</b><span>28-day avg · time</span></div>
+     <div><b style="color:${ratioCol}">${ratioTxt}</b><span>Load ratio</span></div>
+     <div><b>${st.long21?fmt(st.long21):'—'}</b><span>Longest, 21 days</span></div>
+    </div>
+    <p style="font-size:12.5px;color:var(--soft);margin:12px 0 0">The two figures above are raw running time. The load ratio is different — it weights hard sessions more heavily (threshold 1.5×, hard 1.7×), then compares the last 7 days against your 28-day average. Between 0.8 and 1.3 is the zone where you're building without outrunning your own adaptation. It only means anything once you've logged a couple of weeks.</p>
+   </div></div>`;
+
+  const zones=document.getElementById('zonesrc').innerHTML;
+
+  el.innerHTML = dash + zones + WEEKS.map(w=>{
+    const total=w.s.reduce((a,x,i)=>a+plannedMin(w,i),0)||1;
+    const strip=w.s.map((x,i)=>x.min>0?`<i style="flex:${plannedMin(w,i)};background:${Z[x.z].c}"></i>`:'').join('');
+    const used=[...new Set(w.s.filter(x=>x.min>0).map(x=>x.z))];
+    const key=used.map(z=>`<span><b style="background:${Z[z].c}"></b>${Z[z].n}</span>`).join('');
+    const pl=total, ac=w.s.reduce((t,x,i)=>t+doneMin(w,i),0);
+    const pct=pl?Math.round(ac/pl*100):0;
+    const adv=advisories(w).map(a=>`<div class="adv ${a.lvl}">
+        <p>${a.t}</p>
+        <div class="adv-btn">
+          ${a.act?`<button data-apply="${a.act.id}" data-cap="${a.act.capMin}" data-why="${a.act.why}" data-k="${w.id}:${a.k}">${a.act.label}</button>`:''}
+          <button class="ghost" data-dismiss="${w.id}:${a.k}">Dismiss</button>
+        </div></div>`).join('');
+
+    const sess=w.s.map((x,i)=>{
+      const id=sid(w,i), a=actual(w,i), ov=state.ov[id];
+      const tag=x.tag?`<span class="tag" style="background:${Z[x.z].c}">${x.tag}</span>`:'';
+      const dayCtrl = w.vac
+        ? `<div class="day" style="border-left-color:${Z[x.z].c}">${x.d}</div>`
+        : `<select class="day daysel" data-day="${id}" style="border-left-color:${Z[x.z].c}" aria-label="Day">${
+            DAYS.map(d=>`<option${d===(state.days[id]||x.d)?' selected':''}>${d}</option>`).join('')}</select>`;
+      const open = !!(a.el||a.eh||a.em||a.km||a.hr||a.note||a.mode||state.checks[id]);
+      const log = x.min>0 ? `<div class="logbox${open?'':' shut'}" data-box="${id}">
+          <div class="pa">Planned <b>${fmt(plannedMin(w,i))}</b>${KM[id]?` · ~${KM[id]} km`:''}${ov?` <em>· ${ov.why}</em>`:''}</div>
+          <div class="fields four">
+            <label>Hours<input type="text" inputmode="numeric" data-a="${id}.eh" value="${a.eh||''}" placeholder="${Math.floor(plannedMin(w,i)/60)}"></label>
+            <label>Mins<input type="text" inputmode="numeric" data-a="${id}.em" value="${a.em||''}" placeholder="${plannedMin(w,i)%60}"></label>
+            <label>km<input type="text" inputmode="decimal" data-a="${id}.km" value="${a.km||''}" placeholder="${KM[id]||''}"></label>
+            <label>Avg HR<input type="text" inputmode="numeric" data-a="${id}.hr" value="${a.hr||''}" placeholder="bpm"></label>
+          </div>
+          <div class="modes">${[['ran','ran'],['other','swim / other'],['skip','skipped']].map(([m,l])=>`<button data-mode="${id}.${m}" class="${(a.mode||'ran')===m?'on':''}">${l}</button>`).join('')}</div>
+          <div class="feel">${['easy','ok','hard'].map(f=>`<button data-feel="${id}.${f}" class="${a.feel===f?'on':''}">${f}</button>`).join('')}</div>
+          <input class="note" type="text" data-a="${id}.note" value="${(a.note||'').replace(/"/g,'&quot;')}" placeholder="notes">
+        </div>`:'';
+      return `<div class="sessw"><div class="sess" data-id="${id}" role="checkbox" tabindex="0" aria-checked="false">
+        <div class="box"></div>${dayCtrl}
+        <div class="body">
+          <div class="title">${x.t}${tag}${ov?`<span class="tag" style="background:var(--flag)">CAP ${fmt(ov.capMin)}</span>`:''}</div>
+          ${x.x?`<div class="detail">${x.x}</div>`:''}
+          ${HR[id]?`<div class="hr" style="border-left-color:${Z[x.z].c}"><b>${HR[id][0]}</b><span>${HR[id][1]}</span></div>`:''}
+          ${(()=>{const y=yogaFor(w,i);return `<div class="yg"><b style="background:${YCOL[y[0]]}"></b>PM yoga · ${y[1]}</div>`;})()}
+        </div>
+        ${x.min>0?`<button class="exp" data-exp="${id}" aria-label="Log this session">${open?'−':'+'}</button>`:''}
+      </div>${log}</div>`;
+    }).join('');
+
+    return `<article class="week${w.peak?' peak':''}">
+      <div class="wk-head">
+        <div><h2>${w.n}</h2><div class="dates">${w.dates}</div></div>
+        <div class="wk-out"><b>${w.out}</b>days out</div>
+      </div>
+      <div class="tagline">${w.tag}</div>
+      <div class="wkbar"><span>${fmt(ac)} logged of ${fmt(pl)} planned</span>
+        <i><u style="width:${Math.min(pct,140)/1.4}%;background:${pct>115?'var(--flag)':'var(--z2)'}"></u></i>
+        <button class="ghost" data-reset="${w.id}">Reset week</button></div>
+      ${adv}
+      <div class="strip">${strip}</div>
+      <div class="strip-key">${key}</div>
+      ${sess}
+    </article>`;
+  }).join('');
+
+  wire(el);
+  paint();
+}
+
+function wire(el){
+  el.querySelectorAll('.sess').forEach(n=>{
+    n.addEventListener('click',e=>{ if(e.target.closest('input,select,button')) return; toggle(n); });
+    n.addEventListener('keydown',e=>{ if(e.target.closest('input,select,button')) return;
+      if(e.key===' '||e.key==='Enter'){e.preventDefault();toggle(n);} });
+  });
+  el.querySelectorAll('[data-exp]').forEach(b=>b.addEventListener('click',()=>{
+    const box=el.querySelector(`[data-box="${b.dataset.exp}"]`);
+    const shut=box.classList.toggle('shut'); b.textContent=shut?'+':'−';
+  }));
+  el.querySelectorAll('select[data-day]').forEach(sel=>sel.addEventListener('change',()=>{
+    state.days[sel.dataset.day]=sel.value; save(); renderPlan();
+  }));
+  el.querySelectorAll('[data-a]').forEach(inp=>inp.addEventListener('input',()=>{
+    const j=inp.dataset.a.lastIndexOf('.'), id=inp.dataset.a.slice(0,j), f=inp.dataset.a.slice(j+1);
+    state.act[id]=state.act[id]||{}; state.act[id][f]=inp.value; save();
+  }));
+  el.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{
+    const i=b.dataset.mode.lastIndexOf('.'), id=b.dataset.mode.slice(0,i), m=b.dataset.mode.slice(i+1);
+    state.act[id]=state.act[id]||{}; state.act[id].mode=m; save(); renderPlan();
+  }));
+  el.querySelectorAll('[data-feel]').forEach(b=>b.addEventListener('click',()=>{
+    const j=b.dataset.feel.lastIndexOf('.'), id=b.dataset.feel.slice(0,j), f=b.dataset.feel.slice(j+1);
+    state.act[id]=state.act[id]||{};
+    state.act[id].feel = state.act[id].feel===f ? '' : f;
+    save(); renderPlan();
+  }));
+  el.querySelectorAll('[data-apply]').forEach(b=>b.addEventListener('click',()=>{
+    state.ov[b.dataset.apply]={capMin:+b.dataset.cap, why:b.dataset.why};
+    state.dis[b.dataset.k]=true; save(); renderPlan();
+  }));
+  el.querySelectorAll('[data-dismiss]').forEach(b=>b.addEventListener('click',()=>{
+    state.dis[b.dataset.dismiss]=true; save(); renderPlan();
+  }));
+  el.querySelectorAll('[data-reset]').forEach(b=>b.addEventListener('click',()=>{
+    if(!confirm('Reset this week to the original plan? Day swaps and caps are cleared. Your logged times and notes are kept.')) return;
+    const w=b.dataset.reset;
+    Object.keys(state.days).forEach(k=>{ if(k.startsWith(w+'-')) delete state.days[k]; });
+    Object.keys(state.ov).forEach(k=>{ if(k.startsWith(w+'-')) delete state.ov[k]; });
+    Object.keys(state.dis).forEach(k=>{ if(k.startsWith(w+':')) delete state.dis[k]; });
+    save(); renderPlan();
+  }));
+}
+
+function toggle(n){
+  const id = n.dataset.id;
+  state.checks[id] = !state.checks[id];
+  if(!state.checks[id]) delete state.checks[id];
+  save(); renderPlan();
+}
+
+function paint(){
+  document.querySelectorAll('.sess').forEach(n=>{
+    const on = !!state.checks[n.dataset.id];
+    n.classList.toggle('on',on);
+    n.setAttribute('aria-checked',on?'true':'false');
+  });
+  const all = WEEKS.reduce((a,w)=>a+w.s.length,0);
+  const done = Object.keys(state.checks).length;
+  const pct = Math.round(done/all*100);
+  document.getElementById('pbar').style.width = pct+'%';
+  document.getElementById('ptxt').textContent = `${done} of ${all} sessions ticked · ${pct}%`;
+}
+
+function countdown(){
+  const d = Math.max(0, Math.ceil((RACE - new Date())/86400000));
+  document.getElementById('days').textContent = d;
+}
+
+/* ---------------- static tabs ---------------- */
+document.getElementById('tab-fuel').innerHTML = `
+<div class="panel"><h3>Every day</h3>
+ <div class="pc">
+  <p>At roughly <span class="k">86 kg</span>, the numbers that matter most:</p>
+  <ul>
+   <li><b>Protein</b> — ~1.6 g/kg = <span class="k">135–140 g/day</span>, spread across meals, not stacked at dinner.</li>
+   <li><b>Carbohydrate</b> — the fuel for the session and the recovery from it. Under-eating carbs is the most common reason a build falls apart in weeks 4–5.</li>
+   <li><b>Iron and vitamin D</b> — worth a blood test if you have not had one. Low ferritin looks exactly like bad training.</li>
+  </ul>
+ </div></div>
+
+<div class="panel"><h3>Before a run</h3>
+ <div class="pc">
+  <ul>
+   <li><b>Under 75 min</b> — nothing needed. Run it fasted if that suits you.</li>
+   <li><b>Over 75 min</b> — <span class="k">30–60 g carbs</span>, 1–2 h before. Low fibre, low fat.</li>
+   <li><b>Long runs</b> — treat every one as a rehearsal of race morning. Same food, same timing, same coffee.</li>
+  </ul>
+  <div class="note"><b>The point of practice</b>Your gut is trainable. Fuelling every long run from Week 1 is what makes 70 g/h possible in October. Skipping it is how people end up unable to swallow a gel at 30 km.</div>
+ </div></div>
+
+<div class="panel"><h3>During a run</h3>
+ <div class="pc">
+  <p><b>Target <span class="k">60–75 g carbohydrate per hour</span></b>, taken every 25–30 minutes, starting at the 30-minute mark. Never wait until you feel hungry — by then it is too late.</p>
+  <p>Across 4:50 that is roughly <span class="k">330–350 g total</span>. Read the label on your Endurance BG gels and Decathlon jellies and do the division: at ~25–30 g a unit, that is <b>11–13 units</b>.</p>
+  <div class="rule-hi"><b>The carry problem</b>Eleven to thirteen gels will not fit in a shorts pocket. Decide now: belt, vest, drop bottles, or partly from course aid stations. Whatever you choose gets tested on the 24 km and the 28 km, fully loaded. Discovering this in October is too late.</div>
+ </div>
+ <div class="pc">
+  <h4>Fluid and salt</h4>
+  <ul>
+   <li><span class="k">400–800 ml fluid/hour</span> and <span class="k">400–800 mg sodium/hour</span> — start mid-range, adjust to conditions.</li>
+   <li>Check what your Decathlon tablets actually contain. Many are lighter on sodium than people assume.</li>
+   <li><b>Sweat test:</b> weigh naked before and after a long run. 1 kg lost ≈ 1 litre unreplaced. Aim to finish no more than 2% down.</li>
+  </ul>
+ </div>
+ <div class="pc">
+  <h4>Progression</h4>
+  <table>
+   <tr><th>Run</th><th>Practice</th></tr>
+   <tr><td class="num">18 km</td><td>Get the habit going. Fuel on a clock, not on feel.</td></tr>
+   <tr><td class="num">Vacation</td><td>Sweat test in the heat. Sodium matters more than usual.</td></tr>
+   <tr><td class="num">24 km</td><td>~60 g/h. Test the exact gel and jelly combination. Cup drinking on the move.</td></tr>
+   <tr><td class="num">28 km</td><td>65–75 g/h. Full dress rehearsal, fully loaded.</td></tr>
+   <tr><td class="num">22 km</td><td>Race-day fuelling exactly. Test caffeine here.</td></tr>
+   <tr><td class="num">Race</td><td>~70 g/h from the start, adjusted to what actually worked.</td></tr>
+  </table>
+ </div></div>
+
+<div class="panel"><h3>After a run</h3>
+ <div class="pc">
+  <p>Within 60 minutes: <span class="k">1–1.2 g/kg carbs</span> (≈ <b>90–100 g</b>) plus <span class="k">25–30 g protein</span>. After the peak long run this is not optional — it is the difference between a good Monday and a wasted week.</p>
+  <p>Replace fluid at <b>1.5× what you lost</b>, with sodium in it. Plain water after a big sweat dilutes you and makes you feel worse.</p>
+ </div></div>
+
+<div class="panel"><h3>Carb loading · 8–10 Oct</h3>
+ <div class="pc">
+  <p><span class="k">7–8 g/kg/day</span> for three days = <b>600–690 g/day</b>. It is far more than it sounds and most people undershoot badly.</p>
+  <ul>
+   <li>Increase carbs, do <b>not</b> just add food on top. Fat and protein come down as carbs go up.</li>
+   <li>Cut fibre from Wednesday. White rice, white bread, potatoes without skins, juice, sports drink, honey, ripe bananas.</li>
+   <li>Expect to gain 1–2 kg. That is stored glycogen with water attached. It is the point, not a problem.</li>
+   <li><b>Race morning:</b> 3 hours before the gun, <span class="k">100–150 g carbs</span>. Low fibre, low fat, entirely familiar.</li>
+  </ul>
+  <div class="rule-hi"><b>Nothing new on race day</b>Not a gel flavour, not a drink, not a breakfast, not a coffee brand. Every single thing you consume on 11 October must have been consumed on a long run first.</div>
+ </div></div>
+
+<div class="panel"><h3>Caffeine</h3>
+ <div class="pc">
+  <p>Worth 1–2% if used properly. <span class="k">100–200 mg</span> about 45–60 min before the start, then ~100 mg around 30 km when it matters most.</p>
+  <p><b>Test it on the 25 September long run.</b> Some people get a racing heart rate or a gut reaction. Find that out in September.</p>
+ </div></div>`;
+
+document.getElementById('tab-recovery').innerHTML = `
+<div class="panel"><h3>The hierarchy</h3>
+ <div class="pc">
+  <p>In order of how much they actually matter. People spend most of their effort on the bottom two.</p>
+  <table>
+   <tr><th style="width:26px">#</th><th>Lever</th><th>Detail</th></tr>
+   <tr><td class="num">1</td><td><b>Sleep</b></td><td>7.5–9 h. Nothing else on this list comes close.</td></tr>
+   <tr><td class="num">2</td><td><b>Calories & carbs</b></td><td>Chronic under-fuelling is the most common cause of a failed build.</td></tr>
+   <tr><td class="num">3</td><td><b>Protein</b></td><td>135–140 g/day, spread out.</td></tr>
+   <tr><td class="num">4</td><td><b>Fluid & sodium</b></td><td>Especially through the vacation week.</td></tr>
+   <tr><td class="num">5</td><td><b>Easy movement</b></td><td>Walking, easy swimming, mobility.</td></tr>
+   <tr><td class="num">6</td><td>Roller & Theragun</td><td>Real, but small. They are comfort tools, not repair tools.</td></tr>
+  </table>
+ </div></div>
+
+<div class="panel"><h3>Rest days</h3>
+ <div class="pc">
+  <p><b>Monday and Sunday are genuinely rest.</b> The adaptation happens on these days, not on Friday. Friday only creates the stimulus.</p>
+  <ul>
+   <li><b>Eat like you trained.</b> The classic error is cutting food on rest days — that is exactly when the rebuilding is paid for.</li>
+   <li>Walk. 20–30 minutes of easy movement clears more than lying still does.</li>
+   <li>Optional: <span class="k">20–40 min easy swim</span>. Genuinely easy. If you are chasing lengths it has become a workout and it no longer counts as recovery.</li>
+   <li>Do the mobility routine. It takes 8 minutes.</li>
+   <li><b>No leg strength</b>, no hills, no "just a quick 5k".</li>
+  </ul>
+ </div></div>
+
+<div class="panel"><h3>Mobility · daily, 8 minutes</h3>
+ <div class="pc">
+  <ul>
+   <li>Ankle dorsiflexion at a wall — 10 each side. Single most useful item on this list for a runner.</li>
+   <li>Couch stretch (hip flexor) — 60 s each side.</li>
+   <li>90/90 hip rotations — 8 each way.</li>
+   <li>Calf stretch, straight leg then bent knee — 45 s each, both sides.</li>
+   <li>Glute bridge — 15 reps, slow.</li>
+   <li>Dead bug — 8 each side.</li>
+  </ul>
+ </div></div>
+
+<div class="panel"><h3>Spiky roller</h3>
+ <div class="pc">
+  <ul>
+   <li><b>Targets:</b> calves, quads, glutes, peroneals, upper back. 60–90 s each.</li>
+   <li><b>Pressure:</b> moderate. If you are holding your breath or wincing, you are too heavy on it. Tensing against pain defeats the purpose.</li>
+   <li><b>Do not</b> roll directly on the IT band — it is a tendon-like structure and it does not lengthen. Work the glute and quad either side of it instead.</li>
+   <li><b>Do not</b> roll bone: shin, kneecap, spine.</li>
+   <li>Best used in the evening or on a rest day. Rolling hard immediately after a peak long run adds soreness rather than removing it.</li>
+  </ul>
+ </div></div>
+
+<div class="panel"><h3>Theragun</h3>
+ <div class="pc">
+  <ul>
+   <li><b>Float it, do not press it.</b> Let the weight of the head do the work. Pushing harder does not do more.</li>
+   <li><b>30–60 s per muscle.</b> More is not better. Keep it moving rather than parking on one spot.</li>
+   <li><b>Before running:</b> 30 s per muscle to wake tissue up. <b>After:</b> low speed, light, for comfort.</li>
+   <li><b>Avoid</b> bony areas, the Achilles tendon itself, the front of the shin, the back of the knee, and anywhere with sharp or acute pain.</li>
+   <li>Do not use it as permission to keep training on something that hurts. That is what it is most often used for and it is the one thing it should never do.</li>
+  </ul>
+  <div class="note"><b>Being straight about it</b>Both tools genuinely help how you feel and how willing you are to move. Neither repairs tissue, clears lactate, or replaces sleep and food. Use them for comfort, and do not let them buy you extra training you have not recovered for.</div>
+ </div></div>
+
+<div class="panel"><h3>Shoes · rotation &amp; break-in</h3>
+ <div class="pc">
+  <table>
+   <tr><th>Shoe</th><th>Job</th></tr>
+   <tr><td><b>1080 v15 Breathe</b><br><span style="color:var(--soft);font-size:12px">40/34 mm · 6 mm drop</span></td><td><b>Race shoe.</b> All long runs from 11 Sep, race-pace blocks, marathon.</td></tr>
+   <tr><td><b>Supernova Rise 2</b><br><span style="color:var(--soft);font-size:12px">36/26 mm · 10 mm drop</span></td><td>Easy runs through September. Retire at 600 km.</td></tr>
+   <tr><td><b>Streakfly</b></td><td>Strides and short fast work only.</td></tr>
+   <tr><td><b>Hierro v9</b></td><td>Trail. Not for road long runs.</td></tr>
+  </table>
+ </div>
+ <div class="pc">
+  <h4>Break-in schedule — shoes arrive Wed 9 Sep</h4>
+   <ul>
+   <li><b>Through 8 Sep</b> — everything in the Rise 2, including the vacation runs and Friday's 18 km.</li>
+   <li><b>Thu 10 Sep</b> — 8 km easy in the 1080. Mandatory. Their only run before the rehearsal.</li>
+   <li><b>Fri 11 Sep, 24 km</b> — first long run in them, on ~8 km of break-in. Run by HR. Abort early if calves tighten.</li>
+   <li><b>Sat 12 – Thu 17 Sep</b> — all easy runs in the 1080. Should reach ~50 km total.</li>
+   <li><b>Fri 18 Sep, 28 km</b> — the decisive test.</li>
+   <li><b>Race day</b> — roughly 110–140 km. Lower than ideal, but enough.</li>
+   </ul>
+ </div>
+ <div class="pc">
+  <div class="rule-hi"><b>You are dropping 4 mm of heel drop</b>From 10 mm to 6 mm. That load goes straight to your calves and Achilles — already your most likely failure point at 86 kg. <b>Calf raises twice a week are now mandatory, not optional.</b> Straight-leg and bent-knee, 12–15 reps. With the shoes arriving 9 Sep there is no gradual break-in window left — the only preparation available is doing this from today, so your calves meet the new geometry already strong.</div>
+ </div>
+ <div class="pc">
+  <h4>Lacing</h4>
+  <p>Use a <b>runner's loop</b> through the extra top eyelet from the very first run. The knit and thin mesh uppers on this shoe hold less than the Rise 2, and reviewers report a slightly loose fit needing the laces properly tightened.</p>
+  <p style="margin-bottom:0">It also pulls your heel back, which is what stops your toes reaching the front — the actual mechanism behind the middle-toe problem.</p>
+ </div>
+ <div class="pc">
+  <div class="note"><b>Abort conditions</b>Calf or Achilles soreness that lasts more than 48 h, or a middle toe still rubbing at 24 km on 11 September. Either one and the Rise 2 half a size up becomes the race shoe. That decision is still open until 18 September, and not one day later.</div>
+ </div>
+</div>
+
+<div class="panel"><h3>Stop signals</h3>
+ <div class="pc">
+  <div class="rule-hi"><b>Stop the session</b>Pain that changes how you run. Pain that is sharp or points to one spot you can cover with a fingertip. Anything in the Achilles, shin or knee that got worse during the run rather than warming up out of it.</div>
+  <p style="margin-top:12px">Missing three days now costs you nothing. Pushing through three days costs you October.</p>
+  <ul>
+   <li>Legs heavy or sleep poor → drop Thursday first.</li>
+   <li>Friday leaves you wrecked for more than 48 h → reduce the following week instead of adding.</li>
+   <li>Hot conditions → run by HR and let pace go entirely.</li>
+   <li>The 28 km cap is a ceiling, not a challenge.</li>
+  </ul>
+ </div></div>`;
+
+document.getElementById('tab-raceday').innerHTML = `
+<div class="panel"><h3>The pacing plan</h3>
+ <div class="pc">
+  <p>Target <span class="k">6:45–6:50/km</span> on the watch, not 6:52. You will cover 42.6–43 km with tangents and aid stations, so 6:52 measured lands you at roughly 4:52 and 6:45 gives you a real cushion.</p>
+  <table>
+   <tr><th>Section</th><th>Pace /km</th><th>HR</th><th>The job</th></tr>
+   <tr><td class="num">0–10 km</td><td class="num">7:00–7:05</td><td class="num">&lt;158</td><td>Hold back. It will feel absurdly easy. That is correct.</td></tr>
+   <tr><td class="num">10–25 km</td><td class="num">6:45–6:50</td><td class="num">158–164</td><td>Settle into rhythm. Fuel on the clock.</td></tr>
+   <tr><td class="num">25–32 km</td><td class="num">6:45–6:50</td><td class="num">164–168</td><td>Hold. Effort rises, pace does not.</td></tr>
+   <tr><td class="num">32–37 km</td><td class="num">maintain</td><td class="num">—</td><td>Patience. This is the whole race.</td></tr>
+   <tr><td class="num">37–42.2</td><td class="num">whatever is left</td><td class="num">—</td><td>Now you can spend it.</td></tr>
+  </table>
+  <div class="note"><b>The test at 30 km</b>You should arrive at 30 km thinking "this is going incredibly well." If you are grinding at 25 km, the first 10 km were too fast. There is no version of this race where going out hard works.</div>
+ </div></div>
+
+<div class="panel"><h3>Splits for 4:50</h3>
+ <div class="pc">
+  <table>
+   <tr><th>Km</th><th>Elapsed</th><th>Km</th><th>Elapsed</th></tr>
+   <tr><td class="num">5</td><td class="num">0:35:10</td><td class="num">25</td><td class="num">2:51:30</td></tr>
+   <tr><td class="num">10</td><td class="num">1:10:20</td><td class="num">30</td><td class="num">3:25:30</td></tr>
+   <tr><td class="num">15</td><td class="num">1:44:00</td><td class="num">35</td><td class="num">3:59:30</td></tr>
+   <tr><td class="num">21.1</td><td class="num">2:25:30</td><td class="num">40</td><td class="num">4:33:30</td></tr>
+   <tr><td class="num">20</td><td class="num">2:17:40</td><td class="num">42.2</td><td class="num">4:48:30</td></tr>
+  </table>
+  <p style="margin-top:10px;color:var(--soft);font-size:13px">Built on a slightly negative split with ~90 s in hand. Write the 5 km splits on your forearm or a wristband — do not do mental arithmetic at 32 km.</p>
+ </div></div>
+
+<div class="panel"><h3>Aid stations</h3>
+ <div class="pc">
+  <p>You lost 3:33 standing still across 21 km in August. Scaled to a marathon that is around <b>7 minutes</b> — real money against 4:50.</p>
+  <ul>
+   <li>Decide in advance whether you walk aid stations. If you do, <b>cap each at 20 seconds</b> and start moving before you finish drinking.</li>
+   <li>Pinch the top of the cup into a spout. It works and it is worth practising once.</li>
+   <li>No stopping for laces, phone or photos. Sort the shoes before the gun.</li>
+  </ul>
+ </div></div>
+
+<div class="panel"><h3>Kit</h3>
+ <div class="pc">
+  <ul>
+   <li><b>Adidas Supernova Rise 2</b> — check the mileage now. Do not race a shoe with 500+ km on it. If yours is close, buy the replacement in early September and put 60–80 km through it before race day.</li>
+   <li>Everything worn on 11 October must have been worn on a long run. Socks included.</li>
+   <li>Anti-chafe on everything, generously. Four hours fifty is a long time.</li>
+   <li>Lay it all out on Friday night. Bib, pins, gels, tablets, watch charged, safety pins, throwaway top for the start.</li>
+  </ul>
+ </div></div>
+
+<div class="panel"><h3>The 25 September decision</h3>
+ <div class="pc">
+  <p>Two signals already point past 4:50: a heat-adjusted 21.1 km stronger than your December half, and 17 minutes less standing still.</p>
+  <p>The 10 km race-pace block on <b>25 September</b> settles it:</p>
+  <table>
+   <tr><th>Average HR of the block</th><th>Then</th></tr>
+   <tr><td class="num">&lt; 162, controlled</td><td><b>4:35–4:40 is live.</b> Pace the first 10 km at 6:50 and reassess at halfway.</td></tr>
+   <tr><td class="num">162–167</td><td>Run 4:50 as written. A fast finish is still available.</td></tr>
+   <tr><td class="num">168+</td><td>4:50 was the right call. Stop thinking about it and execute.</td></tr>
+  </table>
+ </div></div>`;
+
+document.getElementById('tab-strength').innerHTML = `<div class="panel"><h3>Home session · bands + pull-up bar</h3>
+ <div class="pc">
+  <p>Roughly <b>25 minutes</b>, no gym, no travel. This is the version you'll actually do — which makes it better than the gym session you skip.</p>
+  <h4>Strength A — legs · twice a week</h4>
+  <table>
+   <tr><th>Exercise</th><th>Sets</th><th>Why</th></tr>
+   <tr><td><b>Single-leg calf raise</b><br><span style="font-size:12px;color:var(--soft)">straight leg, then bent knee</span></td><td class="num">3 × 12–15<br>each</td><td><b>Non-negotiable.</b> Your 4 mm drop change lands here.</td></tr>
+   <tr><td><b>Banded RDL</b><br><span style="font-size:12px;color:var(--soft)">stand on band, hinge at hips</span></td><td class="num">3 × 10</td><td>Hamstrings and glutes — late-race power</td></tr>
+   <tr><td><b>Bulgarian split squat</b><br><span style="font-size:12px;color:var(--soft)">rear foot on a chair, band under front foot</span></td><td class="num">3 × 8 each</td><td>Single-leg strength, the way you actually run</td></tr>
+   <tr><td><b>Banded lateral walks</b><br><span style="font-size:12px;color:var(--soft)">band above knees, 10 steps each way</span></td><td class="num">3 sets</td><td>Glute medius — stops the knee collapsing when you tire</td></tr>
+   <tr><td><b>Banded hamstring curl</b><br><span style="font-size:12px;color:var(--soft)">or Nordic negatives if you can anchor your feet</span></td><td class="num">3 × 10</td><td>The other half of the calf/Achilles chain</td></tr>
+   <tr><td><b>Step-ups</b><br><span style="font-size:12px;color:var(--soft)">chair or stairs, controlled down</span></td><td class="num">2 × 10 each</td><td>Eccentric control for downhills</td></tr>
+  </table>
+ </div>
+ <div class="pc">
+  <h4>Strength B — upper &amp; core · once a week</h4>
+  <ul>
+   <li><b>Pull-ups or chin-ups</b> — 3 sets, stop 2 short of failure. Band-assisted is fine.</li>
+   <li><b>Band pull-aparts</b> — 3 × 15. Counteracts the forward shoulder slump that shows up late in a marathon.</li>
+   <li><b>Banded overhead press</b> — 3 × 10.</li>
+   <li><b>Pallof press</b> — band anchored at chest height, 10 each side. Anti-rotation, protects your stride from leaking energy sideways.</li>
+   <li><b>Side plank</b> — 30–45 s each side.</li>
+   <li><b>Dead bug</b> — 10 each side, slow.</li>
+  </ul>
+ </div>
+ <div class="pc">
+  <div class="rule-hi"><b>Two rules</b>Stop 2–3 reps short of failure — you are maintaining tissue, not building a PB. And never within 48 h of the long run. All leg work stops after 30 September.</div>
+ </div>
+ <div class="pc">
+  <h4>If you do get to a gym</h4>
+  <p style="margin-bottom:0">Swap the banded versions for loaded ones — goblet or barbell split squats, dumbbell RDLs, seated and standing calf raises, leg press. Same structure, same sets, heavier. But two home sessions a week beat one gym session you had to drive to.</p>
+ </div>
+</div>
+
+<div class="panel"><h3>Strength</h3>
+ <div class="pc">
+  <h4>Strength A — legs · once a week</h4>
+  <p>2–3 sets, controlled, stopping 2–3 reps short of failure. You are maintaining tissue tolerance, not building a PB.</p>
+  <ul>
+   <li>Bulgarian split squats — 8 each leg</li>
+   <li>Romanian deadlifts — 8</li>
+   <li><b>Calf raises — 12–15, straight leg and bent knee</b></li>
+   <li>Step-ups — 10 each leg</li>
+   <li>Hamstring curls or Nordic negatives — 6–8</li>
+  </ul>
+  <div class="rule-hi"><b>Calf raises are not optional</b>At ~86 kg your calves and Achilles absorb more load per stride than a lighter runner's. This is the single most likely place for the build to break, and calf raises are the cheapest insurance available.</div>
+ </div>
+ <div class="pc">
+  <h4>Strength B — upper and core · once a week</h4>
+  <ul>
+   <li>Rows or pull-ups — 8</li>
+   <li>Press — 8</li>
+   <li>Side plank — 30–45 s each side</li>
+   <li>Pallof press — 10 each side</li>
+   <li>Dead bug — 10 each side</li>
+  </ul>
+  <p><b>Never within 48 h of Friday.</b> Legs stop entirely after 30 September.</p>
+ </div></div>`;
+
+
+/* ---------------- yoga tab ---------------- */
+function renderYoga(){
+  const el=document.getElementById('tab-yoga'); if(!el) return;
+  const pick=(c,pOnly)=>YV.filter(v=>v[1]===c&&(!pOnly||v[2]))
+    .map(v=>`<li><a class="${v[2]?'p':''}" href="${ylink(v[0])}" target="_blank" rel="noopener">${v[0]}</a></li>`).join('');
+  const prio=YV.filter(v=>v[2]&&v[1]!=='r')
+    .map(v=>`<li><a class="p" href="${ylink(v[0])}" target="_blank" rel="noopener">${v[0]}</a></li>`).join('');
+  const n=c=>YV.filter(v=>v[1]===c).length;
+  el.innerHTML=`
+  <div class="panel"><h3>How it fits the week</h3>
+   <div class="pc">
+    <p>Afternoons, after the morning run. Every session in the Plan tab carries a <b>PM yoga</b> line telling you which colour is appropriate that day.</p>
+    <table>
+     <tr><th>Day</th><th>Afternoon</th></tr>
+     <tr><td><b>Quality day</b></td><td>Strength A · <span style="color:var(--flag)">Red</span> yoga allowed — once a week</td></tr>
+     <tr><td><b>Easy days</b></td><td><span style="color:var(--z2)">Green</span>, 15–25 min</td></tr>
+     <tr><td><b>Day before the long run</b></td><td><span style="color:var(--z2)">Green</span> only, light. No deep hip openers.</td></tr>
+     <tr><td><b>Long run day</b></td><td>Restorative or fascia release, evening</td></tr>
+     <tr><td><b>Optional day</b></td><td>Strength B · <span style="color:var(--z2)">Green</span> or swim</td></tr>
+     <tr><td><b>Rest days</b></td><td>Swim · <span style="color:var(--z2)">Green</span> or amber mobility</td></tr>
+     <tr><td><b>Race week</b></td><td>Sleep and breathwork only</td></tr>
+    </table>
+    <div class="rule-hi" style="margin-top:12px"><b>The test</b>If a session gives you DOMS it was training, not recovery — and it counts against your strength allowance for the week, not on top of it. Nothing sore after Wednesday.</div>
+   </div></div>
+
+  <div class="panel"><h3>&#9733; Priority<span class="ycount">${prio.split('<li>').length-1}</span></h3>
+   <div class="pc" style="padding-bottom:0"><p style="font-size:13.5px;color:var(--soft);margin:0 0 4px">Ankles, toes, knees, hips, fascia. The ankle and toe work matters most right now — you are taking a 4 mm drop change into the last six weeks.</p></div>
+   <ul class="ylist">${prio}</ul></div>
+
+  <div class="panel"><h3>Green · daily<span class="ycount">${n('g')}</span></h3>
+   <div class="pc" style="padding-bottom:0"><p style="font-size:13.5px;color:var(--soft);margin:0 0 4px">Yin, restorative, mobility, breathwork, sleep. You should finish looser than you started.</p></div>
+   <ul class="ylist">${pick('g')}</ul></div>
+
+  <div class="panel"><h3>Amber · twice a week<span class="ycount">${n('a')}</span></h3>
+   <div class="pc" style="padding-bottom:0"><p style="font-size:13.5px;color:var(--soft);margin:0 0 4px">Moderate flows. Not the day before the long run, not the day after.</p></div>
+   <ul class="ylist">${pick('a')}</ul></div>
+
+  <div class="panel"><h3>Red · once a week max<span class="ycount">${n('r')}</span></h3>
+   <div class="pc" style="padding-bottom:0"><p style="font-size:13.5px;color:var(--soft);margin:0 0 4px">Training, not recovery — these are the ones that gave you DOMS. Skip handstands and arm balances entirely until November: high wrist and shoulder load for no marathon benefit.</p></div>
+   <ul class="ylist">${pick('r')}</ul></div>`;
+}
+
+/* ---------------- log tab ---------------- */
+const LOGS = [
+ {id:'l1', n:'18 km', s:'Fri 28 Aug'},
+ {id:'l2', n:'Vacation long run', s:'90–110 min'},
+ {id:'l3', n:'24 km — rehearsal', s:'Fri 11 Sep'},
+ {id:'l4', n:'28 km — peak', s:'Fri 18 Sep'},
+ {id:'l5', n:'22 km — decision', s:'Fri 25 Sep · log the 10 km block HR'},
+ {id:'l6', n:'16 km', s:'Fri 2 Oct'}
+];
+
+document.getElementById('tab-log').innerHTML = `
+<div class="panel"><h3>Long run log</h3>
+ <div class="pc" style="padding-bottom:4px">
+  <p style="font-size:13.5px;color:var(--soft);margin-bottom:0">Record <b>elapsed</b> time, not moving time — it is the only number that resembles race day. Watch the HR column: if pace holds while HR falls, the build is working.</p>
+ </div>
+ <div class="log-head"><span>Session</span><span>Elapsed</span><span>Avg HR</span></div>
+ ${LOGS.map(l=>`<div class="log-row">
+   <div class="lr-name">${l.n}<small>${l.s}</small></div>
+   <input type="text" inputmode="numeric" placeholder="0:00" data-log="${l.id}-t" aria-label="${l.n} elapsed time">
+   <input type="text" inputmode="numeric" placeholder="bpm" data-log="${l.id}-h" aria-label="${l.n} average heart rate">
+ </div>`).join('')}
+</div>
+
+<div class="panel"><h3>Sweat test</h3>
+ <div class="log-head"><span>Measurement</span><span colspan="2">Value</span><span></span></div>
+ <div class="log-row"><div class="lr-name">Weight before<small>kg, naked</small></div>
+   <input type="text" inputmode="decimal" data-log="sw-b" placeholder="kg" aria-label="Weight before"><span></span></div>
+ <div class="log-row"><div class="lr-name">Weight after<small>kg, towelled dry</small></div>
+   <input type="text" inputmode="decimal" data-log="sw-a" placeholder="kg" aria-label="Weight after"><span></span></div>
+ <div class="log-row"><div class="lr-name">Fluid drunk during<small>litres</small></div>
+   <input type="text" inputmode="decimal" data-log="sw-f" placeholder="L" aria-label="Fluid drunk"><span></span></div>
+ <div class="pc"><p style="font-size:13.5px;margin:0"><b>Sweat rate</b> = (before − after + fluid drunk) ÷ hours. Aim to replace 70–80% of it on race day, and to finish no more than 2% down on bodyweight.</p></div>
+</div>
+
+<div class="panel"><h3>Export &amp; import</h3>
+ <div class="pc">
+  <p style="font-size:13.5px">Copy your data out to back it up, move it between devices, or paste it to a coach for analysis.</p>
+  <div class="dbtn">
+   <button id="exSum">Copy summary</button>
+   <button id="exRaw">Copy backup</button>
+   <button class="ghost" id="imBtn">Import</button>
+  </div>
+  <textarea id="dataBox" rows="7" placeholder="Exported data appears here. To import, paste a backup and press Import."></textarea>
+  <p id="dataMsg" style="font-size:12px;color:var(--soft);margin:8px 0 0"></p>
+ </div>
+ <div class="pc">
+  <p style="font-size:13px;margin:0"><b>Copy summary</b> gives readable text — sessions, planned vs actual, HR, how it felt. That's the one to paste into a chat. <b>Copy backup</b> gives the full JSON, for restoring or moving devices. Importing merges into what's already there rather than wiping it.</p>
+ </div>
+</div>
+
+<div class="panel"><h3>Shoe mileage</h3>
+ <div class="log-row"><div class="lr-name">1080 v15 Breathe<small>race shoe · from 10 Sep</small></div>
+   <input type="text" inputmode="numeric" data-log="shoe2" placeholder="km" aria-label="1080 mileage"><span></span></div>
+ <div class="log-row"><div class="lr-name">Supernova Rise 2<small>easy runs only · retire at 600 km</small></div>
+   <input type="text" inputmode="numeric" data-log="shoe" placeholder="km" aria-label="Rise 2 mileage"><span></span></div>
+ <div class="pc"><p style="font-size:13.5px;margin:0">The 1080 arrives 9 Sep, so it will only have <b>~8 km before the 24 km rehearsal</b> and ~50 km before the peak. That is thinner than ideal — log every run so you know exactly where you stand.</p></div>
+</div>`;
+
+
+/* ---------------- export / import ---------------- */
+function buildSummary(){
+  const L=[], st=loadStats();
+  L.push('MARATHON TRACKER — export '+new Date().toISOString().slice(0,10));
+  L.push('Race: Sun 11 Oct 2026 · target 4:50 · HRmax 210 · LTHR 182');
+  L.push('Last 7 days '+fmt(st.acute)+' · 28-day avg '+fmt(st.chronic)+
+         ' · load ratio '+(st.chronic>0?st.ratio.toFixed(2):'n/a')+
+         ' · longest 21d '+(st.long21?fmt(st.long21):'—'));
+  WEEKS.forEach(w=>{
+    const rows=[];
+    w.s.forEach((x,i)=>{
+      const id=sid(w,i), a=actual(w,i), t=elMin(a), ov=state.ov[id];
+      const touched = t!==null||a.km||a.hr||a.note||a.mode||state.checks[id];
+      if(!touched) return;
+      const bits=[];
+      bits.push(state.days[id]||x.d);
+      bits.push(x.t.replace(/\s+/g,' '));
+      bits.push('planned '+fmt(plannedMin(w,i))+(KM[id]?'/'+KM[id]+'km':''));
+      if(a.mode&&a.mode!=='ran') bits.push('['+a.mode.toUpperCase()+']');
+      if(t!==null) bits.push('actual '+fmt(t));
+      else if(state.checks[id]) bits.push('done (no time logged)');
+      if(a.km) bits.push(a.km+'km');
+      if(a.hr) bits.push(a.hr+'bpm');
+      if(a.feel) bits.push('felt '+a.feel);
+      if(ov) bits.push('CAP '+fmt(ov.capMin));
+      if(a.note) bits.push('"'+a.note+'"');
+      rows.push('  '+bits.join(' · '));
+    });
+    if(!rows.length) return;
+    const pl=w.s.reduce((t,x,i)=>t+plannedMin(w,i),0);
+    const ac=w.s.reduce((t,x,i)=>t+doneMin(w,i),0);
+    L.push('');
+    L.push(w.n.toUpperCase()+' ('+w.dates+') — '+fmt(ac)+' logged of '+fmt(pl)+' planned');
+    rows.forEach(r=>L.push(r));
+  });
+  const lg=Object.keys(state.logs).filter(k=>state.logs[k]);
+  if(lg.length){ L.push(''); L.push('LOG TAB'); lg.forEach(k=>L.push('  '+k+': '+state.logs[k])); }
+  return L.join('\n');
+}
+function copyOut(text,label){
+  const b=document.getElementById('dataBox'); b.value=text;
+  const done=okc=>{ document.getElementById('dataMsg').textContent =
+    okc ? label+' copied to clipboard.' : 'Select the text above and copy manually.'; };
+  try{
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(text).then(()=>done(true),()=>done(false));
+    else { b.select(); done(document.execCommand&&document.execCommand('copy')); }
+  }catch(e){ done(false); }
+}
+function initData(){
+  const box=document.getElementById('dataBox'), msg=document.getElementById('dataMsg');
+  if(!box) return;
+  document.getElementById('exSum').addEventListener('click',()=>copyOut(buildSummary(),'Summary'));
+  document.getElementById('exRaw').addEventListener('click',()=>copyOut(JSON.stringify(state),'Backup'));
+  document.getElementById('imBtn').addEventListener('click',()=>{
+    const raw=box.value.trim();
+    if(!raw){ msg.textContent='Paste a backup into the box first.'; return; }
+    let inc; try{ inc=JSON.parse(raw); }catch(e){ msg.textContent='That is not a valid backup — paste the JSON from "Copy backup".'; return; }
+    if(typeof inc!=='object'||inc===null||Array.isArray(inc)){ msg.textContent='That is not a valid backup.'; return; }
+    let n=0;
+    ['checks','logs','days','notes','ov','dis'].forEach(k=>{
+      if(inc[k]&&typeof inc[k]==='object'){ Object.keys(inc[k]).forEach(x=>{ state[k][x]=inc[k][x]; n++; }); }
+    });
+    if(inc.act&&typeof inc.act==='object') Object.keys(inc.act).forEach(x=>{
+      state.act[x]=Object.assign({},state.act[x]||{},inc.act[x]); n++; });
+    save(); renderPlan(); msg.textContent='Imported and merged '+n+' entries.'; box.value='';
+  });
+}
+
+/* ---------------- storage ---------------- */
+let saveTimer=null;
+function toast(msg,err){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.toggle('err',!!err); t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),1600);
+}
+/* Storage: use Claude's synced storage when running inside Claude,
+   fall back to the browser's own storage when the file is opened standalone. */
+const STORE = (function(){
+  const hasClaude = typeof window!=='undefined' && window.storage
+                    && typeof window.storage.get==='function';
+  if(hasClaude) return {
+    mode:'synced',
+    get: async()=>{ const r=await window.storage.get(KEY); return (r&&r.value)||null; },
+    set: async v =>{ const r=await window.storage.set(KEY,v); return !!r; }
+  };
+  let ok=true;
+  try{ localStorage.setItem('__t','1'); localStorage.removeItem('__t'); }catch(e){ ok=false; }
+  return {
+    mode: ok?'device':'none',
+    get: async()=>{ try{ return localStorage.getItem(KEY); }catch(e){ return null; } },
+    set: async v =>{ try{ localStorage.setItem(KEY,v); return true; }catch(e){ return false; } }
+  };
+})();
+
+function save(){
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(async()=>{
+    if(STORE.mode==='none'){ toast('Private mode — not saved',true); return; }
+    try{
+      const ok=await STORE.set(JSON.stringify(state));
+      toast(ok?'Saved':'Not saved — try again',!ok);
+    }catch(e){ toast('Not saved — try again',true); }
+  },500);
+}
+async function load(){
+  try{
+    const v=await STORE.get();
+    if(v) state=Object.assign({checks:{},logs:{},days:{},notes:{},act:{},ov:{},dis:{}},JSON.parse(v));
+    ['act','ov','dis','days','logs','checks'].forEach(k=>state[k]=state[k]||{});
+    Object.keys(state.notes||{}).forEach(k=>{           // migrate old note field
+      if(state.notes[k] && !(state.act[k]&&state.act[k].note)){
+        state.act[k]=state.act[k]||{}; state.act[k].note=state.notes[k];
+      }});
+  }catch(e){ /* first run — nothing stored yet */ }
+  renderPlan();
+  const s=document.getElementById('storemode');
+  if(s) s.textContent = STORE.mode==='synced' ? 'Saving to your Claude account'
+                      : STORE.mode==='device' ? 'Saving on this device only'
+                      : 'Private browsing — nothing will save';
+  document.querySelectorAll('[data-log]').forEach(i=>{
+    const k=i.dataset.log;
+    if(state.logs[k]!=null) i.value=state.logs[k];
+    i.addEventListener('input',()=>{ state.logs[k]=i.value; save(); });
+  });
+  initData(); renderYoga();
+}
+
+/* ---------------- wiring ---------------- */
+document.querySelectorAll('nav button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x===b?'true':'false'));
+    ['plan','fuel','recovery','raceday','strength','yoga','log'].forEach(t=>
+      document.getElementById('tab-'+t).classList.toggle('hidden',t!==b.dataset.tab));
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+});
+document.getElementById('reset').addEventListener('click',()=>{
+  if(!confirm('Clear every ticked session? Your logged times and heart rates are kept.')) return;
+  state.checks={}; paint(); save();
+});
+
+countdown();
+setInterval(countdown,3600000);
+load();
+</script>
