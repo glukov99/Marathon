@@ -763,7 +763,7 @@ function wire(el){
   }));
   el.querySelectorAll('[data-a]').forEach(inp=>inp.addEventListener('input',()=>{
     const j=inp.dataset.a.lastIndexOf('.'), id=inp.dataset.a.slice(0,j), f=inp.dataset.a.slice(j+1);
-    state.act[id]=state.act[id]||{}; state.act[id][f]=inp.value; save();
+    state.act[id]=state.act[id]||{}; state.act[id][f]=inp.value; save(); renderLongRuns();
   }));
   el.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{
     const i=b.dataset.mode.lastIndexOf('.'), id=b.dataset.mode.slice(0,i), m=b.dataset.mode.slice(i+1);
@@ -1118,6 +1118,29 @@ document.getElementById('tab-strength').innerHTML = `<div class="panel"><h3>Home
  </div></div>`;
 
 
+
+/* ---------------- long run table (derived) ---------------- */
+function renderLongRuns(){
+  const el=document.getElementById('lrTable'); if(!el) return;
+  const rows=[];
+  WEEKS.forEach(w=>w.s.forEach((x,i)=>{
+    if(x.min<100) return;
+    const id=sid(w,i), a=actual(w,i), t=elMin(a);
+    const km=parseFloat(String(a.km||'').replace(',','.'));
+    const pace=(t&&km)? (()=>{const p=t/km; return Math.floor(p)+':'+String(Math.round((p%1)*60)).padStart(2,'0');})() : '—';
+    rows.push({n:x.t, d:sessDate(w,i).toLocaleDateString('en-GB',{day:'numeric',month:'short'}),
+      pl:fmt(plannedMin(w,i)), ac:t!==null?fmt(t):'—', km:km?km.toFixed(1):'—',
+      hr:a.hr||'—', pace, feel:a.feel||'', done:t!==null});
+  }));
+  el.innerHTML=`<div class="pc" style="padding-top:4px"><table>
+   <tr><th>Run</th><th>Planned</th><th>Actual</th><th>km</th><th>Pace</th><th>HR</th></tr>
+   ${rows.map(r=>`<tr style="${r.done?'':'opacity:.45'}">
+     <td><b>${r.n}</b><br><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--soft);text-transform:uppercase">${r.d}${r.feel?' · '+r.feel:''}</span></td>
+     <td class="num">${r.pl}</td><td class="num"><b>${r.ac}</b></td>
+     <td class="num">${r.km}</td><td class="num">${r.pace}</td><td class="num">${r.hr}</td></tr>`).join('')}
+  </table></div>`;
+}
+
 /* ---------------- yoga tab ---------------- */
 function renderYoga(){
   const el=document.getElementById('tab-yoga'); if(!el) return;
@@ -1161,37 +1184,12 @@ function renderYoga(){
 }
 
 /* ---------------- log tab ---------------- */
-const LOGS = [
- {id:'l1', n:'18 km', s:'Fri 28 Aug'},
- {id:'l2', n:'Vacation long run', s:'90–110 min'},
- {id:'l3', n:'24 km — rehearsal', s:'Fri 11 Sep'},
- {id:'l4', n:'28 km — peak', s:'Fri 18 Sep'},
- {id:'l5', n:'22 km — decision', s:'Fri 25 Sep · log the 10 km block HR'},
- {id:'l6', n:'16 km', s:'Fri 2 Oct'}
-];
-
 document.getElementById('tab-log').innerHTML = `
-<div class="panel"><h3>Long run log</h3>
- <div class="pc" style="padding-bottom:4px">
-  <p style="font-size:13.5px;color:var(--soft);margin-bottom:0">Record <b>elapsed</b> time, not moving time — it is the only number that resembles race day. Watch the HR column: if pace holds while HR falls, the build is working.</p>
+<div class="panel"><h3>Long runs</h3>
+ <div class="pc" style="padding-bottom:6px">
+  <p style="font-size:13.5px;color:var(--soft);margin:0">Pulled from what you log against each session — nothing to type here. <b>Watch the HR column:</b> if pace holds while HR falls, the build is working.</p>
  </div>
- <div class="log-head"><span>Session</span><span>Elapsed</span><span>Avg HR</span></div>
- ${LOGS.map(l=>`<div class="log-row">
-   <div class="lr-name">${l.n}<small>${l.s}</small></div>
-   <input type="text" inputmode="numeric" placeholder="0:00" data-log="${l.id}-t" aria-label="${l.n} elapsed time">
-   <input type="text" inputmode="numeric" placeholder="bpm" data-log="${l.id}-h" aria-label="${l.n} average heart rate">
- </div>`).join('')}
-</div>
-
-<div class="panel"><h3>Sweat test</h3>
- <div class="log-head"><span>Measurement</span><span colspan="2">Value</span><span></span></div>
- <div class="log-row"><div class="lr-name">Weight before<small>kg, naked</small></div>
-   <input type="text" inputmode="decimal" data-log="sw-b" placeholder="kg" aria-label="Weight before"><span></span></div>
- <div class="log-row"><div class="lr-name">Weight after<small>kg, towelled dry</small></div>
-   <input type="text" inputmode="decimal" data-log="sw-a" placeholder="kg" aria-label="Weight after"><span></span></div>
- <div class="log-row"><div class="lr-name">Fluid drunk during<small>litres</small></div>
-   <input type="text" inputmode="decimal" data-log="sw-f" placeholder="L" aria-label="Fluid drunk"><span></span></div>
- <div class="pc"><p style="font-size:13.5px;margin:0"><b>Sweat rate</b> = (before − after + fluid drunk) ÷ hours. Aim to replace 70–80% of it on race day, and to finish no more than 2% down on bodyweight.</p></div>
+ <div id="lrTable"></div>
 </div>
 
 <div class="panel"><h3>Export &amp; import</h3>
@@ -1344,7 +1342,7 @@ async function load(){
     if(state.logs[k]!=null) i.value=state.logs[k];
     i.addEventListener('input',()=>{ state.logs[k]=i.value; save(); });
   });
-  initData(); renderYoga();
+  initData(); renderYoga(); renderLongRuns();
 }
 
 /* ---------------- wiring ---------------- */
