@@ -277,6 +277,12 @@ button.exp{flex-shrink:0;align-self:flex-start;background:none;border:1px solid 
 .ylist a:hover{background:var(--card2);text-decoration:underline}
 .ylist a.p::before{content:"\2605  ";color:var(--z3)}
 .ycount{float:right;font-family:'IBM Plex Mono',monospace;font-size:11px;opacity:.75}
+.wk-head[data-fold]{cursor:pointer;user-select:none}
+.wk-head[data-fold]:hover{background:var(--card2)}
+.week.done{opacity:.62}
+.week.done .wk-head{border-bottom:none}
+.chev{display:inline-block;margin-left:9px;font-family:'IBM Plex Mono',monospace;
+  font-size:15px;color:var(--faint);vertical-align:middle}
 .hidden{display:none}
 @media (max-width:520px){
   .day{width:30px;font-size:10px}
@@ -305,6 +311,7 @@ button.exp{flex-shrink:0;align-self:flex-start;background:none;border:1px solid 
       <div class="prog-txt">
         <span id="ptxt">Loading…</span>
         <span id="storemode" style="color:var(--faint)"></span>
+        <button class="reset" id="hideDone">Hide done</button>
         <button class="reset" id="reset">Clear all ticks</button>
       </div>
     </div>
@@ -358,7 +365,7 @@ button.exp{flex-shrink:0;align-self:flex-start;background:none;border:1px solid 
 <script>
 const KEY = 'marathon-11-oct-2026';
 const RACE = new Date('2026-10-11T09:00:00');
-let state = { checks:{}, logs:{}, days:{}, notes:{}, act:{}, ov:{}, dis:{} };
+let state = { checks:{}, logs:{}, days:{}, notes:{}, act:{}, ov:{}, dis:{}, open:{}, hideDone:false };
 
 /* ---------------- zone colours ---------------- */
 const Z = {
@@ -684,11 +691,11 @@ function renderPlan(){
 
   el.innerHTML = dash + zones + WEEKS.map(w=>{
     const total=w.s.reduce((a,x,i)=>a+plannedMin(w,i),0)||1;
+    const pl=total, ac=w.s.reduce((t,x,i)=>t+doneMin(w,i),0);
+    const pct=pl?Math.round(ac/pl*100):0;
     const strip=w.s.map((x,i)=>x.min>0?`<i style="flex:${plannedMin(w,i)};background:${Z[x.z].c}"></i>`:'').join('');
     const used=[...new Set(w.s.filter(x=>x.min>0).map(x=>x.z))];
     const key=used.map(z=>`<span><b style="background:${Z[z].c}"></b>${Z[z].n}</span>`).join('');
-    const pl=total, ac=w.s.reduce((t,x,i)=>t+doneMin(w,i),0);
-    const pct=pl?Math.round(ac/pl*100):0;
     const adv=advisories(w).map(a=>`<div class="adv ${a.lvl}">
         <p>${a.t}</p>
         <div class="adv-btn">
@@ -697,6 +704,7 @@ function renderPlan(){
         </div></div>`).join('');
 
     const sess=w.s.map((x,i)=>{
+      if(state.hideDone && state.checks[sid(w,i)]) return '';
       const id=sid(w,i), a=actual(w,i), ov=state.ov[id];
       const tag=x.tag?`<span class="tag" style="background:${Z[x.z].c}">${x.tag}</span>`:'';
       const dayCtrl = w.vac
@@ -728,10 +736,18 @@ function renderPlan(){
       </div>${log}</div>`;
     }).join('');
 
+    const wend=new Date(w.start+'T12:00:00'); wend.setDate(wend.getDate()+6);
+    const past=wend<new Date();
+    const shut = state.open[w.id]!==undefined ? !state.open[w.id] : past;
+    if(shut) return `<article class="week done">
+      <div class="wk-head" data-fold="${w.id}">
+        <div><h2>${w.n}</h2><div class="dates">${w.dates} · ${fmt(ac)} logged</div></div>
+        <div class="wk-out"><span class="chev">+</span></div>
+      </div></article>`;
     return `<article class="week${w.peak?' peak':''}">
-      <div class="wk-head">
+      <div class="wk-head" data-fold="${w.id}">
         <div><h2>${w.n}</h2><div class="dates">${w.dates}</div></div>
-        <div class="wk-out"><b>${w.out}</b>days out</div>
+        <div class="wk-out"><b>${w.out}</b>days out<span class="chev">&minus;</span></div>
       </div>
       <div class="tagline">${w.tag}</div>
       <div class="wkbar"><span>${fmt(ac)} logged of ${fmt(pl)} planned</span>
@@ -754,6 +770,13 @@ function wire(el){
     n.addEventListener('keydown',e=>{ if(e.target.closest('input,select,button')) return;
       if(e.key===' '||e.key==='Enter'){e.preventDefault();toggle(n);} });
   });
+  el.querySelectorAll('[data-fold]').forEach(nd=>nd.addEventListener('click',e=>{
+    if(e.target.closest('button,select,input')) return;
+    const id=nd.dataset.fold, wk=WEEKS.find(x=>x.id===id);
+    const wend=new Date(wk.start+'T12:00:00'); wend.setDate(wend.getDate()+6);
+    const cur = state.open[id]!==undefined ? state.open[id] : !(wend<new Date());
+    state.open[id]=!cur; save(); renderPlan();
+  }));
   el.querySelectorAll('[data-exp]').forEach(b=>b.addEventListener('click',()=>{
     const box=el.querySelector(`[data-box="${b.dataset.exp}"]`);
     const shut=box.classList.toggle('shut'); b.textContent=shut?'+':'−';
@@ -1326,7 +1349,7 @@ async function load(){
   try{
     const v=await STORE.get();
     if(v) state=Object.assign({checks:{},logs:{},days:{},notes:{},act:{},ov:{},dis:{}},JSON.parse(v));
-    ['act','ov','dis','days','logs','checks'].forEach(k=>state[k]=state[k]||{});
+    ['act','ov','dis','days','logs','checks','open'].forEach(k=>state[k]=state[k]||{});
     Object.keys(state.notes||{}).forEach(k=>{           // migrate old note field
       if(state.notes[k] && !(state.act[k]&&state.act[k].note)){
         state.act[k]=state.act[k]||{}; state.act[k].note=state.notes[k];
@@ -1334,6 +1357,7 @@ async function load(){
   }catch(e){ /* first run — nothing stored yet */ }
   renderPlan();
   const s=document.getElementById('storemode');
+  const hd=document.getElementById('hideDone'); if(hd&&state.hideDone) hd.textContent='Show done';
   if(s) s.textContent = STORE.mode==='synced' ? 'Saving to your Claude account'
                       : STORE.mode==='device' ? 'Saving on this device only'
                       : 'Private browsing — nothing will save';
@@ -1353,6 +1377,11 @@ document.querySelectorAll('nav button').forEach(b=>{
       document.getElementById('tab-'+t).classList.toggle('hidden',t!==b.dataset.tab));
     window.scrollTo({top:0,behavior:'smooth'});
   });
+});
+document.getElementById('hideDone').addEventListener('click',e=>{
+  state.hideDone=!state.hideDone;
+  e.target.textContent = state.hideDone ? 'Show done' : 'Hide done';
+  save(); renderPlan();
 });
 document.getElementById('reset').addEventListener('click',()=>{
   if(!confirm('Clear every ticked session? Your logged times and heart rates are kept.')) return;
