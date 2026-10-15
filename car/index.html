@@ -89,14 +89,99 @@ ul.steps li{margin:5px 0}
 .hubnav a{flex-shrink:0;font-size:13px;font-weight:600;text-decoration:none;color:var(--soft);padding:5px 11px;border-radius:14px;border:1px solid var(--rule)}
 .hubnav a[aria-current="page"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 </style>
+<style>
+.car{border-top:3px solid var(--cc)}
+.car .meta{font-size:13px;color:var(--soft);padding:2px 16px 0}
+.row{display:flex;gap:10px;align-items:center;padding:9px 16px;border-top:1px solid var(--rule)}
+.row .nm{flex:1;min-width:0}.row .nm b{font-size:14.5px;font-weight:600}.row .nm span{display:block;font-size:12.5px;color:var(--soft)}
+.pill{flex-shrink:0;font-size:12px;font-weight:700;padding:3px 9px;border-radius:12px;white-space:nowrap;background:var(--card2);color:var(--soft)}
+.pill.r{background:var(--big);color:#fff}.pill.a{background:var(--acc2);color:#fff}.pill.g{background:var(--done);color:var(--acc)}
+input.f{font:inherit;font-size:13.5px;padding:5px 7px;border:1px solid var(--rule);border-radius:3px;background:var(--paper);color:var(--ink);min-width:0}
+.kmrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 16px 12px}
+.ed{display:none;gap:6px;flex-wrap:wrap;padding:0 16px 10px;align-items:center}
+.ed.open{display:flex}
+.lnk{background:none;border:0;color:var(--acc);font-size:12.5px;font-weight:600;cursor:pointer;padding:2px 0}
+.lg{padding:9px 16px;border-top:1px solid var(--rule);font-size:13.5px}
+.lg b{font-weight:600}.lg ul{margin:4px 0 0;padding-left:18px}.lg li{margin:2px 0}
+.addf{display:grid;gap:7px;grid-template-columns:1fr 1fr;padding:8px 16px 12px}
+.addf textarea{grid-column:1/-1;font:inherit;font-size:13.5px;padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--paper);color:var(--ink);min-height:70px}
+.addf .btn{grid-column:1/-1;justify-self:start}
+.ed.addf{display:none}.ed.addf.open{display:grid}
+</style>
 </head>
 <body>
 <nav class="hubnav" aria-label="Life hub"><a href="../">Life hub</a><a href="../training/">Training</a><a href="../meals/">Meals</a><a href="../holidays/">Holidays</a><a href="../car/" aria-current="page">Car</a><a href="../money/">Money</a></nav>
 <div class="wrap">
-  <header class="hero"><div class="k">Life hub</div><h1>Car</h1></header>
-  <div class="panel"><h3>Coming next</h3><div class="pc">
- <p>Service items tracked by km and by date: oil and filters, tyres (summer/winter swap), brakes, timing belt, annual technical check, Civil liability insurance, Kasko, vignette, car tax.</p>
- <p class="sub">To build it, Claude needs: make, model, year, engine, current km, and the dates of the last service and the last technical check.</p></div></div>
+  <header class="hero"><div class="k">Life hub</div><h1>Car</h1><div class="sub" id="sy"></div></header>
+  <div class="panel"><h3>Next up</h3><div id="next"></div>
+    <div class="bar"><button class="btn ghost" id="ics">Add dates to calendar (.ics)</button><span class="count" id="spent"></span></div></div>
+  <div id="cars"></div>
+  <div class="foot">Dates come from the "Моят автомобил" app. When you renew something, change its date here. Red: 14 days or less. Amber: 45 days or less.</div>
 </div>
+<div class="toast" id="toast"></div>
+<script src="../shared/sync.js"></script>
+<script src="car-data.js"></script>
+<script>
+let st=C_load();
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fd=s=>{if(!s)return '—';const [y,m,d]=s.split('-').map(Number);return d+' '+MN[m-1]+' '+y};
+const nf=n=>n==null?'—':Number(n).toLocaleString('en-GB');
+const toast=t=>{const e=document.getElementById('toast');e.textContent=t;e.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('show'),1800)};
+const pill=(days,kmLeft)=>{let cls='g',t;
+  if(days==null&&kmLeft==null)return '<span class="pill">Not set</span>';
+  const bad=(days!=null&&days<=14)||(kmLeft!=null&&kmLeft<=500), mid=(days!=null&&days<=45)||(kmLeft!=null&&kmLeft<=2000);
+  cls=bad?'r':mid?'a':'g';
+  const parts=[];if(days!=null)parts.push(days<0?Math.abs(days)+' d late':days+' d');if(kmLeft!=null)parts.push(kmLeft<0?nf(-kmLeft)+' km over':nf(kmLeft)+' km');
+  return `<span class="pill ${cls}">${parts.join(' · ')}</span>`};
+const co=id=>{st.cars=st.cars||{};return st.cars[id]=st.cars[id]||{}};
+const save=m=>{C_save(st);render();if(m)toast(m)};
+function render(){
+  const cars=C_cars(st), up=C_upcoming(st).slice(0,5);
+  document.getElementById('next').innerHTML=up.map(u=>`<div class="row"><span class="dot" style="--dc:${u.c}"></span><div class="nm"><b>${esc(u.n)}</b><span>${esc(u.car||'Both cars')} · ${fd(u.d)}${u.km?' or at '+nf(u.km)+' km':''}</span></div>${pill(C_days(u.d))}</div>`).join('');
+  const y=String(new Date().getFullYear());let tot=0;cars.forEach(c=>c.log.forEach(l=>{if(l.d.slice(0,4)===y)l.items.forEach(i=>tot+=+i[1]||0)}));
+  document.getElementById('spent').textContent='Spent on service in '+y+': '+tot+' €';
+  document.getElementById('cars').innerHTML=cars.map(c=>`<div class="panel car" style="--cc:${c.c}">
+   <h3>${esc(c.n)}</h3><div class="meta">${esc(c.sub)}</div>
+   <div class="kmrow"><span class="sub">Km now:</span><b>${nf(c.km)}</b><span class="sub">${c.kmAt?'('+fd(c.kmAt)+')':''}</span>
+     <input class="f" type="number" inputmode="numeric" placeholder="New km" data-km="${c.id}" style="width:110px"><button class="btn ghost" data-kms="${c.id}">Update</button></div>
+   <div class="sec">Dates</div>
+   ${c.dl.map(x=>`<div class="row"><div class="nm"><b>${esc(x.n)}</b><span>${x.d?'Until '+fd(x.d):esc(x.none||'No date')}${x.note?' · '+esc(x.note):''}</span></div>${x.d?pill(C_days(x.d)):'<span class="pill">None</span>'}<button class="lnk" data-op="dl-${c.id}-${x.id}">Edit</button></div>
+     <div class="ed" id="dl-${c.id}-${x.id}"><span class="sub">New end date:</span><input class="f" type="date" value="${x.d||''}" data-dl="${c.id}|${x.id}"><button class="btn ghost" data-dls="${c.id}|${x.id}">Save</button></div>`).join('')}
+   <div class="sec">Service</div>
+   ${c.sv.map(s=>`<div class="row"><div class="nm"><b>${esc(s.n)}</b><span>${s.last?'Last: '+fd(s.last)+' at '+nf(s.lastKm)+' km · Next: '+fd(s.dueD)+' or '+nf(s.dueKm)+' km':'Last change not known. Enter it.'}</span><span>${esc(s.note)}</span></div>${pill(s.dLeft,s.kmLeft)}<button class="lnk" data-op="sv-${c.id}-${s.id}">Edit</button></div>
+     <div class="ed" id="sv-${c.id}-${s.id}"><span class="sub">Last done:</span><input class="f" type="date" value="${s.last||''}" data-svd="${c.id}|${s.id}"><input class="f" type="number" inputmode="numeric" placeholder="km" value="${s.lastKm??''}" data-svk="${c.id}|${s.id}" style="width:100px"><button class="btn ghost" data-svs="${c.id}|${s.id}">Save</button></div>`).join('')}
+   <div class="row"><div class="nm"><span>${esc(c.info)}</span></div></div>
+   <div class="sec">Service log <button class="lnk" data-op="add-${c.id}">Add visit</button></div>
+   <div class="ed addf" id="add-${c.id}" style="padding-top:8px">
+     <input class="f" type="date" id="ad-${c.id}" value="${C_iso(new Date())}"><input class="f" type="number" inputmode="numeric" id="ak-${c.id}" placeholder="km">
+     <textarea id="ai-${c.id}" placeholder="One job per line, cost at the end&#10;Oil, filters, labour 130&#10;Brake pads 80"></textarea>
+     <button class="btn" data-add="${c.id}">Save visit</button></div>
+   ${c.log.length?c.log.map(l=>`<div class="lg"><b>${fd(l.d)}</b> · ${nf(l.km)} km · ${l.items.reduce((a,i)=>a+(+i[1]||0),0)} €<ul>${l.items.map(i=>`<li>${esc(i[0])}${i[1]?' — '+i[1]+' €':''}</li>`).join('')}</ul></div>`).join(''):'<div class="lg sub">No visits logged yet.</div>'}
+  </div>`).join('');
+}
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const D=b.dataset;
+  if(D.op){const el=document.getElementById(D.op);el.classList.toggle('open');return}
+  if(D.kms){const v=parseInt(document.querySelector(`[data-km="${D.kms}"]`).value,10);if(!(v>0))return toast('Enter the km first');
+    const o=co(D.kms);o.km=v;o.kmAt=C_iso(new Date());save('Km saved')}
+  if(D.dls){const [c,id]=D.dls.split('|');const v=document.querySelector(`[data-dl="${D.dls}"]`).value;const o=co(c);o.dl=o.dl||{};o.dl[id]=v||null;save('Date saved')}
+  if(D.svs){const [c,id]=D.svs.split('|');const d=document.querySelector(`[data-svd="${D.svs}"]`).value,k=parseInt(document.querySelector(`[data-svk="${D.svs}"]`).value,10);
+    const o=co(c);o.sv=o.sv||{};o.sv[id]={last:d||null,lastKm:k>0?k:null};save('Service saved')}
+  if(D.add){const c=D.add,d=document.getElementById('ad-'+c).value,k=parseInt(document.getElementById('ak-'+c).value,10);
+    const items=document.getElementById('ai-'+c).value.split('\n').map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(/^(.*?)[\s—–-]*(\d+(?:[.,]\d+)?)\s*(?:€|eur|лв)?$/i);return m?[m[1].trim(),+m[2].replace(',','.')]:[x,0]});
+    if(!d||!items.length)return toast('Add a date and at least one job');
+    const o=co(c);o.log=o.log||[];o.log.push({d,km:k>0?k:null,items});
+    if(k>0){const car=C_cars(st).find(x=>x.id===c);if(car.km==null||k>=car.km){o.km=k;o.kmAt=d}}
+    save('Visit saved')}
+  if(b.id==='ics'){const L=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Life hub//Car//EN'];
+    const nx=s=>{const [y,m,d]=s.split('-').map(Number);return C_iso(new Date(y,m-1,d+1)).replace(/-/g,'')};
+    C_upcoming(st).forEach((u,i)=>{L.push('BEGIN:VEVENT','UID:lifehub-car-'+u.d+'-'+i+'@glukov','DTSTAMP:20261015T000000Z','DTSTART;VALUE=DATE:'+u.d.replace(/-/g,''),'DTEND;VALUE=DATE:'+nx(u.d),
+      'SUMMARY:'+((u.car?u.car+': ':'')+u.n).replace(/[,;]/g,' '),'BEGIN:VALARM','TRIGGER:-P14D','ACTION:DISPLAY','DESCRIPTION:Car reminder','END:VALARM','END:VEVENT')});
+    L.push('END:VCALENDAR');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([L.join('\r\n')],{type:'text/calendar'}));a.download='car-dates.ics';a.click()}
+});
+render();
+HubSync.onStatus(t=>document.getElementById('sy').textContent=t);
+HubSync.sync(C_KEY,localStorage.getItem(C_KEY)?st:null,d=>{st=d;localStorage.setItem(C_KEY,JSON.stringify(d));render()});
+</script>
 </body>
 </html>

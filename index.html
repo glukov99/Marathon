@@ -132,7 +132,7 @@ ul.steps li{margin:5px 0}
   <div class="panel" id="week"></div>
   <div class="mini">
     <a href="holidays/" style="grid-column:1/-1"><b id="trN">Holidays</b><span id="trS"></span></a>
-    <a href="car/"><b>Car</b><span>Not set up yet</span></a>
+    <a href="car/"><b id="carN">Car</b><span id="carS"></span></a>
     <a href="money/"><b>Money</b><span>Later</span></a>
   </div>
   <div class="panel"><div class="card-h"><h3>Sync between devices</h3></div><div class="pc">
@@ -150,6 +150,7 @@ ul.steps li{margin:5px 0}
 <script src="meals/meals-data.js"></script>
 <script src="holidays/holidays-data.js"></script>
 <script src="shared/travel.js"></script>
+<script src="car/car-data.js"></script>
 <script>
 const TKEY='season-2027-gl';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -230,13 +231,18 @@ document.addEventListener('click',e=>{const b=e.target.closest('button[data-coff
   let st={};try{st=(JSON.parse(localStorage.getItem('lifehub-holidays')||'{}').trips||{})[nx.id]||{}}catch(e){}
   document.getElementById('trN').textContent=n>0?n+' days to: '+nx.n:'Away now: '+nx.n;
   document.getElementById('trS').textContent=(st.dest?st.dest+' · ':'')+(st.status||'Idea')+' · '+d+' '+MN[m-1];})();
+function carCard(){const u=C_upcoming()[0];if(!u)return;const n=C_days(u.d);
+  document.getElementById('carN').textContent=n<=0?'Car: due now':'Car: '+n+' days';
+  document.getElementById('carS').textContent=(u.car?u.car.split(' ')[0]+' · ':'')+u.n;}
+carCard();
 (function(){const c=HubSync.cfg();document.getElementById('hUrl').value=c.url||'';document.getElementById('hTok').value=c.tok||'';
   const st=document.getElementById('syState');HubSync.onStatus(t=>st.textContent=t==='Synced'?'Synced across devices.':t);
   async function go(){if(!HubSync.on())return;st.textContent='Syncing…';
     await HubSync.sync(TKEY,localStorage.getItem(TKEY)?tGet():null,d=>{localStorage.setItem(TKEY,JSON.stringify(d))});
     await HubSync.sync('lifehub-holidays',JSON.parse(localStorage.getItem('lifehub-holidays')||'null'),d=>{localStorage.setItem('lifehub-holidays',JSON.stringify(d))});
     await HubSync.sync('lifehub-meals',JSON.parse(localStorage.getItem('lifehub-meals')||'null'),d=>{localStorage.setItem('lifehub-meals',JSON.stringify(d))});
-    train();people();}
+    await HubSync.sync('lifehub-car',JSON.parse(localStorage.getItem('lifehub-car')||'null'),d=>{localStorage.setItem('lifehub-car',JSON.stringify(d))});
+    train();people();carCard();}
   document.getElementById('hSave').addEventListener('click',()=>{const c=HubSync.cfg();c.url=document.getElementById('hUrl').value.trim();c.tok=document.getElementById('hTok').value.trim();HubSync.setCfg(c);go()});
   go();})();
 </script>
