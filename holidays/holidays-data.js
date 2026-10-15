@@ -1,24 +1,22 @@
 /* Holidays data. Shared by holidays/index.html and the life hub home page.
    Dates are inclusive. Edit here when a plan changes. */
 const H_TRIPS=[
- {id:'t1',kind:'long',n:'Trip 1: early December',from:'2026-11-30',to:'2026-12-06',tbc:true,
+ /* Plan revised 15 Oct 2026: 2 long trips a year, short breaks every 4–6 weeks, about 17 of 20 leave days. */
+ {id:'t1',kind:'short',n:'Early December trip',from:'2026-11-30',to:'2026-12-03',status:'Booked',
   phase:'Base, lighter week (training week 6)',train:'Easy runs only. Hotel upper body and circuit. No gym needed.',
-  why:'Moved from late October. Base phase, so it costs nothing.'},
- {id:'t2',kind:'long',n:'Trip 2: New Year',from:'2026-12-27',to:'2027-01-03',
-  phase:'Base, lighter week (training week 10)',train:'Easy runs, hills if there are any. Hotel circuit.',
-  why:'Includes 1 January, a double-pay day you would miss. Watch for family plans you do not control.'},
- {id:'t3',kind:'long',n:'Trip 3: active',from:'2027-01-27',to:'2027-01-31',moved:'was 19–23 Feb',
-  phase:'Build 1, lighter week (training week 14)',train:'Keep it active: hills, hiking, vert. Do the retests the week after.',
-  why:'19–23 Feb now falls in the marathon block (800s and 24 km long run). End of January is the lighter week before it.'},
- {id:'t4',kind:'long',n:'Trip 4: recovery',from:'2027-05-10',to:'2027-05-16',moved:'was 23 Apr–1 May',
-  phase:'Recovery after Bairi (training week 29)',train:'Walks and swims. Easy runs from Friday if nothing hurts.',
-  why:'23 Apr–1 May now sits between Plovdiv and Bairi, in the trail-reminder week. Right after Bairi is the real recovery window. Flat, warm, no ambition.'},
- {id:'t5',kind:'long',n:'Trip 5: reward',from:'2027-07-02',to:'2027-07-11',
+  why:'Booked: Mon 30 Nov to Thu 3 Dec. Base phase, so it costs nothing.'},
+ {id:'t3',kind:'short',n:'Active weekend',from:'2027-01-29',to:'2027-01-31',moved:'was a 5-day trip, 27–31 Jan',
+  phase:'Build 1, lighter week (training week 14)',train:'Long run on Thursday or on the trip. Keep it active: hills, hiking, vert.',
+  why:'Last lighter week before the marathon block. A weekend is enough: 1 leave day.'},
+ {id:'t4',kind:'short',n:'Recovery weekend',from:'2027-05-14',to:'2027-05-16',moved:'was 10–16 May',
+  phase:'Recovery after Bairi (training week 29)',train:'Walks and swims. Easy runs if nothing hurts.',
+  why:'Close and cheap, for example Hisarya or Velingrad. Flat, warm, no ambition. 1 leave day.'},
+ {id:'t5',kind:'long',n:'Long trip 1: reward',from:'2027-07-02',to:'2027-07-11',
   phase:'After Vitosha, reset month',train:'Nothing planned. Move for fun.',
-  why:'Plan it before June. You will not have the energy after Vitosha.'},
- {id:'t6',kind:'long',n:'Trip 6: pre-autumn',from:'2027-09-03',to:'2027-09-12',
+  why:'The main holiday of the year. Plan it before June. You will not have the energy after Vitosha.'},
+ {id:'t6',kind:'long',n:'Long trip 2: pre-autumn',from:'2027-09-07',to:'2027-09-12',moved:'was 3–12 Sep',
   phase:'5k project',train:'Easy runs and strides. Keep the strength routine.',
-  why:'Includes 6 September, a double-pay day you would miss. Option: start the trip on Tue 7 Sep. Last window before the autumn build.'},
+  why:'Starts on Tue 7 Sep, so you keep the 6 Sep double pay. 4 leave days. Last window before the autumn build.'},
  {id:'s1',kind:'short',n:'Weekend away',from:'2026-11-21',to:'2026-11-22',phase:'Base',train:'Friday long run done. Saturday is rest anyway.'},
  {id:'s2',kind:'short',n:'Weekend away',from:'2027-02-13',to:'2027-02-14',phase:'Build 1',train:'Friday long run done. Sunday: hybrid session or skip.'},
  {id:'s3',kind:'short',n:'Weekend away',from:'2027-03-06',to:'2027-03-07',phase:'Marathon block',train:'Right after the 10k test. Sunday: 30 min recovery run.'},
@@ -49,7 +47,7 @@ function H_load(){try{return JSON.parse(localStorage.getItem('lifehub-holidays')
 function H_list(st){
   const tr=((st||H_load()).trips)||{};
   return H_TRIPS.map(t=>{const o=tr[t.id]||{};
-    return Object.assign({},t,{from:o.from||t.from,to:(o.to&&o.to>=(o.from||t.from))?o.to:(o.from&&o.from>t.to?o.from:t.to),dest:o.dest||'',status:o.status||'Idea',orig:{from:t.from,to:t.to}})})
+    return Object.assign({},t,{from:o.from||t.from,to:(o.to&&o.to>=(o.from||t.from))?o.to:(o.from&&o.from>t.to?o.from:t.to),dest:o.dest||'',status:o.status||t.status||'Idea',orig:{from:t.from,to:t.to}})})
     .sort((a,b)=>a.from.localeCompare(b.from));
 }
 

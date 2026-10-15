@@ -151,7 +151,7 @@ ul.steps li{margin:5px 0}
     <div class="pc" style="padding-top:0"><div class="fld" style="grid-template-columns:1fr"><div><label for="allow">Your yearly leave allowance (days)</label><input id="allow" inputmode="numeric" style="max-width:120px"></div></div>
     <p class="sub">Counts every Mon–Fri inside a trip, public holidays included, because you work them for double pay. Change the allowance to match your contract.</p></div></div>
   <div class="panel"><h3>Long trips</h3><div id="long"></div></div>
-  <div class="panel"><h3>Short trips</h3><div class="pc" style="padding-bottom:0"><p class="sub">One a month, on a clean weekend. None in months that already have a long trip.</p></div><div id="short"></div></div>
+  <div class="panel"><h3>Short trips</h3><div class="pc" style="padding-bottom:0"><p class="sub">Short breaks every 4–6 weeks, mostly weekends by car. New Year is at home.</p></div><div id="short"></div></div>
   <div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px 0"><h3 style="padding:0">People</h3>
       <span><button class="btn ghost" id="smPrev" aria-label="Previous month" style="padding:4px 10px">‹</button> <b id="smLbl" style="display:inline-block;min-width:74px;text-align:center"></b> <button class="btn ghost" id="smNext" aria-label="Next month" style="padding:4px 10px">›</button></span></div>
     <div class="pc" style="padding-bottom:0"><p class="sub">Defaults, all movable: date nights 2nd and 4th Saturday · best man and maid of honour 1st Wednesday at your place and 3rd Saturday out · Maria and Georgi 2nd Tuesday after nursery · Grandma Vili 1st Sunday · Sammy's godparents last Sunday. Going-out plans assume Sammy stays with Iva's parents; press "Sammy at home" if he can't. Iva's parents every Sunday, not listed. Skipped is fine.</p></div>
@@ -258,7 +258,7 @@ function tripHTML(t){
 }
 function lists(){
   document.getElementById('long').innerHTML=TR.filter(t=>t.kind==='long').map(tripHTML).join('');
-  document.getElementById('short').innerHTML=TR.filter(t=>t.kind==='short').map(tripHTML).join('');
+  document.getElementById('short').innerHTML=TR.filter(t=>t.kind==='short').sort((a,b)=>a.from.localeCompare(b.from)).map(tripHTML).join('');
 }
 function social(){
   const t0=iso(today()); if(!SM)SM=t0.slice(0,7)<'2026-11'?'2026-11':t0.slice(0,7);
@@ -286,7 +286,7 @@ function ics(){
   const nx=s=>{const d=P(s);d.setDate(d.getDate()+1);return iso(d).replace(/-/g,'')};
   TR.forEach(t=>{const s=ts(t.id);L.push('BEGIN:VEVENT','UID:lifehub-'+t.id+'@glukov','DTSTAMP:20261015T000000Z',
     'DTSTART;VALUE=DATE:'+t.from.replace(/-/g,''),'DTEND;VALUE=DATE:'+nx(t.to),
-    'SUMMARY:'+(t.kind==='long'?'TRIP — ':'Weekend — ')+t.n.replace(/[,;]/g,' ')+(s.dest?' ('+s.dest.replace(/[,;]/g,' ')+')':''),
+    'SUMMARY:'+(t.kind==='long'?'TRIP — ':'Short trip — ')+t.n.replace(/[,;]/g,' ')+(s.dest?' ('+s.dest.replace(/[,;]/g,' ')+')':''),
     'DESCRIPTION:'+(t.phase+'. '+t.train).replace(/[,;]/g,' '),'TRANSP:OPAQUE','END:VEVENT')});
   SOC.filter(e=>e.status!=='skip').forEach(e=>{L.push('BEGIN:VEVENT','UID:lifehub-'+e.id+'@glukov','DTSTAMP:20261015T000000Z','DTSTART;VALUE=DATE:'+e.date.replace(/-/g,''),'DTEND;VALUE=DATE:'+nx(e.date),'SUMMARY:'+e.n.replace(/[,;]/g,' '),'TRANSP:TRANSPARENT','END:VEVENT')});
   L.push('END:VCALENDAR');
