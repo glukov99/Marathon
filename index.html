@@ -116,6 +116,7 @@ ul.steps li{margin:5px 0}
 :root{--rec:#6E9DC2;--easy:#2F7F60;--mp:#B98A22;--st:#C9702A;--hard:#8E2521;--vert:#6B4E8F;--gym:#4F5F69;--test:#1F6F8B;--swim:#3C8FA6;--race:#1B1E1A}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rec:#7FB0D6;--easy:#4FAE88;--mp:#D9AA45;--st:#E08A45;--hard:#D2584F;--vert:#A68BD0;--gym:#93A6B2;--test:#4FAACB;--swim:#5BB4CC;--race:#E8EBE5}}
 </style>
+<link rel="stylesheet" href="shared/theme.css">
 </head>
 <body>
 <nav class="hubnav" aria-label="Life hub"><a href="./" aria-current="page">Life hub</a><a href="training/">Training</a><a href="meals/">Meals</a><a href="holidays/">Holidays</a><a href="car/">Car</a><a href="money/">Money</a></nav>
@@ -126,6 +127,7 @@ ul.steps li{margin:5px 0}
     <div class="race" id="race"></div>
   </header>
   <div id="alerts"></div>
+  <div class="panel mtn" id="season"></div>
   <div class="panel" id="train"></div>
   <div class="panel" id="meals"></div>
   <div class="panel" id="people"></div>
@@ -173,6 +175,31 @@ function hero(){
   if(dI===6)al+=`<div class="note"><b>Prep day.</b> Rice, potatoes, garlic yoghurt: 30 min. <a href="meals/">Prep steps</a></div>`;
   document.getElementById('alerts').innerHTML=al;
 }
+function season(){
+  const el=document.getElementById('season'), n=W.length, Wd=360, H=120, pad=6;
+  const num=v=>{const t=String(v).replace(/[~,]/g,''),f=parseFloat(t)||0;return / h/.test(t)?f*6:f};
+  const isR=W.map(w=>/race/.test(w.km)), kmR=W.map(w=>num(w.km)), vt=W.map(w=>num(w.vert));
+  const mk=Math.max(...kmR.filter((v,i)=>!isR[i])), mv=Math.max(...vt.filter((v,i)=>!isR[i]))||1;
+  const km=kmR.map(v=>Math.min(v,mk)), vtc=vt.map(v=>Math.min(v,mv)), x=i=>pad+i*(Wd-2*pad)/(n-1);
+  const path=(arr,max,h)=>{let d=`M${x(0)},${H}`;arr.forEach((v,i)=>{const y=H-(v/max)*h;
+      if(i===0)d+=` L${x(0)},${y}`;else{const px=x(i-1),py=H-(arr[i-1]/max)*h,cx=(px+x(i))/2;d+=` C${cx},${py} ${cx},${y} ${x(i)},${y}`}});
+    return d+` L${x(n-1)},${H} Z`};
+  const cw=Math.max(0,Math.min(n-1,Math.floor((t0-START)/864e5/7))), on=t0>=START&&t0<dayDate(n-1,6);
+  const cx=x(cw), cy=H-(km[cw]/mk)*92;
+  el.innerHTML=`<div class="card-h"><h3>The season</h3><a href="training/">Plan</a></div>
+  <svg viewBox="0 0 ${Wd} ${H+18}" role="img" aria-label="Weekly volume over the 35-week season">
+    <defs><linearGradient id="gS" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E2D3BC" stop-opacity=".95"/><stop offset="1" stop-color="#C98B5E" stop-opacity=".55"/></linearGradient>
+    <linearGradient id="gT" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8FC0B6" stop-opacity=".55"/><stop offset="1" stop-color="#6E9A97" stop-opacity=".15"/></linearGradient></defs>
+    <path d="${path(vtc,mv,100)}" fill="url(#gT)"/>
+    <path d="${path(km,mk,92)}" fill="url(#gS)" opacity=".92"/>
+    ${W.map((w,i)=>isR[i]?`<circle cx="${x(i)}" cy="${H-92-10}" r="3.2" fill="#E07A63"/>`:'').join('')}
+    ${on?`<line x1="${cx}" y1="${cy-6}" x2="${cx}" y2="${H}" stroke="#18201E" stroke-width="1.5" stroke-dasharray="2 3"/><circle cx="${cx}" cy="${cy-8}" r="4.5" fill="#18201E" stroke="#E2D3BC" stroke-width="2"/>`:''}
+    <text x="${pad}" y="${H+14}" fill="#7C8A84" font-size="9">Oct</text><text x="${Wd/2}" y="${H+14}" fill="#7C8A84" font-size="9" text-anchor="middle">Plovdiv · Apr</text><text x="${Wd-pad}" y="${H+14}" fill="#7C8A84" font-size="9" text-anchor="end">Vitosha · Jun</text>
+  </svg>
+  <div class="lg"><span><i style="background:#D9A97F"></i>Km per week</span><span><i style="background:#8FC0B6"></i>Vert</span><span><i style="background:#E07A63"></i>Race</span>${on?`<span style="margin-left:auto">Week ${cw+1} of ${n}</span>`:`<span style="margin-left:auto">Starts Mon 26 Oct</span>`}</div>`;
+}
+season();
+
 function train(){
   const el=document.getElementById('train');
   if(!inSeason){
