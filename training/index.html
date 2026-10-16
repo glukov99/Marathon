@@ -183,10 +183,12 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 .hubnav a[aria-current="page"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 </style>
 <link rel="stylesheet" href="../shared/theme.css">
+<link rel="stylesheet" href="body.css">
 </head>
 <body>
 <nav class="hubnav" aria-label="Life hub"><a href="../">Life hub</a><a href="../training/" aria-current="page">Training</a><a href="../meals/">Meals</a><a href="../holidays/">Holidays</a><a href="../car/">Car</a><a href="../money/">Money</a></nav>
 <div class="wrap">
+  <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
     <div class="hero-top">
       <div class="big" id="cd">—</div>
@@ -235,6 +237,7 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 <script src="../shared/sync.js"></script>
 <script src="../holidays/holidays-data.js"></script>
 <script src="../shared/travel.js"></script>
+<script src="body.js"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -613,7 +616,7 @@ async function runSync(manual){
   syMsg('Last sync: '+c.last+'.');
 }
 function autoSync(){if(syncCfg().url)runSync(false)}
-function renderAll(){renderHero();renderWeek();renderRaces();renderGym();renderYoga();renderCh();renderZones();renderCI()}
+function renderAll(){if(window.renderBody)renderBody();renderHero();renderWeek();renderRaces();renderGym();renderYoga();renderCh();renderZones();renderCI()}
 
 /* ============ events ============ */
 document.addEventListener('click',e=>{

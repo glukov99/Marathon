@@ -175,6 +175,7 @@ function hero(){
   if(dI===6)al+=`<div class="note"><b>Prep day.</b> Rice, potatoes, garlic yoghurt: 30 min. <a href="meals/">Prep steps</a></div>`;
   document.getElementById('alerts').innerHTML=al;
 }
+
 function season(){
   const el=document.getElementById('season'), n=W.length, Wd=360, H=120, pad=6;
   const num=v=>{const t=String(v).replace(/[~,]/g,''),f=parseFloat(t)||0;return / h/.test(t)?f*6:f};

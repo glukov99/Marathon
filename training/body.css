@@ -1,0 +1,32 @@
+/* Training tab: dark glass, orange accent, glowing body (images 2 + 3). */
+:root:not(#lh):not(#tr){--paper:#0F1312;--card:#171D1B;--card2:#1E2624;--acc2:#FF8A3D;--sand:#FFB27A}
+body{background:radial-gradient(700px 500px at 50% 8%,rgba(160,210,120,.10),transparent 65%),
+  radial-gradient(800px 600px at 100% 60%,rgba(255,138,61,.07),transparent 60%),var(--paper)!important}
+.hubnav a[aria-current="page"]{background:#FF8A3D!important;color:#1A0F07!important}
+.btn{background:#FF8A3D!important;color:#1A0F07!important}
+#bodyhub{padding:18px 0 4px}
+.bh-hello{font-size:13px;color:var(--soft)}
+.bh-head{margin:4px 0 2px;font:800 clamp(24px,6.6vw,32px)/1.12 'Manrope',sans-serif;letter-spacing:-.02em}
+.bh-sub{font-size:13.5px;color:var(--soft)}
+.bh-stage{position:relative;margin-top:6px}
+.bh-stage svg{display:block;width:100%;height:auto;overflow:visible}
+.bh-node{cursor:pointer}
+.bh-node text{font-family:'Manrope',sans-serif}
+.bh-flip{position:absolute;right:0;top:0;border:0;border-radius:14px;padding:5px 11px;font:700 12px 'Manrope',sans-serif;
+  background:rgba(255,255,255,.07);color:var(--ink);cursor:pointer}
+.bh-score{text-align:center;margin-top:-4px}
+.bh-score .n{font:300 68px/1 'Manrope',sans-serif;letter-spacing:-.04em;color:#CFE8A8}
+.bh-score .l{font-size:14px;color:var(--ink);margin-top:2px}
+.bh-score .x{font-size:12.5px;color:var(--soft);margin-top:4px}
+.bh-pop{margin:10px 0 0;border-radius:18px;background:rgba(255,255,255,.05);padding:12px 14px;font-size:13.5px}
+.bh-pop b{display:block;margin-bottom:4px}
+.bh-pop div{display:flex;gap:8px;padding:3px 0;color:var(--soft)}
+.bh-pop div.on{color:var(--ink)}
+.today-card{margin-top:16px;border-radius:24px;padding:16px;display:flex;gap:14px;align-items:center;
+  background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,.02));box-shadow:0 12px 30px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.today-card svg{flex:0 0 108px;width:108px;height:auto}
+.today-card .k{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.today-card .t{font:800 19px/1.2 'Manrope',sans-serif;margin:3px 0}
+.today-card .d{font-size:13px;color:var(--soft)}
+.today-card .also{font-size:12.5px;color:var(--soft);margin-top:6px}
