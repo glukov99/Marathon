@@ -62,22 +62,23 @@ async function bhFetch(){
 }
 try{BH.well=JSON.parse(localStorage.getItem('lifehub-wellness')||'null')}catch(e){}
 
+/* Body drawn from the traced chart (body-shapes.js). Fit: 395 px tall, centred at x=180. */
+const BH_ANCH={front:{swim:[179,236],str:[161,323],mob:[262,470],rec:[318,80],run:[346,596],vert:[393,810]},
+  back:{swim:[111,238],str:[171,308],mob:[181,495],rec:[254,80],run:[287,622],vert:[320,798]}};
+function bhFit(view){const B=BH_SHAPES[view].box,s=395/B[3];return {s,tx:180-(B[0]+B[2]/2)*s,ty:4-B[1]*s}}
+function bhAnchor(view,k){const f=bhFit(view),p=BH_ANCH[view][k];return [p[0]*f.s+f.tx,p[1]*f.s+f.ty]}
 function bhBodySVG(load,view){
-  const g=m=>Math.min(1,(load[m]||0)/1.6);
-  const M=(m,shape)=>{const v=g(m);return `<g opacity="${(.12+.88*v).toFixed(2)}">${shape.replace(/FILL/g,v>.05?'url(#bhHot)':'rgba(190,230,150,.10)')}</g>`};
-  const E=(cx,cy,rx,ry,r)=>`<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="FILL"${r?` transform="rotate(${r} ${cx} ${cy})"`:''}/>`;
-  const pair=(cx,cy,rx,ry,r)=>E(100-cx,cy,rx,ry,r?-r:0)+E(100+cx,cy,rx,ry,r||0);
-  const front=M('shoulders',pair(38,82,10,9))+M('chest',pair(14,93,14,10))+M('abs','<rect x="89" y="106" width="22" height="46" rx="9" fill="FILL"/>')
-    +M('obliques',pair(24,128,7,17))+M('arms',pair(48,114,6,14,8)+pair(55,160,5,16,6))+M('quads',pair(16,240,11,33,3))+M('calves',pair(17,325,7,26));
-  const backV=M('shoulders',pair(38,82,10,9))+M('back','<ellipse cx="100" cy="74" rx="22" ry="8" fill="FILL"/>'+pair(17,112,15,24,-6))
-    +M('lowerback','<rect x="88" y="140" width="24" height="30" rx="9" fill="FILL"/>')+M('arms',pair(48,116,6,14,8))
-    +M('glutes',pair(13,198,13,14))+M('hams',pair(16,246,10,30,3))+M('calves',pair(17,318,8,25));
-  const sil=`<path d="M100,14 a17,20 0 1,1 -0.1,0 Z M92,52 h16 v14 h-16 Z
-    M70,70 Q100,62 130,70 L138,80 Q143,120 133,150 L129,190 Q100,201 71,190 L67,150 Q57,120 62,80 Z
-    M62,76 Q47,80 45,100 L39,150 Q35,176 38,204 L47,204 Q50,176 54,150 L61,112 Z M138,76 Q153,80 155,100 L161,150 Q165,176 162,204 L153,204 Q150,176 146,150 L139,112 Z
-    M72,188 Q69,232 74,272 L76,300 Q73,342 78,384 L93,384 Q95,342 95,300 L98,242 L100,198 Z M128,188 Q131,232 126,272 L124,300 Q127,342 122,384 L107,384 Q105,342 105,300 L102,242 L100,198 Z"
-    fill="url(#bhSkin)" stroke="rgba(200,240,150,.45)" stroke-width="1" filter="url(#bhEdge)"/>`;
-  return sil+`<g filter="url(#bhGlow)">${view==='front'?front:backV}</g>`;
+  const V=BH_SHAPES[view],f=bhFit(view),g=m=>Math.min(1,(load[m]||0)/1.6);
+  const L={...load};if(L.obliques)L.abs=(L.abs||0)+L.obliques*.5;if(L.lowerback)L.back=(L.back||0)+L.lowerback*.5;
+  const val=m=>Math.min(1,(L[m]||0)/1.6);
+  let base='',hot='',crisp='';
+  Object.entries(V.m).forEach(([m,ps])=>{const v=val(m),d=ps.join(' ');
+    base+=`<path d="${d}" fill="rgba(190,232,150,.09)" stroke="rgba(190,232,150,.30)" stroke-width="1.6"/>`;
+    if(v>.05){hot+=`<path d="${d}" fill="#FF8A3D" opacity="${(v*.9).toFixed(2)}"/>`;
+      crisp+=`<path d="${d}" fill="url(#bhHot)" opacity="${(.25+.75*v).toFixed(2)}" stroke="rgba(255,200,140,.6)" stroke-width="1.4"/>`}});
+  return `<g transform="translate(${f.tx.toFixed(1)},${f.ty.toFixed(1)}) scale(${f.s.toFixed(4)})">
+    <path d="${V.sil}" fill="url(#bhSkin)" stroke="rgba(200,240,150,.55)" stroke-width="2.4" filter="url(#bhEdge)"/>
+    ${base}<g filter="url(#bhGlow)">${hot}</g>${crisp}</g>`;
 }
 function renderBody(){
   const el=document.getElementById('bodyhub');if(!el)return;
@@ -90,24 +91,25 @@ function renderBody(){
   const pct=k=>c[k][1]?Math.round(c[k][0]/c[k][1]*100):null;
   const sleepP=R&&R.sleep7?Math.min(100,Math.round(R.sleep7/8*100)):null;
   const nodes=[
-    {k:'swim',n:'SWIM',x:38,y:70,to:[142,82],v:pct('swim')},
-    {k:'str',n:'STRENGTH',x:38,y:180,to:[130,140],v:pct('str')},
-    {k:'mob',n:'MOBILITY',x:38,y:295,to:[160,196],v:pct('mob')},
-    {k:'rec',n:'RECOVERY',x:322,y:70,to:[196,36],v:sleepP,lbl:R&&R.sleep7?R.sleep7.toFixed(1)+'h':'—'},
-    {k:'run',n:'RUN',x:322,y:200,to:[198,236],v:pct('run')},
-    {k:'vert',n:'VERT',x:322,y:315,to:[198,322],v:pct('vert')}];
+    {k:'swim',n:'SWIM',x:38,y:70,v:pct('swim')},
+    {k:'str',n:'STRENGTH',x:38,y:180,v:pct('str')},
+    {k:'mob',n:'MOBILITY',x:38,y:295,v:pct('mob')},
+    {k:'rec',n:'RECOVERY',x:322,y:70,v:sleepP,lbl:R&&R.sleep7?R.sleep7.toFixed(1)+'h':'—'},
+    {k:'run',n:'RUN',x:322,y:200,v:pct('run')},
+    {k:'vert',n:'VERT',x:322,y:315,v:pct('vert')}];
+  nodes.forEach(n=>n.to=bhAnchor(BH.view,n.k));
   const ring=(v)=>{const C=2*Math.PI*19,p=v==null?0:v/100;return `<circle r="19" fill="rgba(15,19,18,.9)" stroke="rgba(255,255,255,.10)" stroke-width="3"/>
     <circle r="19" fill="none" stroke="${p>=1?'#CFE8A8':'#FF8A3D'}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(C*p).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90)"/>`};
   const svg=`<svg viewBox="0 0 360 420" role="img" aria-label="Body map: muscles worked in the last 7 days, and this week's progress by type">
     <defs>
-      <radialGradient id="bhHot"><stop offset="0" stop-color="#FFD08A"/><stop offset=".55" stop-color="#FF8A3D"/><stop offset="1" stop-color="#FF8A3D" stop-opacity="0"/></radialGradient>
-      <linearGradient id="bhSkin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A3A2E"/><stop offset="1" stop-color="#151C18"/></linearGradient>
-      <filter id="bhGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.2"/></filter>
+      <radialGradient id="bhHot"><stop offset="0" stop-color="#FFD9A0"/><stop offset=".6" stop-color="#FF9A4D"/><stop offset="1" stop-color="#F0702A"/></radialGradient>
+      <linearGradient id="bhSkin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26332B"/><stop offset="1" stop-color="#121815"/></linearGradient>
+      <filter id="bhGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
       <filter id="bhEdge" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceAlpha" stdDeviation="2" result="b"/><feFlood flood-color="#BFE88A" flood-opacity=".35"/><feComposite in2="b" operator="in" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     </defs>
     <ellipse cx="180" cy="396" rx="70" ry="9" fill="rgba(191,232,138,.10)"/>
-    ${nodes.map(n=>`<line x1="${n.x}" y1="${n.y}" x2="${n.to[0]}" y2="${n.to[1]}" stroke="rgba(191,232,138,.28)" stroke-width="1"/><circle cx="${n.to[0]}" cy="${n.to[1]}" r="2.6" fill="#CFE8A8"/>`).join('')}
-    <g transform="translate(80,0)">${bhBodySVG(load,BH.view)}</g>
+    ${bhBodySVG(load,BH.view)}
+    ${nodes.map(n=>`<line x1="${n.x}" y1="${n.y}" x2="${n.to[0]}" y2="${n.to[1]}" stroke="rgba(191,232,138,.38)" stroke-width="1"/><circle cx="${n.to[0]}" cy="${n.to[1]}" r="2.6" fill="#CFE8A8"/>`).join('')}
     ${nodes.map(n=>`<g class="bh-node" data-node="${n.k}" transform="translate(${n.x},${n.y})" tabindex="0" role="button" aria-label="${n.n}: ${n.lbl||(n.v==null?'nothing planned':n.v+'% done')}">${ring(n.v)}
       <text y="4.5" text-anchor="middle" font-size="12" font-weight="800" fill="#E8ECE6">${n.lbl||(n.v==null?'—':n.v+'%')}</text>
       <text y="34" text-anchor="middle" font-size="9" font-weight="700" letter-spacing=".08em" fill="#A7B4AD">${n.n}</text></g>`).join('')}
