@@ -84,8 +84,8 @@ function renderBody(){
   const el=document.getElementById('bodyhub');if(!el)return;
   const load=bhLoad(),{c,items}=bhWeek(),R=bhReady(),t0=today0(),h=new Date().getHours();
   const hello=(h<12?'Good morning':h<18?'Good afternoon':'Good evening')+', Georgi';
-  let head='Your body is ready to train.',sub='Connect wellness data to see your readiness.';
-  if(R){head=R.score>=80?'Your body is doing well today.':R.score>=65?'A normal day. Train as planned.':R.score>=50?'Take it a bit easier today.':'Your body needs rest today.';
+  let head='No readiness data yet.',sub='Connect wellness data to see your readiness.';
+  if(R){head=R.score>=80?'Your numbers look strong today.':R.score>=65?'Your numbers look normal today.':R.score>=50?'Your numbers are a bit low today.':'Your numbers are low today.';
     sub=[R.last.hrv!=null&&R.H?`HRV ${R.last.hrv} ms (normal ${Math.round(R.H.m)})`:'',R.last.rhr!=null&&R.R?`Resting HR ${R.last.rhr} (normal ${Math.round(R.R.m)})`:'',
       R.last.sleepH!=null?`Sleep ${R.last.sleepH} h${R.last.sleepScore?' · score '+R.last.sleepScore:''}`:''].filter(Boolean).join(' · ');}
   const pct=k=>c[k][1]?Math.round(c[k][0]/c[k][1]*100):null;
@@ -134,7 +134,7 @@ function renderBody(){
   else if(n<0)today=`<div class="today-card"><div><div class="k">Today</div><div class="t">Rest until Sun 25 Oct</div><div class="d">Yoga and easy swims only. Base starts Mon 26 Oct.</div></div></div>`;
   el.innerHTML=`<div class="bh-hello">${hello}</div><div class="bh-head">${head}</div><div class="bh-sub">${sub}</div>
     <div class="bh-stage">${svg}<button class="bh-flip" id="bhFlip">${BH.view==='front'?'Show back':'Show front'}</button></div>
-    <div class="bh-score"><div class="n">${R?R.score:'—'}</div><div class="l">Readiness</div><div class="x">${R?'Garmin data for '+R.date.split('-').reverse().slice(0,2).join('.'):'Needs the wellness update in Apps Script'}</div></div>${pop}${today}`;
+    <div class="bh-score"><div class="n">${R?R.score:'—'}</div><div class="l">Readiness</div><div class="x">${R?'Garmin data for '+R.date.split('-').reverse().slice(0,2).join('.')+'. How you feel comes first.':'Needs the wellness update in Apps Script'}</div></div>${pop}${today}`;
 }
 document.addEventListener('click',e=>{
   if(e.target.closest('#bhFlip')){BH.view=BH.view==='front'?'back':'front';renderBody();return}
