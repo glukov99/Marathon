@@ -64,23 +64,25 @@ function render() {
 
   const rows = data.tx.filter(t => t.d.startsWith(month) && (owner === 'All' || t.own === owner));
 
-  // Totals in EUR only. GBP rows are listed but not added.
-  let spent = 0, big = 0, inc = 0, saved = 0, gl = 0;
+  // Totals in EUR only. Out and in are kept apart, never netted.
+  let out = 0, back = 0, big = 0, inc = 0, saved = 0, gl = 0;
   const cats = {};
   rows.filter(t => t.c === 'EUR').forEach(t => {
-    if (t.acc === 'Savings') { saved += t.a; return; } // money in/out of the Revolut savings account
-    if (t.cat === 'Income') { inc += t.a; return; }
-    if (t.cat === 'Savings') { saved -= t.a; return; }
-    if (t.cat === 'Transfer') return;
-    if (t.cat === 'GL Studio') { gl -= t.a; return; }
-    const k = t.cat || 'Uncategorised';
-    cats[k] = (cats[k] || 0) - t.a;
-    if (k === 'Big purchase') big -= t.a; else spent -= t.a;
+    const cn = (t.cat || '').trim().toLowerCase();
+    if (t.acc === 'Savings') { saved += t.a; return; } // Revolut savings account
+    if (cn === 'income') { inc += t.a; return; }
+    if (cn === 'savings') { saved -= t.a; return; }
+    if (cn === 'transfer') return;
+    if (cn === 'gl studio') { gl -= t.a; return; }
+    if (cn === 'big purchase') { big -= t.a; return; }
+    const k = t.cat ? t.cat.trim() : 'Uncategorised';
+    const c = cats[k] || (cats[k] = { out: 0, in: 0 });
+    if (t.a < 0) { c.out -= t.a; out -= t.a; } else { c.in += t.a; back += t.a; }
   });
 
-  const stat = (l, v, cls) => `<div class="stat"><div class="l">${l}</div><div class="v ${cls || ''}">${v}</div></div>`;
+  const stat = (l, v, cls, sub) => `<div class="stat"><div class="l">${l}</div><div class="v ${cls || ''}">${v}</div>${sub ? `<div class="s">${sub}</div>` : ''}</div>`;
   $('#stats').innerHTML =
-    stat('Spent', money(spent)) +
+    stat('Spent', money(out), '', back > 0 ? money(back) + ' paid back' : '') +
     (big > 0 ? stat('Big purchases', money(big)) : '') +
     stat('Saved', money(saved), saved >= 0 ? 'pos' : '') +
     stat('In', money(inc), 'pos') +
@@ -93,18 +95,21 @@ function render() {
 }
 
 function renderCats(cats) {
-  const list = Object.entries(cats).filter(([k, v]) => v > 0.005 && k !== 'Big purchase').sort((a, b) => b[1] - a[1]);
-  const max = list.length ? list[0][1] : 1;
-  const total = list.reduce((s, [, v]) => s + v, 0);
+  const list = Object.entries(cats).filter(([, v]) => v.out > 0.005 || v.in > 0.005)
+    .sort((a, b) => b[1].out - a[1].out);
+  const max = Math.max(1, ...list.map(([, v]) => Math.max(v.out, v.in)));
+  const total = list.reduce((s, [, v]) => s + v.out, 0) || 1;
   $('#cats').innerHTML = list.length ? list.map(([k, v]) => `
     <button class="cat${catFilter === k ? ' on' : ''}" data-cat="${esc(k)}">
-      <div class="row"><b>${esc(k)}</b><span>${money(v)} · ${Math.round(v / total * 100)}%</span></div>
-      <div class="tr"><i style="width:${(v / max * 100).toFixed(1)}%"></i></div>
+      <div class="row"><b>${esc(k)}</b><span>${money(v.out)} out${v.out ? ' · ' + Math.round(v.out / total * 100) + '%' : ''}</span></div>
+      <div class="tr"><i style="width:${(v.out / max * 100).toFixed(1)}%"></i></div>
+      ${v.in > 0.005 ? `<div class="row in"><span></span><span>${money(v.in)} in</span></div>
+      <div class="tr"><i class="inb" style="width:${(v.in / max * 100).toFixed(1)}%"></i></div>` : ''}
     </button>`).join('') : '<p class="sub">No spending this month.</p>';
 }
 
 function renderTx(rows) {
-  const shown = catFilter ? rows.filter(t => (t.cat || 'Uncategorised') === catFilter) : rows;
+  const shown = catFilter ? rows.filter(t => (t.cat ? t.cat.trim() : 'Uncategorised').toLowerCase() === catFilter.toLowerCase()) : rows;
   $('#txH').textContent = catFilter ? catFilter : 'Transactions';
   $('#txClear').classList.toggle('hidden', !catFilter);
   $('#tx').innerHTML = shown.length ? shown.map(t => {
