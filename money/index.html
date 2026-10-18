@@ -89,7 +89,7 @@ ul.steps li{margin:5px 0}
 .hubnav a{flex-shrink:0;font-size:13px;font-weight:600;text-decoration:none;color:var(--soft);padding:5px 11px;border-radius:14px;border:1px solid var(--rule)}
 .hubnav a[aria-current="page"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610182129">
+<link rel="stylesheet" href="../shared/theme.css?v=202610182147">
 <style>
 .mbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .mbar b{font-size:19px;font-weight:800}
@@ -103,6 +103,9 @@ ul.steps li{margin:5px 0}
 .inc{color:#7FB0E0}.exp{color:var(--big)}.mv{color:var(--faint)}
 #tabs{position:sticky;top:env(safe-area-inset-top,0px);margin-top:8px}
 #tabs button{flex:1;font-size:15px}
+#tabs button[hidden]{display:none}
+/* Five tabs do not fit at phone width at 15px, so shrink only in that case. */
+#tabs.five button{font-size:13px;padding-left:2px;padding-right:2px}
 .day{background:var(--card);border-radius:16px;margin-top:12px;overflow:hidden;box-shadow:var(--shadow)}
 .dh{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--rule)}
 .dh b{font-size:22px;font-weight:800;min-width:30px}
@@ -163,11 +166,11 @@ ul.steps li{margin:5px 0}
   <div id="main" class="hidden">
     <div class="mbar"><button class="btn ghost" id="mPrev" aria-label="Previous">‹</button><b id="mLabel"></b><button class="btn ghost" id="mNext" aria-label="Next">›</button></div>
     <div class="sum" id="sum"></div>
-    <nav id="tabs"><button data-t="accounts">Accounts</button><button data-t="daily">Daily</button><button data-t="monthly">Monthly</button><button data-t="stats">Stats</button></nav>
+    <nav id="tabs"><button data-t="accounts">Accounts</button><button data-t="daily">Daily</button><button data-t="monthly">Monthly</button><button data-t="stats">Stats</button><button data-t="business" hidden>Business</button></nav>
     <div id="view"></div>
   </div>
 </div>
-<script src="../shared/sync.js?v=202610182129"></script>
-<script src="app.js?v=202610182129"></script>
+<script src="../shared/sync.js?v=202610182147"></script>
+<script src="app.js?v=202610182147"></script>
 </body>
 </html>

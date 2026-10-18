@@ -10,7 +10,10 @@ const sfmt = (n, cur) => (n < 0 ? '−' : '') + fmt(n, cur);
 const PAL = ['#E07A63', '#D99A6C', '#E2C46B', '#B9C46B', '#7FB98A', '#6E9A97', '#8FC0B6', '#9DB6C4', '#8A9BD0', '#B58AC9', '#C98BA0', '#A7B4AD'];
 const MON = m => new Date(m + '-01T12:00').toLocaleDateString('en-GB', { month: 'short' });
 let data = null, month = null, owner = 'All', tab = 'accounts', statKind = 'exp', drill = null;
-const OWNERS = ['All', 'Personal', 'Joint', 'Business'];
+const OWNERS = ['All', 'Personal', 'Joint'];
+// The company is a separate entity, so it gets its own tab rather than being a
+// filter over personal money. "All" above never includes it.
+const businessRows = () => data.tx.filter(t => t.own === 'Business');
 
 const apiUrl = () => ((window.HubSync && HubSync.cfg()) || {}).url || '';
 const token = () => { try { return localStorage.getItem(TKEY) || ''; } catch (e) { return ''; } };
@@ -114,7 +117,8 @@ function render() {
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.t === tab)));
   document.querySelectorAll('#own button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.o === owner)));
 
-  const period = mine().filter(t => t.d.startsWith(yearly ? year : month));
+  const period = (tab === 'business' ? businessRows() : mine())
+    .filter(t => t.d.startsWith(yearly ? year : month));
   const s = totals(period), g = totals(period, 'GBP');
   $('#sum').innerHTML =
     `<div><span>Income</span><b class="inc">${fmt(s.inc)}</b></div>` +
@@ -126,7 +130,14 @@ function render() {
         `<div class="g"><span>GBP total</span><b>${sfmt(g.net, 'GBP')}</b></div>`
       : '');
 
-  if (tab === 'daily') renderDaily(period);
+  const hasBusiness = businessRows().length > 0;
+  const bTab = document.querySelector('#tabs button[data-t="business"]');
+  if (bTab) bTab.hidden = !hasBusiness;
+  $('#tabs').classList.toggle('five', hasBusiness);
+  if (!hasBusiness && tab === 'business') tab = 'accounts';
+
+  if (tab === 'business') renderBusiness(period);
+  else if (tab === 'daily') renderDaily(period);
   else if (tab === 'monthly') renderMonthly(year);
   else if (tab === 'stats') drill ? renderDrill(period) : renderStats(period);
   else renderAccounts(period);
@@ -228,6 +239,22 @@ function renderDrill(rows) {
     <div class="dhd"><button class="btn ghost" data-act="back">‹ Back</button><h3>${esc(drill)}</h3></div>
     <div class="card">${trend(pts)}</div>
     ${dayList(list)}`;
+}
+
+// ===== Business =====
+// The company account. Same month switcher and the same day list as the rest of
+// the page; the summary above already shows its own income and expenses,
+// because render() hands this tab the business rows.
+function renderBusiness(rows) {
+  const b = data.balances && data.balances.accounts
+    ? data.balances.accounts.filter(a => a.own === 'Business') : [];
+  const bal = b.map(a => `<div class="arow"><span>${esc(a.account)}${a.error ? ' <small class="warn">needs re-approval</small>' : ''}</span>` +
+    `<span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}</span></div>`).join('');
+  $('#view').innerHTML =
+    (bal ? `<div class="card">${bal}</div>` : '') +
+    `<div class="card"><div class="arow"><span>Rows this period</span><b>${rows.length}</b></div>
+      <div class="note2">GL Studio 99 EOOD is a separate company, so it is never counted in your own income or expenses. Money it pays you shows as income on the personal side.</div></div>` +
+    dayList(rows);
 }
 
 // ===== Accounts =====
