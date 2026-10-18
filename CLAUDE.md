@@ -10,6 +10,7 @@ Full project context (private, outside this repo):
 ## Quick rules
 - Push: `python3 bump.py && git add -A && git commit -m "..." && git push`. Always run `bump.py` first (cache-busting).
 - Shared files: `shared/theme.css`, `shared/sync.js`, `shared/travel.js`.
+- Checks (no network): `node money/classify-check.js`, `node money/year-check.js`. Run them after touching `money/app.js`.
 - Backend changes go in `../lifehub-script` (clasp, personal user). See the private file.
 - `index.html` finishes a bank approval: the bank app lands on `/?code=&state=`, the page sends it to `connect=redirect`, shows the result and drops the code from the URL. The Money page starts one with the **Approve** buttons on the Accounts tab.
 - Reply style: short, plain language (ASD-STE100), direct and honest.
