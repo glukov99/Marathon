@@ -300,11 +300,11 @@ function renderAccounts(rows) {
       <div class="arow"><span>Net into Flexible Cash Funds this month</span><b>${sfmt(saved)}</b></div>
       <div class="arow"><span>Interest from Flexible Cash Funds this month</span><b>${sfmt(rows.filter(t => t._fund).reduce((a, t) => a + t.a, 0))}</b></div>
       <div class="arow"><span>Net into gift fund this month</span><b>${sfmt(gift)}</b></div>
+      <div class="note2">Moves between your own accounts are not counted as income or expenses. Only the fund interest is income.</div>
     </div>
     <div class="card">
       ${bankFresh()}
       <div class="note2">UniCredit sessions expire within hours. Approve personal, then business, and sync at least once a month. Each sync looks back 90 days, so nothing is lost.</div>
-      <div class="note2">Moves between your own accounts are not counted as income or expenses. Only the fund interest is income.</div>
     </div>
     <div class="chips" id="own2">${OWNERS.map(o => `<button data-act="owner" data-o="${o}" aria-pressed="${o === owner}">${o}</button>`).join('')}</div>
     <p class="foot">${consent}</p>
