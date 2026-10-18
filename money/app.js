@@ -9,7 +9,7 @@ const fmt = (n, cur) => (cur === 'GBP' ? '£' : '€') + Math.abs(n).toLocaleStr
 const sfmt = (n, cur) => (n < 0 ? '−' : '') + fmt(n, cur);
 const PAL = ['#E07A63', '#D99A6C', '#E2C46B', '#B9C46B', '#7FB98A', '#6E9A97', '#8FC0B6', '#9DB6C4', '#8A9BD0', '#B58AC9', '#C98BA0', '#A7B4AD'];
 const MON = m => new Date(m + '-01T12:00').toLocaleDateString('en-GB', { month: 'short' });
-let data = null, month = null, owner = 'All', tab = 'accounts', statKind = 'exp', drill = null, yearCat = null, yearCell = null;
+let data = null, month = null, owner = 'All', tab = 'accounts', statKind = 'exp', drill = null, yearCat = null, yearCell = null, yearKind = 'exp';
 const OWNERS = ['All', 'Personal', 'Joint'];
 // The company is a separate entity, so it gets its own tab rather than being a
 // filter over personal money. "All" above never includes it.
@@ -213,24 +213,27 @@ const z12 = () => new Array(12).fill(0);
 
 function yearData(rows, year) {
   const inYear = eur(rows).filter(t => t.d.startsWith(year));
-  const inc = z12(), exp = z12(), cats = {}, has = new Array(12).fill(false);
+  const inc = z12(), exp = z12(), cats = {}, icats = {}, has = new Array(12).fill(false);
   inYear.forEach(t => {
     const i = mIdx(t);
     if (t._k === 'inc' || t._k === 'exp') has[i] = true;
-    if (t._k === 'inc') inc[i] += t.a;
-    else if (t._k === 'exp') {
+    if (t._k === 'inc') {
+      inc[i] += t.a;
+      (icats[t._cat] = icats[t._cat] || z12())[i] += t.a;
+    } else if (t._k === 'exp') {
       exp[i] -= t.a;
       (cats[t._cat] = cats[t._cat] || z12())[i] -= t.a;
     }
   });
-  const list = Object.entries(cats)
+  const rank = o => Object.entries(o)
     .map(([cat, months]) => ({ cat, months, total: months.reduce((a, b) => a + b, 0) }))
     .sort((a, b) => b.total - a.total);
+  const list = rank(cats);
   const net = inc.map((v, i) => v - exp[i]);
   // Months with any activity, so a part year is not read as twelve months.
   const live = inYear.length ? inYear.map(mIdx) : [];
   const from = live.length ? Math.min(...live) : 0, to = live.length ? Math.max(...live) : -1;
-  return { year, inc, exp, net, cats: list, from, to, has,
+  return { year, inc, exp, net, cats: list, incCats: rank(icats), from, to, has,
     total: list.reduce((a, c) => a + c.total, 0), months: to - from + 1 };
 }
 
@@ -283,25 +286,49 @@ function heatCell(v, max, cls) {
   return `<span class="yc ${cls}" style="opacity:${o.toFixed(2)}"></span>`;
 }
 
+const Y_KINDS = [['net', 'Net'], ['exp', 'Expenses'], ['inc', 'Income']];
+
 function yearGrid(d, tx) {
-  if (!d.cats.length) return '<div class="empty">Nothing spent in this year.</div>';
+  if (!d.cats.length && !d.incCats.length) return '<div class="empty">Nothing in this year.</div>';
   // Average over the months the year actually holds, not over twelve, or a part
   // year would read as if the quiet months were spending nothing.
   const per = n => n / Math.max(d.months, 1);
   const head = `<div class="ygh"><span></span>${M_INIT.map((m, i) =>
     `<span class="${i < d.from || i > d.to ? 'off' : ''}">${m}</span>`).join('')}` +
     `<span class="yt">Total</span><span class="yt">Avg</span></div>`;
-  const netMax = Math.max(...d.net.map(Math.abs), 1);
-  const netTotal = d.net.reduce((a, b) => a + b, 0);
-  const netRow = `<div class="yr net"><span class="yn">Net</span>${d.net.map((v, i) =>
-    i < d.from || i > d.to ? '<span class="yc z"></span>' : heatCell(Math.abs(v), netMax, v >= 0 ? 'up' : 'dn')).join('')}` +
-    `<span class="yt">${sfmt0(netTotal)}</span><span class="yt av">${sfmt0(per(netTotal))}</span></div>`;
-  const rows = d.cats.map(c => {
+  const chips = `<div class="chips yk">${Y_KINDS.map(([k, label]) =>
+    `<button data-act="ykind" data-k="${k}" aria-pressed="${yearKind === k}">${label}</button>`).join('')}</div>`;
+
+  // One summary row: twelve cells, the year total, and the average per month with
+  // data. The Net row has no average on purpose: an average net month says nothing.
+  const sumRow = (label, arr, cls, avg) => {
+    const max = Math.max(...arr.map(Math.abs), 1);
+    const tot = arr.reduce((a, b) => a + b, 0);
+    return `<div class="yr net"><span class="yn">${label}</span>` +
+      arr.map((v, i) => (i < d.from || i > d.to
+        ? '<span class="yc z"></span>'
+        : heatCell(Math.abs(v), max, typeof cls === 'function' ? cls(v) : cls))).join('') +
+      `<span class="yt">${sfmt0(tot)}</span><span class="yt av">${avg ? sfmt0(per(tot)) : ''}</span></div>`;
+  };
+
+  if (yearKind === 'net') {
+    return `<div class="yg">${chips}${head}` +
+      sumRow('Income', d.inc, 'up', true) +
+      sumRow('Expenses', d.exp, 'ex', true) +
+      `<div class="ysep"></div>` + sumRow('Net', d.net, v => (v >= 0 ? 'up' : 'dn'), false) +
+      `</div><div class="note2">Money in, money out and what was left, month by month. ` +
+      `Tap Expenses or Income above for the categories behind them. EUR only.</div>`;
+  }
+
+  const kind = yearKind === 'inc' ? d.incCats : d.cats;
+  if (!kind.length) return `<div class="yg">${chips}</div>` +
+    `<div class="empty">No ${yearKind === 'inc' ? 'money in' : 'spending'} in this year.</div>`;
+  const rows = kind.map(c => {
     const max = Math.max(...c.months);
     const open = yearCat === c.cat;
     return `<button class="yr${open ? ' open' : ''}" data-act="ycat" data-c="${esc(c.cat)}">` +
       `<span class="yn">${esc(c.cat)}</span>` +
-      c.months.map(v => heatCell(v, max, 'ex')).join('') +
+      c.months.map(v => heatCell(v, max, yearKind === 'inc' ? 'up' : 'ex')).join('') +
       `<span class="yt">${fmt0(c.total)}</span><span class="yt av">${fmt0(per(c.total))}</span></button>` +
       (open ? `<div class="ym">${c.months.map((v, i) => v
         ? `<button class="ymb${yearCell === i ? ' on' : ''}" data-act="ycell" data-i="${i}">` +
@@ -312,7 +339,7 @@ function yearGrid(d, tx) {
           : '')
         : '');
   }).join('');
-  return `<div class="yg">${head}${netRow}<div class="ysep"></div>${rows}</div>` +
+  return `<div class="yg">${chips}${head}${rows}</div>` +
     `<div class="note2">Shading is each category against its own best month, so a small one still shows its shape. Tap a row for the months, then a month for what is in it. Avg is per month with data (${d.months} this year). EUR only.</div>`;
 }
 
@@ -504,6 +531,7 @@ $('#view').addEventListener('click', e => {
   else if (act === 'owner') { owner = b.dataset.o; }
   else if (act === 'ycat') { yearCat = yearCat === b.dataset.c ? null : b.dataset.c; yearCell = null; }
   else if (act === 'ycell') { const i = +b.dataset.i; yearCell = yearCell === i ? null : i; }
+  else if (act === 'ykind') { yearKind = b.dataset.k; yearCat = null; yearCell = null; }
   else if (act === 'approve') { startApproval(b.dataset.bank, b.dataset.psu, b); return; }
   else if (act === 'forget') { if (confirm('Remove the Money token and saved data from this device?')) forget(); return; }
   render();
