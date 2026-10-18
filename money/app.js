@@ -23,15 +23,15 @@ function show(id) {
 function classify(t) {
   if (t.c !== 'EUR') return { k: 'other', cat: t.cat || '' };
   if (t._fund) return { k: 'inc', cat: 'Interest' };
-  const cn = (t.cat || '').trim().toLowerCase();
+  const ct = (t.cat || '').trim(), cn = ct.toLowerCase();
   if (t.acc === 'Gifts') {
     if (t.a > 0 || cn === 'transfer') return { k: 'move', cat: 'Gift fund' };
     return { k: 'exp', cat: 'Gifts' };
   }
   if (cn === 'transfer') return { k: 'move', cat: 'Transfer' };
   if (cn === 'savings') return { k: 'save', cat: 'Savings' };
-  if (t.a > 0) return { k: 'inc', cat: cn === 'income' ? 'Income' : 'Paid back' };
-  return { k: 'exp', cat: t.cat ? t.cat.trim() : 'Uncategorised' };
+  if (t.a > 0) return { k: 'inc', cat: cn === 'income' ? 'Income' : ct || 'Uncategorised' };
+  return { k: 'exp', cat: ct || 'Uncategorised' };
 }
 // Fund interest: one income row per month from the statement, only for months the bank data covers.
 function fundRows(j) {
