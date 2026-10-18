@@ -285,24 +285,29 @@ function heatCell(v, max, cls) {
 
 function yearGrid(d) {
   if (!d.cats.length) return '<div class="empty">Nothing spent in this year.</div>';
+  // Average over the months the year actually holds, not over twelve, or a part
+  // year would read as if the quiet months were spending nothing.
+  const per = n => n / Math.max(d.months, 1);
   const head = `<div class="ygh"><span></span>${M_INIT.map((m, i) =>
-    `<span class="${i < d.from || i > d.to ? 'off' : ''}">${m}</span>`).join('')}<span class="yt">Total</span></div>`;
+    `<span class="${i < d.from || i > d.to ? 'off' : ''}">${m}</span>`).join('')}` +
+    `<span class="yt">Total</span><span class="yt">Avg</span></div>`;
   const netMax = Math.max(...d.net.map(Math.abs), 1);
+  const netTotal = d.net.reduce((a, b) => a + b, 0);
   const netRow = `<div class="yr net"><span class="yn">Net</span>${d.net.map((v, i) =>
     i < d.from || i > d.to ? '<span class="yc z"></span>' : heatCell(Math.abs(v), netMax, v >= 0 ? 'up' : 'dn')).join('')}` +
-    `<span class="yt">${sfmt0(d.net.reduce((a, b) => a + b, 0))}</span></div>`;
+    `<span class="yt">${sfmt0(netTotal)}</span><span class="yt av">${sfmt0(per(netTotal))}</span></div>`;
   const rows = d.cats.map(c => {
     const max = Math.max(...c.months);
     const open = yearCat === c.cat;
     return `<button class="yr${open ? ' open' : ''}" data-act="ycat" data-c="${esc(c.cat)}">` +
       `<span class="yn">${esc(c.cat)}</span>` +
       c.months.map(v => heatCell(v, max, 'ex')).join('') +
-      `<span class="yt">${fmt0(c.total)}</span></button>` +
+      `<span class="yt">${fmt0(c.total)}</span><span class="yt av">${fmt0(per(c.total))}</span></button>` +
       (open ? `<div class="ym">${c.months.map((v, i) => v ? `<span>${M_INIT[i] ? MON(d.year + '-' + String(i + 1).padStart(2, '0')) : ''} ${kfmt(v)}</span>` : '').join('')}` +
         `<span class="av">${fmt(c.total)} in all, ${fmt(c.total / Math.max(d.months, 1))} a month</span></div>` : '');
   }).join('');
   return `<div class="yg">${head}${netRow}<div class="ysep"></div>${rows}</div>` +
-    `<div class="note2">Shading is each category against its own best month, so a small one still shows its shape. Tap a row for the months. EUR only.</div>`;
+    `<div class="note2">Shading is each category against its own best month, so a small one still shows its shape. Tap a row for the months. Avg is per month with data (${d.months} this year). EUR only.</div>`;
 }
 
 // ===== Stats =====
