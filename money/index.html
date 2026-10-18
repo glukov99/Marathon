@@ -105,7 +105,8 @@ ul.steps li{margin:5px 0}
 .pos{color:var(--acc)}
 .stat .s{font-size:12px;color:var(--soft);margin-top:2px}
 .cat .row.in{margin-top:4px;font-size:12.5px}
-.cat .tr i.inb{background:var(--teal)}
+.cat.incat .tr i{background:var(--teal)}
+.cat small{font-weight:500;color:var(--faint);font-size:12px}
 .cat{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 0;cursor:pointer}
 .cat .row{display:flex;justify-content:space-between;gap:10px;font-size:14px}
 .cat .row span{color:var(--soft);white-space:nowrap}
@@ -143,7 +144,7 @@ ul.steps li{margin:5px 0}
     <div class="mbar"><button class="btn ghost" id="mPrev" aria-label="Previous month">‹</button><b id="mLabel"></b><button class="btn ghost" id="mNext" aria-label="Next month">›</button></div>
     <div class="chips" id="own"><button data-o="All">All</button><button data-o="Personal">Personal</button><button data-o="Joint">Joint</button></div>
     <div class="stats" id="stats"></div>
-    <div class="panel"><h3>Where it went</h3><div class="pc" id="cats"></div></div>
+    <div class="panel"><div class="txh"><h3>Where it went</h3><div class="chips" id="view" style="margin-top:14px"><button data-v="out">Out</button><button data-v="in">In</button></div></div><div class="pc" id="cats"></div></div>
     <div class="panel"><div class="txh"><h3 id="txH">Transactions</h3><button class="btn ghost hidden" id="txClear">Show all</button></div><div id="tx" style="margin-top:8px"></div></div>
     <div class="panel"><h3>Balances</h3><div class="pc" id="bal"></div></div>
     <p class="foot" id="foot"></p>

@@ -6,7 +6,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const money = (n, cur) => (n < 0 ? '−' : '') + (cur === 'GBP' ? '£' : '€') +
   Math.abs(n).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-let data = null, month = null, owner = 'All', catFilter = null;
+let data = null, month = null, owner = 'All', catFilter = null, view = 'out';
 
 const apiUrl = () => ((window.HubSync && HubSync.cfg()) || {}).url || '';
 const token = () => { try { return localStorage.getItem(TKEY) || ''; } catch (e) { return ''; } };
@@ -76,7 +76,7 @@ function render() {
       const g = cats['Gifts'] || (cats['Gifts'] = { out: 0, in: 0 });
       g.out -= t.a; out -= t.a; return;
     }
-    if (cn === 'income') { inc += t.a; return; }
+    if (cn === 'income') { inc += t.a; const ic = cats['Income'] || (cats['Income'] = { out: 0, in: 0 }); ic.in += t.a; return; }
     if (cn === 'savings') { saved -= t.a; return; }
     if (cn === 'transfer') return;
     if (cn === 'gl studio') { gl -= t.a; return; }
@@ -102,22 +102,21 @@ function render() {
 }
 
 function renderCats(cats) {
-  const list = Object.entries(cats).filter(([, v]) => v.out > 0.005 || v.in > 0.005)
-    .sort((a, b) => b[1].out - a[1].out);
-  const max = Math.max(1, ...list.map(([, v]) => Math.max(v.out, v.in)));
-  const total = list.reduce((s, [, v]) => s + v.out, 0) || 1;
+  document.querySelectorAll('#view button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === view)));
+  const key = view === 'in' ? 'in' : 'out';
+  const list = Object.entries(cats).filter(([, v]) => v[key] > 0.005).sort((a, b) => b[1][key] - a[1][key]);
+  const max = list.length ? list[0][1][key] : 1;
+  const total = list.reduce((s, [, v]) => s + v[key], 0) || 1;
   $('#cats').innerHTML = list.length ? list.map(([k, v]) => `
-    <button class="cat${catFilter === k ? ' on' : ''}" data-cat="${esc(k)}">
-      <div class="row"><b>${esc(k)}</b><span>${money(v.out)} out${v.out ? ' · ' + Math.round(v.out / total * 100) + '%' : ''}</span></div>
-      <div class="tr"><i style="width:${(v.out / max * 100).toFixed(1)}%"></i></div>
-      ${v.in > 0.005 ? `<div class="row in"><span></span><span>${money(v.in)} in</span></div>
-      <div class="tr"><i class="inb" style="width:${(v.in / max * 100).toFixed(1)}%"></i></div>` : ''}
-    </button>`).join('') : '<p class="sub">No spending this month.</p>';
+    <button class="cat${catFilter === k ? ' on' : ''}${key === 'in' ? ' incat' : ''}" data-cat="${esc(k)}">
+      <div class="row"><b>${esc(k)}${key === 'in' && k !== 'Income' ? ' <small>paid back</small>' : ''}</b><span>${money(v[key])} · ${Math.round(v[key] / total * 100)}%</span></div>
+      <div class="tr"><i style="width:${(v[key] / max * 100).toFixed(1)}%"></i></div>
+    </button>`).join('') : `<p class="sub">${key === 'in' ? 'No money in this month.' : 'No spending this month.'}</p>`;
 }
 
 function renderTx(rows) {
-  const shown = catFilter ? rows.filter(t => (t.cat ? t.cat.trim() : 'Uncategorised').toLowerCase() === catFilter.toLowerCase()) : rows;
-  $('#txH').textContent = catFilter ? catFilter : 'Transactions';
+  const shown = catFilter ? rows.filter(t => (t.cat ? t.cat.trim() : 'Uncategorised').toLowerCase() === catFilter.toLowerCase() && (view === 'in' ? t.a > 0 : t.a < 0)) : rows;
+  $('#txH').textContent = catFilter ? catFilter + (view === 'in' ? ' · in' : ' · out') : 'Transactions';
   $('#txClear').classList.toggle('hidden', !catFilter);
   $('#tx').innerHTML = shown.length ? shown.map(t => {
     const title = t.who || t.desc || '—';
@@ -166,6 +165,10 @@ $('#own').addEventListener('click', e => {
 $('#cats').addEventListener('click', e => {
   const b = e.target.closest('.cat'); if (!b) return;
   catFilter = catFilter === b.dataset.cat ? null : b.dataset.cat; render();
+});
+$('#view').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  view = b.dataset.v; catFilter = null; render();
 });
 $('#txClear').addEventListener('click', () => { catFilter = null; render(); });
 $('#tokSave').addEventListener('click', () => {
