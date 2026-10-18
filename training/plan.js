@@ -22,10 +22,10 @@ const V=(vert,m,x)=>S('vert',`Mladezhki Halm vert, ~${vert} m`,x||'Hike up hard 
 const ST=(t,d,m)=>S('st',t,d,m,{key:1});
 const HD=(t,d,m)=>S('hard',t,d,m,{key:1});
 const MPS=(t,d,m)=>S('mp',t,d,m,{key:1});
-const GA=(x)=>S('gym','Gym A: lower body and power',x||'See Strength tab. 35–40 min, after the run.',38,{g:'A'});
+const GA=(x)=>S('gym','Gym A: lower body and power',x||'See Strength tab. 45 min, after the run. Slow lowering on every lift.',45,{g:'A'});
 const GB=(x)=>S('gym','Gym B: upper body',x||'See Strength tab. 30 min, home or gym.',30,{g:'B'});
 const GC=(v)=>S('gym','Hybrid session '+v,'See Strength tab. 25–30 min, low leg load.',28,{g:'C'});
-const CORE=()=>S('gym','Core 12 min','Dead bug, side plank, Pallof press, bird dog, hollow hold. 2 rounds.',12);
+const CORE=()=>S('gym','Core + hips 25 min','Spanish squat hold, banded side walks, Cossack squat, tib raise, seated calf raise, dead bug, Pallof press. Light: legs must be fresh for Friday.',25);
 const SWIM=(m)=>S('swim',`Recovery swim ${m||'20–30'} min`,'Easy, any stroke. Loosens the legs. Not a workout.',25);
 const REST=()=>S('rest','Rest','Yoga and stretching only.',0);
 const T=(t,d,m)=>S('test',t,d,m||25,{test:1});
