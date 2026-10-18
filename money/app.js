@@ -65,11 +65,17 @@ function render() {
   const rows = data.tx.filter(t => t.d.startsWith(month) && (owner === 'All' || t.own === owner));
 
   // Totals in EUR only. Out and in are kept apart, never netted.
-  let out = 0, back = 0, big = 0, inc = 0, saved = 0, gl = 0;
+  let out = 0, back = 0, big = 0, inc = 0, saved = 0, gl = 0, giftIn = 0, giftOut = 0;
   const cats = {};
   rows.filter(t => t.c === 'EUR').forEach(t => {
     const cn = (t.cat || '').trim().toLowerCase();
-    if (t.acc === 'Savings') { saved += t.a; return; } // Revolut savings account
+    if (t.acc === 'Gifts') {           // gift fund: money set aside, then spent on gifts
+      if (t.a > 0) { giftIn += t.a; return; }
+      if (cn === 'transfer') { giftIn += t.a; return; } // moved back out
+      giftOut -= t.a;
+      const g = cats['Gifts'] || (cats['Gifts'] = { out: 0, in: 0 });
+      g.out -= t.a; out -= t.a; return;
+    }
     if (cn === 'income') { inc += t.a; return; }
     if (cn === 'savings') { saved -= t.a; return; }
     if (cn === 'transfer') return;
@@ -86,7 +92,8 @@ function render() {
     (big > 0 ? stat('Big purchases', money(big)) : '') +
     stat('Saved', money(saved), saved >= 0 ? 'pos' : '') +
     stat('In', money(inc), 'pos') +
-    (gl > 0 ? stat('GL Studio', money(gl)) : '');
+    (gl > 0 ? stat('GL Studio', money(gl)) : '') +
+    ((giftIn || giftOut) ? stat('Gift fund', money(giftIn), giftIn >= 0 ? 'pos' : '', 'set aside' + (giftOut ? ' · ' + money(giftOut) + ' spent' : '')) : '');
 
   renderCats(cats);
   renderTx(rows);
