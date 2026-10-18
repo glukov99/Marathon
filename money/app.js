@@ -259,15 +259,39 @@ function renderBusiness(rows) {
 
 // UniCredit needs a manual approval about once a month. Show how old its data is.
 function bankFresh() {
-  const groups = [['UniCredit personal', t => /^UniCredit/.test(t.acc)], ['GL Studio EOOD', t => t.acc === 'GL Studio EOOD']];
-  return groups.map(([name, f]) => {
+  const groups = [['UniCredit personal', 'personal', t => /^UniCredit/.test(t.acc)],
+    ['GL Studio EOOD', 'business', t => t.acc === 'GL Studio EOOD']];
+  return groups.map(([name, psu, f]) => {
     const ds = data.tx.filter(f).map(t => t.d).sort();
     if (!ds.length) return '';
     const last = ds[ds.length - 1];
     const age = Math.floor((Date.now() - new Date(last + 'T12:00')) / 864e5);
     const d = new Date(last + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    return `<div class="arow"><span>${name}: data up to ${d}</span>${age > 30 ? '<b class="warn">approve and sync</b>' : `<span>${age} days old</span>`}</div>`;
+    // The button is always there: a UniCredit session lasts about an hour, so a
+    // fresh approval is the only way to read the accounts again, whatever the age.
+    return `<div class="arow"><span>${name}: data up to ${d}${age > 30 ? ' <b class="warn">old</b>' : ` <small>(${age} days)</small>`}</span>` +
+      `<button class="btn ghost" data-act="approve" data-bank="unicredit" data-psu="${psu}">Approve</button></div>`;
   }).join('');
+}
+
+// Starts a bank approval from this device. The bank app or page sends us back to
+// the hub home page with the code, and that page finishes it by itself, so there
+// is nothing to copy. One tap here, approve in the bank, done.
+async function startApproval(bank, psu, btn) {
+  const was = btn.textContent;
+  btn.textContent = 'Opening…';
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${apiUrl()}?action=money&mt=${encodeURIComponent(token())}` +
+      `&connect=start&bank=${encodeURIComponent(bank)}&psu=${encodeURIComponent(psu)}`);
+    const j = await r.json();
+    if (!j.ok || !j.url) throw new Error(j.error || 'no approval URL came back');
+    location.href = j.url;
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = was;
+    setStatus('Could not start the approval: ' + e.message);
+  }
 }
 
 // ===== Accounts =====
@@ -286,7 +310,9 @@ function renderAccounts(rows) {
   if (data.consent_until) {
     const until = new Date(data.consent_until), days = Math.round((until - Date.now()) / 864e5);
     const d = until.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-    consent = days <= 21 ? `<span class="warn">Revolut access ends in ${days} days (${d}). Renew: run ebStartAuth.</span>` : `Revolut access until ${d}.`;
+    consent = days <= 21
+      ? `<span class="warn">Revolut access ends in ${days} days (${d}).</span> <button class="btn ghost" data-act="approve" data-bank="revolut" data-psu="personal">Renew now</button>`
+      : `Revolut access until ${d}.`;
   }
   $('#view').innerHTML = `
     <div class="card">
@@ -338,6 +364,7 @@ $('#view').addEventListener('click', e => {
   else if (act === 'drill') { drill = b.dataset.c; }
   else if (act === 'back') { drill = null; }
   else if (act === 'owner') { owner = b.dataset.o; }
+  else if (act === 'approve') { startApproval(b.dataset.bank, b.dataset.psu, b); return; }
   else if (act === 'forget') { if (confirm('Remove the Money token and saved data from this device?')) forget(); return; }
   render();
 });

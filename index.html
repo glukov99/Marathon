@@ -116,11 +116,15 @@ ul.steps li{margin:5px 0}
 :root{--rec:#6E9DC2;--easy:#2F7F60;--mp:#B98A22;--st:#C9702A;--hard:#8E2521;--vert:#6B4E8F;--gym:#4F5F69;--test:#1F6F8B;--swim:#3C8FA6;--race:#1B1E1A}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rec:#7FB0D6;--easy:#4FAE88;--mp:#D9AA45;--st:#E08A45;--hard:#D2584F;--vert:#A68BD0;--gym:#93A6B2;--test:#4FAACB;--swim:#5BB4CC;--race:#E8EBE5}}
 </style>
-<link rel="stylesheet" href="shared/theme.css?v=202610182211">
+<link rel="stylesheet" href="shared/theme.css?v=202610182335">
 </head>
 <body>
 <nav class="hubnav" aria-label="Life hub"><a href="./" aria-current="page">Life hub</a><a href="training/">Training</a><a href="meals/">Meals</a><a href="holidays/">Holidays</a><a href="car/">Car</a><a href="money/">Money</a></nav>
 <div class="wrap">
+  <div class="panel hidden" id="ebCard"><div class="card-h"><h3>Bank approval</h3></div><div class="pc">
+    <p class="sub" id="ebMsg"></p>
+    <p class="sub hidden" id="ebCode" style="word-break:break-all;font-variant-numeric:tabular-nums"></p>
+  </div></div>
   <header class="hero">
     <div class="k" id="hk"></div>
     <h1>Today</h1>
@@ -147,12 +151,12 @@ ul.steps li{margin:5px 0}
     <p class="sub">Same URL and token as the Intervals.icu sync. Enter them once on each device.</p></div></div>
   <div class="foot">Ticks here are the same as in Training.</div>
 </div>
-<script src="training/plan.js?v=202610182211"></script>
-<script src="shared/sync.js?v=202610182211"></script>
-<script src="meals/meals-data.js?v=202610182211"></script>
-<script src="holidays/holidays-data.js?v=202610182211"></script>
-<script src="shared/travel.js?v=202610182211"></script>
-<script src="car/car-data.js?v=202610182211"></script>
+<script src="training/plan.js?v=202610182335"></script>
+<script src="shared/sync.js?v=202610182335"></script>
+<script src="meals/meals-data.js?v=202610182335"></script>
+<script src="holidays/holidays-data.js?v=202610182335"></script>
+<script src="shared/travel.js?v=202610182335"></script>
+<script src="car/car-data.js?v=202610182335"></script>
 <script>
 const TKEY='season-2027-gl';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -282,6 +286,43 @@ carCard();
     train();people();carCard();}
   document.getElementById('hSave').addEventListener('click',()=>{const c=HubSync.cfg();c.url=document.getElementById('hUrl').value.trim();c.tok=document.getElementById('hTok').value.trim();HubSync.setCfg(c);go()});
   go();})();
+</script>
+<script>
+/* Bank approval, finished here.
+   A bank app opens this page inside its own browser, where there is no address bar
+   to copy from and no token in localStorage, so the page sends the code straight
+   back to the backend. The backend takes it only for a state it created in the last
+   hour, and each state works once (ebRedirectFinish_ in Money.js). The URL below
+   opens nothing by itself: every other route on it needs a token. */
+(function () {
+  const q = new URLSearchParams(location.search);
+  const code = q.get('code'), state = q.get('state'), err = q.get('error');
+  if (!code && !err) return;
+  const EXEC = 'https://script.google.com/macros/s/AKfycbw1gz9r2XR6JdtRvGySrBb4BfVKQ8wvruuey-dezUL65oNtJyjxkhjYQDCw6yEoDWd4/exec';
+  const card = document.getElementById('ebCard'), msg = document.getElementById('ebMsg');
+  card.classList.remove('hidden');
+  const show = t => { msg.textContent = t; };
+  const fallback = t => {
+    show(t);
+    const c = document.getElementById('ebCode');
+    c.textContent = 'code ' + code + ' · state ' + state;
+    c.classList.remove('hidden');
+  };
+  // The code is single use, so take it out of the URL before anything can reload it.
+  history.replaceState(null, '', location.pathname);
+  if (!code) { show('The bank did not complete the approval: ' + err + '. Start it again from the Money page.'); return; }
+  if (!state) { fallback('No state came back with the code, so this cannot be finished here.'); return; }
+  show('Finishing the approval and reading the accounts. This can take up to a minute.');
+  fetch(EXEC + '?action=money&connect=redirect&state=' + encodeURIComponent(state) + '&code=' + encodeURIComponent(code))
+    .then(r => r.json())
+    .then(j => {
+      if (!j.ok) throw new Error(j.error || 'it did not work');
+      show(j.bank + ' approved (' + j.psu + '). ' + (j.accounts || []).join(', ') +
+        '. ' + j.added + ' new row' + (j.added === 1 ? '' : 's') +
+        (j.skipped ? ', ' + j.skipped + ' account not read' : '') + '.');
+    })
+    .catch(e => fallback('Could not finish it here: ' + e.message + '. The code is below, and it is good for a few minutes.'));
+})();
 </script>
 </body>
 </html>
