@@ -278,7 +278,8 @@ function renderAccounts(rows) {
   $('#view').innerHTML = `
     <div class="card">
       ${Object.entries(tot).map(([c, v]) => `<div class="arow tot"><b>Total ${c}</b><b>${sfmt(v, c)}</b></div>`).join('')}
-      ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${esc(a.account)}${a.est ? ' <small>(est.)</small>' : ''}${a.error ? ' <small class="warn">needs re-approval</small>' : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}</span></div>`).join('')}
+      ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${esc(a.account)}${a.est ? ' <small>(est.)</small>' : ''}${a.error ? ' <small class="warn">needs re-approval</small>' : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}</span></div>` +
+        (a.overdraft ? `<div class="arow od"><span>Overdraft ${fmt(a.overdraft.eur)} (${a.overdraft.bgn.toLocaleString('en-GB')} лв)</span><span>${a.available != null ? 'available ' + fmt(a.available) : ''}</span></div>` : '')).join('')}
       ${b ? `<div class="note2">As of ${new Date(b.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.</div>` : ''}
       ${data.fund ? `<div class="note2">Flexible Cash Funds: statement ${new Date(data.fund.statement_date + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} plus moves since. Interest after that date shows when a new statement is added.</div>` : ''}
     </div>
