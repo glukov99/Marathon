@@ -9,7 +9,7 @@ const fmt = (n, cur) => (cur === 'GBP' ? '£' : '€') + Math.abs(n).toLocaleStr
 const sfmt = (n, cur) => (n < 0 ? '−' : '') + fmt(n, cur);
 const PAL = ['#E07A63', '#D99A6C', '#E2C46B', '#B9C46B', '#7FB98A', '#6E9A97', '#8FC0B6', '#9DB6C4', '#8A9BD0', '#B58AC9', '#C98BA0', '#A7B4AD'];
 const MON = m => new Date(m + '-01T12:00').toLocaleDateString('en-GB', { month: 'short' });
-let data = null, month = null, owner = 'All', tab = 'accounts', statKind = 'exp', drill = null, yearCat = null;
+let data = null, month = null, owner = 'All', tab = 'accounts', statKind = 'exp', drill = null, yearCat = null, yearCell = null;
 const OWNERS = ['All', 'Personal', 'Joint'];
 // The company is a separate entity, so it gets its own tab rather than being a
 // filter over personal money. "All" above never includes it.
@@ -186,7 +186,7 @@ function renderMonthly(year) {
   const ms = allMonths().filter(m => m.startsWith(year));
   $('#view').innerHTML =
     (story.length ? `<div class="card story">${story.map(x => `<p>${esc(x)}</p>`).join('')}</div>` : '') +
-    `<div class="card">${yearGrid(d)}</div>` +
+    `<div class="card">${yearGrid(d, eur(rows).filter(t => t.d.startsWith(year)))}</div>` +
     `<div class="card">` + ms.map(m => {
     const inMonth = rows.filter(t => t.d.startsWith(m));
     const s = totals(inMonth), g = totals(inMonth, 'GBP');
@@ -283,7 +283,7 @@ function heatCell(v, max, cls) {
   return `<span class="yc ${cls}" style="opacity:${o.toFixed(2)}"></span>`;
 }
 
-function yearGrid(d) {
+function yearGrid(d, tx) {
   if (!d.cats.length) return '<div class="empty">Nothing spent in this year.</div>';
   // Average over the months the year actually holds, not over twelve, or a part
   // year would read as if the quiet months were spending nothing.
@@ -303,11 +303,17 @@ function yearGrid(d) {
       `<span class="yn">${esc(c.cat)}</span>` +
       c.months.map(v => heatCell(v, max, 'ex')).join('') +
       `<span class="yt">${fmt0(c.total)}</span><span class="yt av">${fmt0(per(c.total))}</span></button>` +
-      (open ? `<div class="ym">${c.months.map((v, i) => v ? `<span>${M_INIT[i] ? MON(d.year + '-' + String(i + 1).padStart(2, '0')) : ''} ${kfmt(v)}</span>` : '').join('')}` +
-        `<span class="av">${fmt(c.total)} in all, ${fmt(c.total / Math.max(d.months, 1))} a month</span></div>` : '');
+      (open ? `<div class="ym">${c.months.map((v, i) => v
+        ? `<button class="ymb${yearCell === i ? ' on' : ''}" data-act="ycell" data-i="${i}">` +
+          `${MON(d.year + '-' + String(i + 1).padStart(2, '0'))} ${kfmt(v)}</button>`
+        : '').join('')}<span class="av">${fmt(c.total)} in all, ${fmt(per(c.total))} a month</span></div>` +
+        (yearCell != null
+          ? `<div class="ye">${dayList(tx.filter(t => t._cat === c.cat && mIdx(t) === yearCell))}</div>`
+          : '')
+        : '');
   }).join('');
   return `<div class="yg">${head}${netRow}<div class="ysep"></div>${rows}</div>` +
-    `<div class="note2">Shading is each category against its own best month, so a small one still shows its shape. Tap a row for the months. Avg is per month with data (${d.months} this year). EUR only.</div>`;
+    `<div class="note2">Shading is each category against its own best month, so a small one still shows its shape. Tap a row for the months, then a month for what is in it. Avg is per month with data (${d.months} this year). EUR only.</div>`;
 }
 
 // ===== Stats =====
@@ -496,7 +502,8 @@ $('#view').addEventListener('click', e => {
   else if (act === 'drill') { drill = b.dataset.c; }
   else if (act === 'back') { drill = null; }
   else if (act === 'owner') { owner = b.dataset.o; }
-  else if (act === 'ycat') { yearCat = yearCat === b.dataset.c ? null : b.dataset.c; }
+  else if (act === 'ycat') { yearCat = yearCat === b.dataset.c ? null : b.dataset.c; yearCell = null; }
+  else if (act === 'ycell') { const i = +b.dataset.i; yearCell = yearCell === i ? null : i; }
   else if (act === 'approve') { startApproval(b.dataset.bank, b.dataset.psu, b); return; }
   else if (act === 'forget') { if (confirm('Remove the Money token and saved data from this device?')) forget(); return; }
   render();
