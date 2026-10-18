@@ -10,6 +10,7 @@ const sfmt = (n, cur) => (n < 0 ? '−' : '') + fmt(n, cur);
 const PAL = ['#E07A63', '#D99A6C', '#E2C46B', '#B9C46B', '#7FB98A', '#6E9A97', '#8FC0B6', '#9DB6C4', '#8A9BD0', '#B58AC9', '#C98BA0', '#A7B4AD'];
 const MON = m => new Date(m + '-01T12:00').toLocaleDateString('en-GB', { month: 'short' });
 let data = null, month = null, owner = 'All', tab = 'accounts', statKind = 'exp', drill = null;
+const OWNERS = ['All', 'Personal', 'Joint', 'Business'];
 
 const apiUrl = () => ((window.HubSync && HubSync.cfg()) || {}).url || '';
 const token = () => { try { return localStorage.getItem(TKEY) || ''; } catch (e) { return ''; } };
@@ -53,7 +54,9 @@ function fundBalance(j) {
 function prep(j) {
   j.tx = j.tx.filter(t => !t._fund).concat(fundRows(j)).sort((x, y) => (x.d < y.d ? 1 : -1));
   j.tx.forEach(t => { const c = classify(t); t._k = c.k; t._cat = c.cat; }); return j; }
-const mine = () => data.tx.filter(t => owner === 'All' || t.own === owner);
+// "All" means Georgi's own money: Personal plus Joint. The business account is
+// a separate legal entity, so it only shows under its own filter.
+const mine = () => data.tx.filter(t => owner === 'All' ? t.own !== 'Business' : t.own === owner);
 function totals(rows, cur) {
   let inc = 0, exp = 0;
   rows.forEach(t => {
@@ -235,7 +238,8 @@ function renderAccounts(rows) {
   if (fb != null) accs.push({ id: 'fund', account: 'Flexible Cash Funds', amount: fb, currency: 'EUR', est: true });
   accs.sort((x, y) => Math.abs(y.amount || 0) - Math.abs(x.amount || 0));
   const tot = {};
-  accs.forEach(a => { if (a.amount != null) tot[a.currency] = (tot[a.currency] || 0) + a.amount; });
+  accs.filter(a => (owner === 'All' ? a.own !== 'Business' : !a.own || a.own === owner))
+    .forEach(a => { if (a.amount != null) tot[a.currency] = (tot[a.currency] || 0) + a.amount; });
   const saved = -eur(rows).filter(t => t._k === 'save').reduce((a, t) => a + t.a, 0);
   const gift = rows.filter(t => t._k === 'move' && t.acc === 'Gifts').reduce((a, t) => a + t.a, 0);
   let consent = '';
@@ -247,7 +251,7 @@ function renderAccounts(rows) {
   $('#view').innerHTML = `
     <div class="card">
       ${Object.entries(tot).map(([c, v]) => `<div class="arow tot"><b>Total ${c}</b><b>${sfmt(v, c)}</b></div>`).join('')}
-      ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${esc(a.account)}${a.est ? ' <small>(est.)</small>' : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}</span></div>`).join('')}
+      ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${esc(a.account)}${a.est ? ' <small>(est.)</small>' : ''}${a.error ? ' <small class="warn">needs re-approval</small>' : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}</span></div>`).join('')}
       ${b ? `<div class="note2">As of ${new Date(b.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. Revolut only.</div>` : ''}
       ${data.fund ? `<div class="note2">Flexible Cash Funds: statement ${new Date(data.fund.statement_date + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} plus moves since. Interest after that date shows when a new statement is added.</div>` : ''}
     </div>
@@ -257,7 +261,7 @@ function renderAccounts(rows) {
       <div class="arow"><span>Net into gift fund this month</span><b>${sfmt(gift)}</b></div>
       <div class="note2">Moves between your own accounts are not counted as income or expenses. Only the fund interest is income.</div>
     </div>
-    <div class="chips" id="own2">${['All', 'Personal', 'Joint'].map(o => `<button data-act="owner" data-o="${o}" aria-pressed="${o === owner}">${o}</button>`).join('')}</div>
+    <div class="chips" id="own2">${OWNERS.map(o => `<button data-act="owner" data-o="${o}" aria-pressed="${o === owner}">${o}</button>`).join('')}</div>
     <p class="foot">${consent}</p>
     <p class="foot"><button class="btn ghost" data-act="forget">Forget token on this device</button></p>`;
 }
