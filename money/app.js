@@ -9,7 +9,7 @@ const fmt = (n, cur) => (cur === 'GBP' ? '£' : '€') + Math.abs(n).toLocaleStr
 const sfmt = (n, cur) => (n < 0 ? '−' : '') + fmt(n, cur);
 const PAL = ['#E07A63', '#D99A6C', '#E2C46B', '#B9C46B', '#7FB98A', '#6E9A97', '#8FC0B6', '#9DB6C4', '#8A9BD0', '#B58AC9', '#C98BA0', '#A7B4AD'];
 const MON = m => new Date(m + '-01T12:00').toLocaleDateString('en-GB', { month: 'short' });
-let data = null, month = null, owner = 'All', tab = 'accounts', statKind = 'exp', drill = null;
+let data = null, month = null, owner = 'All', tab = 'accounts', statKind = 'exp', drill = null, yearCat = null;
 const OWNERS = ['All', 'Personal', 'Joint'];
 // The company is a separate entity, so it gets its own tab rather than being a
 // filter over personal money. "All" above never includes it.
@@ -180,8 +180,14 @@ function renderDaily(rows) { $('#view').innerHTML = dayList(rows); }
 // ===== Monthly =====
 function renderMonthly(year) {
   const rows = mine();
+  const d = yearData(rows, year);
+  const prev = yearData(rows, String(+year - 1));
+  const story = yearStory(d, prev.total ? prev : null);
   const ms = allMonths().filter(m => m.startsWith(year));
-  $('#view').innerHTML = `<div class="card">` + ms.map(m => {
+  $('#view').innerHTML =
+    (story.length ? `<div class="card story">${story.map(x => `<p>${esc(x)}</p>`).join('')}</div>` : '') +
+    `<div class="card">${yearGrid(d)}</div>` +
+    `<div class="card">` + ms.map(m => {
     const inMonth = rows.filter(t => t.d.startsWith(m));
     const s = totals(inMonth), g = totals(inMonth, 'GBP');
     const last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
@@ -192,6 +198,111 @@ function renderMonthly(year) {
       `<span class="net">${sfmt(s.net)}</span></div>
     </button>`;
   }).join('') + `</div>`;
+}
+
+// ===== Year grid =====
+// Categories down, months across, so a year reads in one screen instead of
+// stepping back month by month. Pure computation here, HTML below, so the same
+// numbers can be checked in Node (tools: money/year-check.js).
+const M_INIT = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+const kfmt = n => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(Math.round(n)));
+const fmt0 = n => '\u20ac' + Math.round(Math.abs(n)).toLocaleString('en-GB');
+const sfmt0 = n => (n < 0 ? '\u2212' : '') + fmt0(n);
+const mIdx = t => +t.d.slice(5, 7) - 1;
+const z12 = () => new Array(12).fill(0);
+
+function yearData(rows, year) {
+  const inYear = eur(rows).filter(t => t.d.startsWith(year));
+  const inc = z12(), exp = z12(), cats = {}, has = new Array(12).fill(false);
+  inYear.forEach(t => {
+    const i = mIdx(t);
+    if (t._k === 'inc' || t._k === 'exp') has[i] = true;
+    if (t._k === 'inc') inc[i] += t.a;
+    else if (t._k === 'exp') {
+      exp[i] -= t.a;
+      (cats[t._cat] = cats[t._cat] || z12())[i] -= t.a;
+    }
+  });
+  const list = Object.entries(cats)
+    .map(([cat, months]) => ({ cat, months, total: months.reduce((a, b) => a + b, 0) }))
+    .sort((a, b) => b.total - a.total);
+  const net = inc.map((v, i) => v - exp[i]);
+  // Months with any activity, so a part year is not read as twelve months.
+  const live = inYear.length ? inYear.map(mIdx) : [];
+  const from = live.length ? Math.min(...live) : 0, to = live.length ? Math.max(...live) : -1;
+  return { year, inc, exp, net, cats: list, from, to, has,
+    total: list.reduce((a, c) => a + c.total, 0), months: to - from + 1 };
+}
+
+// Three plain sentences about the year. Each one is a fact from the grid above,
+// not a judgement: where the money went, which month stands out and why, and
+// how it compares with the year before over the same months.
+function yearStory(d, prev) {
+  const out = [];
+  if (!d.cats.length) return out;
+  const top = d.cats[0];
+  const share = d.total ? Math.round(top.total / d.total * 100) : 0;
+  out.push(`${top.cat} is the biggest at ${fmt(top.total)}, ${share}% of everything you spent.`);
+
+  const peak = d.exp.indexOf(Math.max(...d.exp));
+  if (d.exp[peak] > 0) {
+    // What made that month stand out: the category furthest above its own average
+    // in the other live months.
+    let drv = null;
+    d.cats.forEach(c => {
+      const others = c.months.filter((v, i) => i !== peak && i >= d.from && i <= d.to);
+      const avg = others.length ? others.reduce((a, b) => a + b, 0) / others.length : 0;
+      const over = c.months[peak] - avg;
+      if (c.months[peak] > 0 && (!drv || over > drv.over)) drv = { cat: c.cat, over, v: c.months[peak] };
+    });
+    out.push(`${MON(d.year + '-' + String(peak + 1).padStart(2, '0'))} was the dearest month at ${fmt(d.exp[peak])}` +
+      (drv && drv.over > 0 ? `, mostly ${drv.cat} at ${fmt(drv.v)}.` : '.'));
+  }
+
+  if (prev) {
+    // Only the months both years actually hold data for. A part year, or a year the
+    // bank history barely reaches, would otherwise produce a true but useless number.
+    const both = d.has.map((h, i) => h && prev.has[i]);
+    const n = both.filter(Boolean).length;
+    const sum = (arr) => arr.reduce((x, y, i) => x + (both[i] ? y : 0), 0);
+    const a = sum(d.exp), b = sum(prev.exp);
+    if (n >= 2 && b > 0) {
+      const diff = a - b, pc = Math.round(Math.abs(diff) / b * 100);
+      out.push(`Over the ${n} months both years cover, that is ${fmt(Math.abs(diff))} ` +
+        `${diff >= 0 ? 'more' : 'less'} than ${prev.year} (${pc}%).`);
+    }
+  }
+  const saved = d.net.filter((v, i) => i >= d.from && i <= d.to && v > 0).length;
+  if (d.months > 1) out.push(`You ended ${saved} of ${d.months} months in the black.`);
+  return out.slice(0, 3);
+}
+
+function heatCell(v, max, cls) {
+  if (!v) return `<span class="yc z"></span>`;
+  const o = 0.18 + 0.82 * (max ? v / max : 0);
+  return `<span class="yc ${cls}" style="opacity:${o.toFixed(2)}"></span>`;
+}
+
+function yearGrid(d) {
+  if (!d.cats.length) return '<div class="empty">Nothing spent in this year.</div>';
+  const head = `<div class="ygh"><span></span>${M_INIT.map((m, i) =>
+    `<span class="${i < d.from || i > d.to ? 'off' : ''}">${m}</span>`).join('')}<span class="yt">Total</span></div>`;
+  const netMax = Math.max(...d.net.map(Math.abs), 1);
+  const netRow = `<div class="yr net"><span class="yn">Net</span>${d.net.map((v, i) =>
+    i < d.from || i > d.to ? '<span class="yc z"></span>' : heatCell(Math.abs(v), netMax, v >= 0 ? 'up' : 'dn')).join('')}` +
+    `<span class="yt">${sfmt0(d.net.reduce((a, b) => a + b, 0))}</span></div>`;
+  const rows = d.cats.map(c => {
+    const max = Math.max(...c.months);
+    const open = yearCat === c.cat;
+    return `<button class="yr${open ? ' open' : ''}" data-act="ycat" data-c="${esc(c.cat)}">` +
+      `<span class="yn">${esc(c.cat)}</span>` +
+      c.months.map(v => heatCell(v, max, 'ex')).join('') +
+      `<span class="yt">${fmt0(c.total)}</span></button>` +
+      (open ? `<div class="ym">${c.months.map((v, i) => v ? `<span>${M_INIT[i] ? MON(d.year + '-' + String(i + 1).padStart(2, '0')) : ''} ${kfmt(v)}</span>` : '').join('')}` +
+        `<span class="av">${fmt(c.total)} in all, ${fmt(c.total / Math.max(d.months, 1))} a month</span></div>` : '');
+  }).join('');
+  return `<div class="yg">${head}${netRow}<div class="ysep"></div>${rows}</div>` +
+    `<div class="note2">Shading is each category against its own best month, so a small one still shows its shape. Tap a row for the months. EUR only.</div>`;
 }
 
 // ===== Stats =====
@@ -380,6 +491,7 @@ $('#view').addEventListener('click', e => {
   else if (act === 'drill') { drill = b.dataset.c; }
   else if (act === 'back') { drill = null; }
   else if (act === 'owner') { owner = b.dataset.o; }
+  else if (act === 'ycat') { yearCat = yearCat === b.dataset.c ? null : b.dataset.c; }
   else if (act === 'approve') { startApproval(b.dataset.bank, b.dataset.psu, b); return; }
   else if (act === 'forget') { if (confirm('Remove the Money token and saved data from this device?')) forget(); return; }
   render();
