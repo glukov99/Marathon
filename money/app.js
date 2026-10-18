@@ -68,6 +68,7 @@ function render() {
   let spent = 0, big = 0, inc = 0, saved = 0, gl = 0;
   const cats = {};
   rows.filter(t => t.c === 'EUR').forEach(t => {
+    if (t.acc === 'Savings') { saved += t.a; return; } // money in/out of the Revolut savings account
     if (t.cat === 'Income') { inc += t.a; return; }
     if (t.cat === 'Savings') { saved -= t.a; return; }
     if (t.cat === 'Transfer') return;
