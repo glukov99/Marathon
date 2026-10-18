@@ -148,7 +148,12 @@ function renderBody(){
         big=`<div class="bh-flag soft">Big run in the last 3 days (${+lg.t>=240?Math.round(lg.t/60*10)/10+' h':lg.el+' m up'}). Do Gym A as isometrics only today: Spanish squat, calf raise holds, plank, at 60%.</div>`})}}
   // Weight trend (7-day average, no goal)
   let wt='';
-  const ws=(BH.well||[]).filter(x=>x.weight).sort((a,b)=>a.date.localeCompare(b.date)).slice(-56);
+  const cut=new Date(today0());cut.setDate(cut.getDate()-56);const cutS=cut.toISOString().slice(0,10);
+  const ws=(BH.well||[]).filter(x=>x.weight&&x.date>=cutS).sort((a,b)=>a.date.localeCompare(b.date));
+  if(ws.length<3){const l=ws[ws.length-1];
+    wt=`<div class="bh-weight"><div class="k">Weight</div>${l?`<div class="v"><b>${l.weight.toFixed(1)} kg</b> on ${l.date.split('-').reverse().slice(0,2).join('.')}</div><div class="x">The trend line starts after 3 weigh-ins (${ws.length} so far). Weigh in the morning, 3–4 times a week.</div>`
+      :`<div class="x">No weight yet. Log it in Intervals.icu: calendar → today → Wellness → Weight.</div>`}</div>`;
+  }
   if(ws.length>=3){
     const avg=i=>{const v=ws.slice(Math.max(0,i-6),i+1).map(x=>x.weight);return v.reduce((a,b)=>a+b,0)/v.length};
     const av=ws.map((x,i)=>avg(i)),lo=Math.min(...ws.map(x=>x.weight))-.5,hi=Math.max(...ws.map(x=>x.weight))+.5;
