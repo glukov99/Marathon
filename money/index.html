@@ -89,42 +89,61 @@ ul.steps li{margin:5px 0}
 .hubnav a{flex-shrink:0;font-size:13px;font-weight:600;text-decoration:none;color:var(--soft);padding:5px 11px;border-radius:14px;border:1px solid var(--rule)}
 .hubnav a[aria-current="page"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610181631">
+<link rel="stylesheet" href="../shared/theme.css?v=202610181637">
 <style>
-.mbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:4px}
-.mbar b{font-size:18px;font-weight:800}
+.mbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.mbar b{font-size:19px;font-weight:800}
 .mbar .btn{min-width:44px;font-size:18px;padding:6px 12px}
 .mbar .btn:disabled{opacity:.3;cursor:default}
-.chips{display:flex;gap:6px;margin-top:12px}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;margin-top:14px;padding:12px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.sum span{display:block;font-size:12.5px;color:var(--soft)}
+.sum b{display:block;font-size:20px;font-weight:800;margin-top:2px}
+.inc{color:#7FB0E0}.exp{color:var(--big)}.mv{color:var(--faint)}
+#tabs{position:sticky;top:env(safe-area-inset-top,0px);margin-top:8px}
+#tabs button{flex:1;font-size:15px}
+.day{background:var(--card);border-radius:16px;margin-top:12px;overflow:hidden;box-shadow:var(--shadow)}
+.dh{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--rule)}
+.dh b{font-size:22px;font-weight:800;min-width:30px}
+.dh .dw{font-size:12px;font-weight:700;background:rgba(255,255,255,.08);border-radius:6px;padding:2px 7px;color:var(--soft)}
+.dh .inc,.dh .exp{margin-left:auto;font-size:14px;font-weight:600;min-width:70px;text-align:right}
+.dh .exp{margin-left:10px}
+.tr{display:flex;gap:10px;padding:10px 14px;align-items:flex-start}
+.tr+.tr{border-top:1px solid var(--rule)}
+.tc{flex:0 0 92px;font-size:12.5px;color:var(--faint);padding-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb{flex:1;min-width:0}
+.tb b{display:block;font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb span{display:block;font-size:12.5px;color:var(--soft)}
+.ta{font-weight:700;white-space:nowrap}
+.card{background:var(--card);border-radius:16px;margin-top:12px;overflow:hidden;box-shadow:var(--shadow)}
+.mrow,.crow{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:12px 14px;text-align:left;cursor:pointer}
+.mrow+.mrow,.crow+.crow{border-top:1px solid var(--rule)}
+.mrow>div:first-child{flex:1}
+.mrow b{display:block;font-size:17px;font-weight:800}
+.mrow span{font-size:12px;color:var(--faint)}
+.mrow .r{display:grid;grid-template-columns:auto auto;gap:2px 14px;text-align:right}
+.mrow .r span{font-size:14px;font-weight:600}
+.mrow .r .net{grid-column:2;color:var(--soft);font-weight:500;font-size:12.5px}
+.seg{display:flex;margin-top:12px;border-bottom:1px solid var(--rule)}
+.seg button{flex:1;background:none;border:0;border-bottom:2px solid transparent;padding:10px 4px;font-weight:700;color:var(--faint);cursor:pointer}
+.seg button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--acc2)}
+.donut{display:block;width:190px;height:190px;margin:16px auto 8px}
+.crow b{flex:1;font-weight:600}
+.crow .v{font-weight:600}
+.badge{min-width:46px;text-align:center;font-size:12.5px;font-weight:800;color:#1E2522;border-radius:6px;padding:3px 6px}
+.dhd{display:flex;align-items:center;gap:12px;margin-top:12px}
+.dhd h3{margin:0;font-size:20px}
+.trend{display:block;width:100%;height:auto;padding:6px 4px}
+.trend .tv{font-size:11px;fill:var(--soft)}
+.trend .tm{font-size:11px;fill:var(--faint)}
+.arow{display:flex;justify-content:space-between;gap:10px;padding:9px 14px;font-size:14.5px}
+.arow+.arow{border-top:1px solid var(--rule)}
+.arow.tot{font-size:16px}
+.arow.zero{color:var(--faint)}
+.note2{padding:8px 14px 12px;font-size:12.5px;color:var(--faint)}
+.empty{padding:20px 14px;color:var(--faint);text-align:center}
+.chips{display:flex;gap:6px;margin-top:14px}
 .chips button{border:1px solid var(--rule);background:rgba(255,255,255,.04);border-radius:12px;padding:4px 12px;font-size:13px;cursor:pointer;color:var(--soft)}
 .chips button[aria-pressed="true"]{background:var(--sand);color:#1E2522;border-color:var(--sand)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:14px}
-.stat{background:var(--card);border-radius:18px;padding:12px 14px;box-shadow:var(--shadow)}
-.stat .l{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:700}
-.stat .v{font-size:24px;font-weight:800;margin-top:2px}
-.pos{color:var(--acc)}
-.stat .s{font-size:12px;color:var(--soft);margin-top:2px}
-.cat .row.in{margin-top:4px;font-size:12.5px}
-.cat.incat .tr i{background:var(--teal)}
-.cat small{font-weight:500;color:var(--faint);font-size:12px}
-.cat{display:block;width:100%;text-align:left;background:none;border:0;padding:7px 0;cursor:pointer}
-.cat .row{display:flex;justify-content:space-between;gap:10px;font-size:14px}
-.cat .row span{color:var(--soft);white-space:nowrap}
-.cat .tr{height:6px;border-radius:3px;background:rgba(255,255,255,.06);margin-top:5px;overflow:hidden}
-.cat .tr i{display:block;height:100%;background:var(--acc);border-radius:3px}
-.cat.on .tr i{background:var(--acc2)}
-.cat.on .row b{color:var(--acc2)}
-.txh{display:flex;justify-content:space-between;align-items:center;padding-right:16px}
-.txr{display:flex;gap:12px;padding:10px 16px;border-top:1px solid var(--rule)}
-.txr .dt{flex:0 0 48px;font-size:12.5px;color:var(--faint);padding-top:2px}
-.txr .bd{flex:1;min-width:0}
-.txr .bd b{display:block;font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.txr .bd span{display:block;font-size:12.5px;color:var(--soft)}
-.txr .am{font-weight:700;white-space:nowrap}
-.txr .am.pos{color:var(--acc)}
-.balr{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:14px}
-.balr.tot{border-bottom:1px solid var(--rule);padding-bottom:8px;margin-bottom:4px}
-.balr.zero{color:var(--faint)}
 .warn{color:var(--acc2);font-weight:700}
 #tokIn{width:100%;padding:10px 12px;font:inherit}
 </style>
@@ -133,25 +152,19 @@ ul.steps li{margin:5px 0}
 <nav class="hubnav" aria-label="Life hub"><a href="../">Life hub</a><a href="../training/">Training</a><a href="../meals/">Meals</a><a href="../holidays/">Holidays</a><a href="../car/">Car</a><a href="../money/" aria-current="page">Money</a></nav>
 <div class="wrap">
   <header class="hero"><div class="k">Life hub</div><h1>Money</h1><div class="sub" id="status"></div></header>
-
   <div id="setup" class="panel hidden"><h3>Connect</h3><div class="pc">
     <p id="setupMsg">Paste your Money token. It stays on this device only.</p>
     <input id="tokIn" type="password" autocomplete="off" placeholder="Money token">
     <div style="margin-top:10px"><button class="btn" id="tokSave">Save</button></div>
   </div></div>
-
   <div id="main" class="hidden">
-    <div class="mbar"><button class="btn ghost" id="mPrev" aria-label="Previous month">‹</button><b id="mLabel"></b><button class="btn ghost" id="mNext" aria-label="Next month">›</button></div>
-    <div class="chips" id="own"><button data-o="All">All</button><button data-o="Personal">Personal</button><button data-o="Joint">Joint</button></div>
-    <div class="stats" id="stats"></div>
-    <div class="panel"><div class="txh"><h3>Where it went</h3><div class="chips" id="view" style="margin-top:14px"><button data-v="out">Out</button><button data-v="in">In</button></div></div><div class="pc" id="cats"></div></div>
-    <div class="panel"><div class="txh"><h3 id="txH">Transactions</h3><button class="btn ghost hidden" id="txClear">Show all</button></div><div id="tx" style="margin-top:8px"></div></div>
-    <div class="panel"><h3>Balances</h3><div class="pc" id="bal"></div></div>
-    <p class="foot" id="foot"></p>
-    <p class="foot"><button class="btn ghost" id="forget">Forget token on this device</button></p>
+    <div class="mbar"><button class="btn ghost" id="mPrev" aria-label="Previous">‹</button><b id="mLabel"></b><button class="btn ghost" id="mNext" aria-label="Next">›</button></div>
+    <div class="sum" id="sum"></div>
+    <nav id="tabs"><button data-t="daily">Daily</button><button data-t="monthly">Monthly</button><button data-t="stats">Stats</button><button data-t="accounts">Accounts</button></nav>
+    <div id="view"></div>
   </div>
 </div>
-<script src="../shared/sync.js?v=202610181631"></script>
-<script src="app.js?v=202610181631"></script>
+<script src="../shared/sync.js?v=202610181637"></script>
+<script src="app.js?v=202610181637"></script>
 </body>
 </html>
