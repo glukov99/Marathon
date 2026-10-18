@@ -257,6 +257,19 @@ function renderBusiness(rows) {
     dayList(rows);
 }
 
+// UniCredit needs a manual approval about once a month. Show how old its data is.
+function bankFresh() {
+  const groups = [['UniCredit personal', t => /^UniCredit/.test(t.acc)], ['GL Studio EOOD', t => t.acc === 'GL Studio EOOD']];
+  return groups.map(([name, f]) => {
+    const ds = data.tx.filter(f).map(t => t.d).sort();
+    if (!ds.length) return '';
+    const last = ds[ds.length - 1];
+    const age = Math.floor((Date.now() - new Date(last + 'T12:00')) / 864e5);
+    const d = new Date(last + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    return `<div class="arow"><span>${name}: data up to ${d}</span>${age > 30 ? '<b class="warn">approve and sync</b>' : `<span>${age} days old</span>`}</div>`;
+  }).join('');
+}
+
 // ===== Accounts =====
 function renderAccounts(rows) {
   const b = data.balances;
@@ -287,6 +300,10 @@ function renderAccounts(rows) {
       <div class="arow"><span>Net into Flexible Cash Funds this month</span><b>${sfmt(saved)}</b></div>
       <div class="arow"><span>Interest from Flexible Cash Funds this month</span><b>${sfmt(rows.filter(t => t._fund).reduce((a, t) => a + t.a, 0))}</b></div>
       <div class="arow"><span>Net into gift fund this month</span><b>${sfmt(gift)}</b></div>
+    </div>
+    <div class="card">
+      ${bankFresh()}
+      <div class="note2">UniCredit sessions expire within hours. Approve personal, then business, and sync at least once a month. Each sync looks back 90 days, so nothing is lost.</div>
       <div class="note2">Moves between your own accounts are not counted as income or expenses. Only the fund interest is income.</div>
     </div>
     <div class="chips" id="own2">${OWNERS.map(o => `<button data-act="owner" data-o="${o}" aria-pressed="${o === owner}">${o}</button>`).join('')}</div>
