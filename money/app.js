@@ -1,5 +1,6 @@
 /* Money page. Reads bank data from the Apps Script Money API (token mt, kept in this browser only).
-   Rules: money in = income, money out = expense. Own-account moves (Transfer, Savings, gift fund top-ups) are not counted. */
+   Rules: money in = income, money out = expense. Own-account moves (Transfer, Savings, gift fund top-ups) are not counted.
+   Flexible Cash Funds: moves in/out are transfers; only the interest (net of fees, from the statement) is income. */
 (() => {
 const TKEY = 'lifehub-money-token', CKEY = 'lifehub-money-cache';
 const $ = s => document.querySelector(s);
@@ -8,7 +9,7 @@ const fmt = (n, cur) => (cur === 'GBP' ? '£' : '€') + Math.abs(n).toLocaleStr
 const sfmt = (n, cur) => (n < 0 ? '−' : '') + fmt(n, cur);
 const PAL = ['#E07A63', '#D99A6C', '#E2C46B', '#B9C46B', '#7FB98A', '#6E9A97', '#8FC0B6', '#9DB6C4', '#8A9BD0', '#B58AC9', '#C98BA0', '#A7B4AD'];
 const MON = m => new Date(m + '-01T12:00').toLocaleDateString('en-GB', { month: 'short' });
-let data = null, month = null, owner = 'All', tab = 'daily', statKind = 'exp', drill = null;
+let data = null, month = null, owner = 'All', tab = 'accounts', statKind = 'exp', drill = null;
 
 const apiUrl = () => ((window.HubSync && HubSync.cfg()) || {}).url || '';
 const token = () => { try { return localStorage.getItem(TKEY) || ''; } catch (e) { return ''; } };
@@ -21,6 +22,7 @@ function show(id) {
 // One place decides what each row is.
 function classify(t) {
   if (t.c !== 'EUR') return { k: 'other', cat: t.cat || '' };
+  if (t._fund) return { k: 'inc', cat: 'Interest' };
   const cn = (t.cat || '').trim().toLowerCase();
   if (t.acc === 'Gifts') {
     if (t.a > 0 || cn === 'transfer') return { k: 'move', cat: 'Gift fund' };
@@ -31,7 +33,27 @@ function classify(t) {
   if (t.a > 0) return { k: 'inc', cat: cn === 'income' ? 'Income' : 'Paid back' };
   return { k: 'exp', cat: t.cat ? t.cat.trim() : 'Uncategorised' };
 }
-function prep(j) { j.tx.forEach(t => { const c = classify(t); t._k = c.k; t._cat = c.cat; }); return j; }
+// Fund interest: one income row per month from the statement, only for months the bank data covers.
+function fundRows(j) {
+  const f = j.fund; if (!f || !f.interest || !j.tx.length) return [];
+  const first = j.tx.reduce((m, t) => (t.d < m ? t.d : m), j.tx[0].d).slice(0, 7);
+  return f.interest.filter(([m]) => m >= first).map(([m, a]) => {
+    const last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
+    const d = m === f.statement_date.slice(0, 7) ? f.statement_date : m + '-' + String(last).padStart(2, '0');
+    return { d, a, c: 'EUR', acc: 'Flexible Cash Funds', own: 'Personal', cat: 'Interest',
+      who: 'Flexible Cash Funds', desc: 'Interest after fees', note: '', _fund: true };
+  });
+}
+// Estimated fund balance: statement balance + bank moves into/out of the fund after the cutoff.
+function fundBalance(j) {
+  const f = j.fund; if (!f) return null;
+  const moves = j.tx.filter(t => !t._fund && t.c === 'EUR' && (t.cat || '').trim().toLowerCase() === 'savings' && t.d > f.bank_cutoff)
+    .reduce((a, t) => a - t.a, 0);
+  return Math.round((f.balance + moves) * 100) / 100;
+}
+function prep(j) {
+  j.tx = j.tx.filter(t => !t._fund).concat(fundRows(j)).sort((x, y) => (x.d < y.d ? 1 : -1));
+  j.tx.forEach(t => { const c = classify(t); t._k = c.k; t._cat = c.cat; }); return j; }
 const mine = () => data.tx.filter(t => owner === 'All' || t.own === owner);
 function totals(rows) {
   let inc = 0, exp = 0;
@@ -196,7 +218,10 @@ function renderDrill(rows) {
 // ===== Accounts =====
 function renderAccounts(rows) {
   const b = data.balances;
-  const accs = b && b.accounts ? b.accounts.slice().sort((x, y) => Math.abs(y.amount || 0) - Math.abs(x.amount || 0)) : [];
+  const accs = b && b.accounts ? b.accounts.slice() : [];
+  const fb = fundBalance(data);
+  if (fb != null) accs.push({ id: 'fund', account: 'Flexible Cash Funds', amount: fb, currency: 'EUR', est: true });
+  accs.sort((x, y) => Math.abs(y.amount || 0) - Math.abs(x.amount || 0));
   const tot = {};
   accs.forEach(a => { if (a.amount != null) tot[a.currency] = (tot[a.currency] || 0) + a.amount; });
   const saved = -rows.filter(t => t._k === 'save').reduce((a, t) => a + t.a, 0);
@@ -210,13 +235,15 @@ function renderAccounts(rows) {
   $('#view').innerHTML = `
     <div class="card">
       ${Object.entries(tot).map(([c, v]) => `<div class="arow tot"><b>Total ${c}</b><b>${sfmt(v, c)}</b></div>`).join('')}
-      ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${esc(a.account)}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}</span></div>`).join('')}
+      ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${esc(a.account)}${a.est ? ' <small>(est.)</small>' : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}</span></div>`).join('')}
       ${b ? `<div class="note2">As of ${new Date(b.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}. Revolut only.</div>` : ''}
+      ${data.fund ? `<div class="note2">Flexible Cash Funds: statement ${new Date(data.fund.statement_date + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} plus moves since. Interest after that date shows when a new statement is added.</div>` : ''}
     </div>
     <div class="card">
       <div class="arow"><span>Net into Flexible Cash Funds this month</span><b>${sfmt(saved)}</b></div>
+      <div class="arow"><span>Interest from Flexible Cash Funds this month</span><b>${sfmt(rows.filter(t => t._fund).reduce((a, t) => a + t.a, 0))}</b></div>
       <div class="arow"><span>Net into gift fund this month</span><b>${sfmt(gift)}</b></div>
-      <div class="note2">Moves between your own accounts. Not counted as income or expenses.</div>
+      <div class="note2">Moves between your own accounts are not counted as income or expenses. Only the fund interest is income.</div>
     </div>
     <div class="chips" id="own2">${['All', 'Personal', 'Joint'].map(o => `<button data-act="owner" data-o="${o}" aria-pressed="${o === owner}">${o}</button>`).join('')}</div>
     <p class="foot">${consent}</p>
