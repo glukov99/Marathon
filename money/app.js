@@ -21,7 +21,6 @@ function show(id) {
 
 // One place decides what each row is.
 function classify(t) {
-  if (t.c !== 'EUR') return { k: 'other', cat: t.cat || '' };
   if (t._fund) return { k: 'inc', cat: 'Interest' };
   const ct = (t.cat || '').trim(), cn = ct.toLowerCase();
   if (t.acc === 'Gifts') {
@@ -55,11 +54,16 @@ function prep(j) {
   j.tx = j.tx.filter(t => !t._fund).concat(fundRows(j)).sort((x, y) => (x.d < y.d ? 1 : -1));
   j.tx.forEach(t => { const c = classify(t); t._k = c.k; t._cat = c.cat; }); return j; }
 const mine = () => data.tx.filter(t => owner === 'All' || t.own === owner);
-function totals(rows) {
+function totals(rows, cur) {
   let inc = 0, exp = 0;
-  rows.forEach(t => { if (t._k === 'inc') inc += t.a; else if (t._k === 'exp') exp -= t.a; });
+  rows.forEach(t => {
+    if (t.c !== (cur || 'EUR')) return;
+    if (t._k === 'inc') inc += t.a; else if (t._k === 'exp') exp -= t.a;
+  });
   return { inc, exp, net: inc - exp };
 }
+// Stats, the donut and the fund rows are about EUR only. GBP has its own line.
+const eur = rows => rows.filter(t => t.c === 'EUR');
 
 async function load() {
   const url = apiUrl(), tok = token();
@@ -108,11 +112,16 @@ function render() {
   document.querySelectorAll('#own button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.o === owner)));
 
   const period = mine().filter(t => t.d.startsWith(yearly ? year : month));
-  const s = totals(period);
+  const s = totals(period), g = totals(period, 'GBP');
   $('#sum').innerHTML =
     `<div><span>Income</span><b class="inc">${fmt(s.inc)}</b></div>` +
     `<div><span>Expenses</span><b class="exp">${fmt(s.exp)}</b></div>` +
-    `<div><span>Total</span><b>${sfmt(s.net)}</b></div>`;
+    `<div><span>Total</span><b>${sfmt(s.net)}</b></div>` +
+    (g.inc || g.exp
+      ? `<div class="g"><span>GBP in</span><b class="inc">${fmt(g.inc, 'GBP')}</b></div>` +
+        `<div class="g"><span>GBP out</span><b class="exp">${fmt(g.exp, 'GBP')}</b></div>` +
+        `<div class="g"><span>GBP total</span><b>${sfmt(g.net, 'GBP')}</b></div>`
+      : '');
 
   if (tab === 'daily') renderDaily(period);
   else if (tab === 'monthly') renderMonthly(year);
@@ -149,11 +158,14 @@ function renderMonthly(year) {
   const rows = mine();
   const ms = allMonths().filter(m => m.startsWith(year));
   $('#view').innerHTML = `<div class="card">` + ms.map(m => {
-    const s = totals(rows.filter(t => t.d.startsWith(m)));
+    const inMonth = rows.filter(t => t.d.startsWith(m));
+    const s = totals(inMonth), g = totals(inMonth, 'GBP');
     const last = new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
     return `<button class="mrow" data-act="month" data-m="${m}">
       <div><b>${MON(m)}</b><span>1.${+m.slice(5, 7)} – ${last}.${+m.slice(5, 7)}</span></div>
-      <div class="r"><span class="inc">${fmt(s.inc)}</span><span class="exp">${fmt(s.exp)}</span><span class="net">${sfmt(s.net)}</span></div>
+      <div class="r"><span class="inc">${fmt(s.inc)}</span><span class="exp">${fmt(s.exp)}</span>` +
+      (g.inc || g.exp ? `<span class="gb">${sfmt(g.net, 'GBP')}</span>` : '') +
+      `<span class="net">${sfmt(s.net)}</span></div>
     </button>`;
   }).join('') + `</div>`;
 }
@@ -161,7 +173,7 @@ function renderMonthly(year) {
 // ===== Stats =====
 function catSums(rows, kind) {
   const m = {};
-  rows.filter(t => t._k === kind).forEach(t => { m[t._cat] = (m[t._cat] || 0) + Math.abs(t.a); });
+  eur(rows).filter(t => t._k === kind).forEach(t => { m[t._cat] = (m[t._cat] || 0) + Math.abs(t.a); });
   return Object.entries(m).sort((a, b) => b[1] - a[1]);
 }
 function donut(list, total) {
@@ -206,9 +218,9 @@ function trend(points) {
 function renderDrill(rows) {
   const ms = allMonths().filter(m => m <= month).slice(0, 7).reverse();
   const all = mine();
-  const pts = ms.map(m => ({ m, v: all.filter(t => t.d.startsWith(m) && t._k === statKind && t._cat === drill)
+  const pts = ms.map(m => ({ m, v: eur(all).filter(t => t.d.startsWith(m) && t._k === statKind && t._cat === drill)
     .reduce((a, t) => a + Math.abs(t.a), 0) }));
-  const list = rows.filter(t => t._k === statKind && t._cat === drill);
+  const list = eur(rows).filter(t => t._k === statKind && t._cat === drill);
   $('#view').innerHTML = `
     <div class="dhd"><button class="btn ghost" data-act="back">‹ Back</button><h3>${esc(drill)}</h3></div>
     <div class="card">${trend(pts)}</div>
@@ -224,7 +236,7 @@ function renderAccounts(rows) {
   accs.sort((x, y) => Math.abs(y.amount || 0) - Math.abs(x.amount || 0));
   const tot = {};
   accs.forEach(a => { if (a.amount != null) tot[a.currency] = (tot[a.currency] || 0) + a.amount; });
-  const saved = -rows.filter(t => t._k === 'save').reduce((a, t) => a + t.a, 0);
+  const saved = -eur(rows).filter(t => t._k === 'save').reduce((a, t) => a + t.a, 0);
   const gift = rows.filter(t => t._k === 'move' && t.acc === 'Gifts').reduce((a, t) => a + t.a, 0);
   let consent = '';
   if (data.consent_until) {
