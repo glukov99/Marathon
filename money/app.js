@@ -23,6 +23,16 @@ function show(id) {
   $('#main').classList.toggle('hidden', id !== 'main');
 }
 
+// A small bank mark in front of each account, so the list is easy to scan.
+// The bank name comes from the API; a payload cached before that fall backs to
+// the label, where only UniCredit and the company account are not Revolut.
+const BANKS = [[/unicredit/i, 'uni', 'UC'], [/revolut/i, 'rev', 'R']];
+function bankMark(a) {
+  const name = a.bank || (/^UniCredit|^GL Studio/.test(a.account || '') ? 'UniCredit Bulbank' : 'Revolut');
+  const hit = BANKS.find(([re]) => re.test(name));
+  return hit ? `<span class="bk ${hit[1]}" title="${esc(name)}">${hit[2]}</span>` : '';
+}
+
 // One place decides what each row is.
 function classify(t) {
   if (t._fund) return { k: 'inc', cat: 'Interest' };
@@ -248,7 +258,7 @@ function renderDrill(rows) {
 function renderBusiness(rows) {
   const b = data.balances && data.balances.accounts
     ? data.balances.accounts.filter(a => a.own === 'Business') : [];
-  const bal = b.map(a => `<div class="arow"><span>${esc(a.account)}${a.error ? ` <span class="rdot" title="Needs re-approval${a.as_of ? ' · last read ' + new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}"></span>` : ''}</span>` +
+  const bal = b.map(a => `<div class="arow"><span>${bankMark(a)}${esc(a.account)}${a.error ? ` <span class="rdot" title="Needs re-approval${a.as_of ? ' · last read ' + new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}"></span>` : ''}</span>` +
     `<span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}</span></div>`).join('');
   $('#view').innerHTML =
     (bal ? `<div class="card">${bal}</div>` : '') +
@@ -299,13 +309,18 @@ function renderAccounts(rows) {
   const b = data.balances;
   const accs = b && b.accounts ? b.accounts.slice() : [];
   const fb = fundBalance(data);
-  if (fb != null) accs.push({ id: 'fund', account: 'Flexible Cash Funds', amount: fb, currency: 'EUR', est: true });
+  if (fb != null) accs.push({ id: 'fund', account: 'Flexible Cash Funds', amount: fb, currency: 'EUR', est: true, bank: 'Revolut' });
   accs.sort((x, y) => Math.abs(y.amount || 0) - Math.abs(x.amount || 0));
   const tot = {};
   accs.filter(a => (owner === 'All' ? a.own !== 'Business' : !a.own || a.own === owner))
     .forEach(a => { if (a.amount != null) tot[a.currency] = (tot[a.currency] || 0) + a.amount; });
   const saved = -eur(rows).filter(t => t._k === 'save').reduce((a, t) => a + t.a, 0);
   const gift = rows.filter(t => t._k === 'move' && t.acc === 'Gifts').reduce((a, t) => a + t.a, 0);
+  // When each consent was approved. The backend stamps this from 18 Oct 2026, so a
+  // session approved before that has no time and is left out rather than guessed.
+  const approved = (data.consents || []).filter(c => c.at && !isNaN(Date.parse(c.at))).map(c =>
+    `<div class="arow"><span>${bankMark({ bank: c.bank })}${esc(c.bank)}${c.psu === 'business' ? ' business' : ''}: approved</span>` +
+    `<span>${new Date(c.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span></div>`).join('');
   let consent = '';
   if (data.consent_until) {
     const until = new Date(data.consent_until), days = Math.round((until - Date.now()) / 864e5);
@@ -317,7 +332,7 @@ function renderAccounts(rows) {
   $('#view').innerHTML = `
     <div class="card">
       ${Object.entries(tot).map(([c, v]) => `<div class="arow tot"><b>Total ${c}</b><b>${sfmt(v, c)}</b></div>`).join('')}
-      ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${esc(a.account)}${a.est ? ' <small>(est.)</small>' : ''}${a.error ? ` <span class="rdot" title="Needs re-approval${a.as_of ? ' · last read ' + new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}"></span>` : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}${a.error && a.as_of ? `<small class="asof">${new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</small>` : ''}</span></div>` +
+      ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${bankMark(a)}${esc(a.account)}${a.est ? ' <small>(est.)</small>' : ''}${a.error ? ` <span class="rdot" title="Needs re-approval${a.as_of ? ' · last read ' + new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}"></span>` : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}${a.error && a.as_of ? `<small class="asof">${new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</small>` : ''}</span></div>` +
         (a.overdraft ? `<div class="arow od"><span>Overdraft ${fmt(a.overdraft.eur)} (${a.overdraft.bgn.toLocaleString('en-GB')} лв)</span><span>${a.available != null ? 'available ' + fmt(a.available) : ''}</span></div>` : '')).join('')}
       ${b ? `<div class="note2">As of ${new Date(b.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.</div>` : ''}
       ${data.fund ? `<div class="note2">Flexible Cash Funds: statement ${new Date(data.fund.statement_date + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} plus moves since. Interest after that date shows when a new statement is added.</div>` : ''}
@@ -330,6 +345,7 @@ function renderAccounts(rows) {
     </div>
     <div class="card">
       ${bankFresh()}
+      ${approved}
       <div class="note2">UniCredit sessions expire within hours. Approve personal, then business, and sync at least once a month. Each sync looks back 90 days, so nothing is lost.</div>
     </div>
     <div class="chips" id="own2">${OWNERS.map(o => `<button data-act="owner" data-o="${o}" aria-pressed="${o === owner}">${o}</button>`).join('')}</div>
