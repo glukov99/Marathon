@@ -4,20 +4,20 @@
 const fs = require('fs'), assert = require('assert'), path = require('path');
 const dir = __dirname;
 const shared = {};
-['year', 'charts'].forEach(f => new Function('window',
+['year', 'charts', 'invoices'].forEach(f => new Function('window',
   fs.readFileSync(path.join(dir, '../shared/' + f + '.js'), 'utf8'))(shared));
-const { Year, Charts } = shared;
+const { Year, Charts, Invoices } = shared;
 
 const src = fs.readFileSync(path.join(dir, 'app.js'), 'utf8');
 const body = src.slice(src.indexOf('const esc = '), src.indexOf("$('#tabs').addEventListener"));
 const out = {};
 const $ = () => ({ set innerHTML(v) { out.html = v; }, set textContent(v) {} , classList: { toggle() {} } });
 const ctx = {};
-new Function('ctx', 'Year', 'Charts', '$', 'document', 'localStorage', 'fetch', 'CatPick',
+new Function('ctx', 'Year', 'Charts', 'Invoices', '$', 'document', 'localStorage', 'fetch', 'CatPick',
   body + '\nctx.prep=prep;ctx.render=render;ctx.setData=d=>{data=d};' +
   'ctx.tabs=t=>{tab=t};ctx.filter=f=>{filter=f};ctx.out=()=>out;' +
   'ctx.workingDue=workingDue;ctx.jobState=jobState;')
-  (ctx, Year, Charts, $, { querySelectorAll: () => [] }, { getItem: () => null, setItem() {} },
+  (ctx, Year, Charts, Invoices, $, { querySelectorAll: () => [] }, { getItem: () => null, setItem() {} },
    () => Promise.reject(new Error('no network in the check')), { open() {} });
 
 const tx = (d, a, desc, cat) => ({ k: 'k' + d + a, d, a, c: 'EUR', desc, who: '', cat: cat || '' });

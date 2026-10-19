@@ -1,10 +1,15 @@
-/* Checks the invoice/payment matcher in app.js. Made-up rows, no network.
+/* Checks the invoice/payment matcher in shared/invoices.js, through the
+   Business page's own prep(). Made-up rows, no network.
    Run: node business/match-check.js   */
-const fs = require('fs'), assert = require('assert');
+const fs = require('fs'), assert = require('assert'), path = require('path');
+const shared = {};
+['invoices'].forEach(f => new Function('window',
+  fs.readFileSync(path.join(__dirname, '../shared/' + f + '.js'), 'utf8'))(shared));
+const { Invoices } = shared;
 const src = fs.readFileSync(__dirname + '/app.js', 'utf8');
 const ctx = {};
-new Function('ctx', src.slice(src.indexOf('function classify'),
-  src.indexOf('async function load')) + '\nctx.prep = prep;')(ctx);
+new Function('ctx', 'Invoices', src.slice(src.indexOf('function classify'),
+  src.indexOf('async function load')) + '\nctx.prep = prep;')(ctx, Invoices);
 
 const inv = (no, issued, amount_eur, client) => ({ no, issued, amount_eur, client });
 const tx = (d, a, desc, cat) => ({ d, a, c: 'EUR', desc, cat: cat || 'Income', who: '' });

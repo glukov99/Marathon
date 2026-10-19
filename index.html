@@ -116,7 +116,7 @@ ul.steps li{margin:5px 0}
 :root{--rec:#6E9DC2;--easy:#2F7F60;--mp:#B98A22;--st:#C9702A;--hard:#8E2521;--vert:#6B4E8F;--gym:#4F5F69;--test:#1F6F8B;--swim:#3C8FA6;--race:#1B1E1A}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rec:#7FB0D6;--easy:#4FAE88;--mp:#D9AA45;--st:#E08A45;--hard:#D2584F;--vert:#A68BD0;--gym:#93A6B2;--test:#4FAACB;--swim:#5BB4CC;--race:#E8EBE5}}
 </style>
-<link rel="stylesheet" href="shared/theme.css?v=202610191754">
+<link rel="stylesheet" href="shared/theme.css?v=202610191756">
 </head>
 <body>
 <nav class="hubnav" aria-label="Life hub"><a href="./" aria-current="page">Life hub</a><a href="training/">Training</a><a href="meals/">Meals</a><a href="holidays/">Holidays</a><a href="car/">Car</a><a href="money/">Money</a><a href="business/">Business</a></nav>
@@ -134,6 +134,8 @@ ul.steps li{margin:5px 0}
   <div class="panel mtn" id="season"></div>
   <div class="panel" id="train"></div>
   <div class="panel" id="meals"></div>
+  <div class="panel hidden" id="biz"></div>
+  <div class="panel hidden" id="cash"></div>
   <div class="panel" id="people"></div>
   <div class="panel" id="week"></div>
   <div class="mini">
@@ -151,12 +153,13 @@ ul.steps li{margin:5px 0}
     <p class="sub">Same URL and token as the Intervals.icu sync. Enter them once on each device.</p></div></div>
   <div class="foot">Ticks here are the same as in Training.</div>
 </div>
-<script src="training/plan.js?v=202610191754"></script>
-<script src="shared/sync.js?v=202610191754"></script>
-<script src="meals/meals-data.js?v=202610191754"></script>
-<script src="holidays/holidays-data.js?v=202610191754"></script>
-<script src="shared/travel.js?v=202610191754"></script>
-<script src="car/car-data.js?v=202610191754"></script>
+<script src="shared/invoices.js?v=202610191756"></script>
+<script src="training/plan.js?v=202610191756"></script>
+<script src="shared/sync.js?v=202610191756"></script>
+<script src="meals/meals-data.js?v=202610191756"></script>
+<script src="holidays/holidays-data.js?v=202610191756"></script>
+<script src="shared/travel.js?v=202610191756"></script>
+<script src="car/car-data.js?v=202610191756"></script>
 <script>
 const TKEY='season-2027-gl';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -262,6 +265,75 @@ function people(){
    ${ev.map(e=>`<div class="tr"><span class="zb" style="--zc:${e.c};margin-left:0"></span><div class="nm"><b>${esc(e.n)}</b><span>${e.date===ts?'<b style="color:var(--ink)">Today</b>':fdd(e.date)} · ${esc(e.time)}${e.note?' · '+esc(e.note):''}</span></div></div>`).join('')}`;
 }
 people();
+
+/* Money and Business, read once on load.
+   The token already lives in this browser's localStorage under the same origin,
+   put there by the Money page, so nothing has to be set up twice and nothing is
+   stored here. Both panels stay hidden until the data arrives: a home page that
+   shows empty money boxes while it loads reads worse than one that does not
+   mention money at all. */
+(function(){
+  const $m=document.getElementById('cash'), $b=document.getElementById('biz');
+  let url='', tok='';
+  try{ url=(JSON.parse(localStorage.getItem('season-2027-sync')||'null')||{}).url||''; }catch(e){}
+  try{ tok=localStorage.getItem('lifehub-money-token')||''; }catch(e){}
+  if(!url||!tok) return;
+  const eur=n=>'\u20ac'+Math.abs(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const eur0=n=>'\u20ac'+Math.round(Math.abs(n)).toLocaleString('en-GB');
+  const sgn=n=>(n<0?'\u2212':'+')+eur(n);
+  const api=q=>fetch(url+(url.includes('?')?'&':'?')+'action=money&mt='+encodeURIComponent(tok)+q).then(r=>r.json());
+  const day=d=>{const x=new Date(d+'T12:00');return x.getDate()+' '+MN[x.getMonth()]};
+  const now=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+
+  // Ten working days after the shoot, the same rule as the Business page.
+  function due(shoot){const d=new Date(shoot+'T12:00');if(isNaN(d))return '';let n=10;
+    while(n>0){d.setDate(d.getDate()+1);const w=d.getDay();if(w!==0&&w!==6)n--;}
+    return d.toISOString().slice(0,10);}
+
+  api('').then(j=>{
+    if(!j.ok) return;
+    const month=now.slice(0,7);
+    const mine=(j.tx||[]).filter(t=>t.own!=='Business'&&t.c==='EUR'&&t.d.startsWith(month));
+    const skip=t=>{const c=(t.cat||'').toLowerCase();return c==='transfer'||c==='savings'};
+    const inc=mine.filter(t=>t.a>0&&!skip(t)).reduce((a,t)=>a+t.a,0);
+    const out=mine.filter(t=>t.a<0&&!skip(t)).reduce((a,t)=>a-t.a,0);
+    const accs=((j.balances||{}).accounts||[]).filter(a=>a.own!=='Business'&&a.currency==='EUR'&&!a.est);
+    const total=accs.reduce((a,x)=>a+(Number(x.amount)||0),0);
+    const stale=accs.some(a=>a.error);
+    $m.innerHTML='<div class="card-h"><h3>Money</h3><a href="money/">Open</a></div>'+
+      '<div class="pc"><p class="sub">In the accounts <b style="color:var(--ink)">'+eur(total)+'</b>'+
+      (stale?' <span style="color:var(--soft)">(a bank did not answer, last reading)</span>':'')+'</p>'+
+      '<p class="sub">This month: in '+eur0(inc)+' \u00b7 out '+eur0(out)+
+      ' \u00b7 <b style="color:var(--ink)">'+sgn(inc-out)+'</b></p></div>';
+    $m.classList.remove('hidden');
+  }).catch(()=>{});
+
+  api('&biz=go').then(j=>{
+    if(!j.ok) return;
+    // The same matcher the Business page runs, so the two can never disagree
+    // about what is still owed.
+    const open=Invoices.reconcile(j.invoices,j.tx).live.filter(i=>!i._paid);
+    const owed=open.reduce((a,i)=>a+(Number(i.amount_eur)||0),0);
+
+    const jobs=(j.bookings||[]).filter(b=>!b.delivered).map(b=>({b:b,d:due(b.shoot)}))
+      .sort((x,y)=>x.d<y.d?-1:1);
+    const late=jobs.filter(x=>x.d<now);
+    const next=jobs.find(x=>x.d>=now);
+
+    let lines='';
+    if(late.length) lines+='<p class="sub" style="color:var(--big)"><b>'+late.length+
+      ' shoot'+(late.length===1?'':'s')+' past the delivery date</b>, oldest '+day(late[0].d)+'.</p>';
+    if(next) lines+='<p class="sub">Next due: <b style="color:var(--ink)">'+
+      (next.b.client?next.b.client.replace(/[<>&]/g,''):'a shoot')+'</b> by '+day(next.d)+'.</p>';
+    if(!jobs.length) lines+='<p class="sub">No shoot waiting to be delivered.</p>';
+    if(owed>0.01) lines+='<p class="sub">'+open.length+' invoice'+(open.length===1?'':'s')+
+      ' with no payment found, '+eur(owed)+'.</p>';
+    $b.innerHTML='<div class="card-h"><h3>Business</h3><a href="business/">Open</a></div>'+
+      '<div class="pc">'+lines+'</div>';
+    $b.classList.remove('hidden');
+  }).catch(()=>{});
+})();
+
 document.addEventListener('click',e=>{const b=e.target.closest('button[data-coffee]');if(!b)return;
   let hs={};try{hs=JSON.parse(localStorage.getItem('lifehub-holidays')||'{}')||{}}catch(x){}
   hs.coffee=hs.coffee||{};const k=b.dataset.coffee;hs.coffee[k]=!hs.coffee[k];if(!hs.coffee[k])delete hs.coffee[k];
