@@ -31,6 +31,18 @@ const BANKS = [[/unicredit/i, 'uni', 'UC'], [/revolut/i, 'rev', 'R'], [/mypos/i,
    do anything; a 429 is the daily cap on balance requests and clears by itself,
    so it must not wear the same red dot. The figure beside it is the last good
    reading either way. */
+/* A figure nobody can refresh automatically goes quietly wrong. The credit
+   card's balance, myPOS and the cash fund are all kept by hand, so each says
+   how old it is and shouts once it is past a month. */
+function ageNote(a) {
+  if (!a.est || !a.as_of) return '';
+  const days = Math.floor((Date.now() - new Date(a.as_of + (a.as_of.length === 10 ? 'T12:00' : '')).getTime()) / 864e5);
+  if (isNaN(days)) return '';
+  const when = new Date(a.as_of + (a.as_of.length === 10 ? 'T12:00' : ''))
+    .toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return ` <small class="asof${days > 31 ? ' warn' : ''}">by hand, ${when}${days > 31 ? ', check it' : ''}</small>`;
+}
+
 function warnDot(a) {
   // Red only when we KNOW the consent has gone. A rate limit, a bank having a
   // bad morning, or a payload cached before the reason was recorded all mean
@@ -434,7 +446,7 @@ function renderAccounts(rows) {
   $('#view').innerHTML = `
     <div class="card">
       ${Object.entries(tot).map(([c, v]) => `<div class="arow tot"><b>Total ${c}</b><b>${sfmt(v, c)}</b></div>`).join('')}
-      ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${bankMark(a)}${esc(a.account)}${a.est ? ' <small>(est.)</small>' : ''}${a.error ? warnDot(a) : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}${a.error && a.as_of ? `<small class="asof">${new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</small>` : ''}</span></div>` +
+      ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${bankMark(a)}${esc(a.account)}${ageNote(a)}${a.error ? warnDot(a) : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}${a.error && a.as_of ? `<small class="asof">${new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</small>` : ''}</span></div>` +
         (a.overdraft || a.credit ? odRow(a) : '')).join('')}
       ${b ? `<div class="note2">As of ${new Date(b.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.</div>` : ''}
       ${data.fund ? `<div class="note2">Flexible Cash Funds: statement ${new Date(data.fund.statement_date + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} plus moves since. Interest after that date shows when a new statement is added.</div>` : ''}

@@ -27,7 +27,7 @@ const data = ctx.prep({ ok: true, tx: [
   row('2026-02-20', 900, 'Income'), row('2026-03-02', -12, 'Groceries')
 ], balances: { at: '2026-03-02T10:00:00Z', accounts: [
   { id: 'a1', account: 'Main', own: 'Personal', amount: 10, currency: 'EUR', bank: 'Revolut' },
-  { id: 'mypos001', account: 'myPOS', own: 'Business', amount: 5, currency: 'EUR', bank: 'myPOS', est: true }
+  { id: 'mypos001', account: 'myPOS', own: 'Personal', amount: 5, currency: 'EUR', bank: 'myPOS', est: true, as_of: '2026-01-02' }
 ] }, fund: null });
 ctx.setData(data);
 ctx.setMonth('2026-02');
@@ -41,6 +41,9 @@ assert.ok(/data-k="/.test(out.view), 'a transaction can be tapped to set its cat
 assert.ok(!/a month/.test(out.sum), 'a single month has no average');
 ctx.tabs('accounts'); ctx.render();
 assert.ok(/data-act="sync"/.test(out.view), 'the Accounts tab can ask the banks for anything new');
+// A figure kept by hand must say so, and say when, or it rots unnoticed.
+assert.ok(/by hand/.test(out.view), 'a hand-kept balance says it is hand-kept');
+assert.ok(/check it/.test(out.view), 'and shouts once it is over a month old');
 
 ctx.tabs('monthly'); ctx.render();
 assert.ok(/a month/.test(out.sum), 'a year says what each figure is a month');

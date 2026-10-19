@@ -16,7 +16,7 @@ const ctx = {};
 new Function('ctx', 'Year', 'Charts', 'Invoices', '$', 'document', 'localStorage', 'fetch', 'CatPick',
   body + '\nctx.prep=prep;ctx.render=render;ctx.setData=d=>{data=d};' +
   'ctx.tabs=t=>{tab=t};ctx.filter=f=>{filter=f};ctx.out=()=>out;' +
-  'ctx.workingDue=workingDue;ctx.jobState=jobState;')
+  'ctx.workingDue=workingDue;ctx.jobState=jobState;ctx.jobGaps=jobGaps;ctx.edit=i=>{jobEdit=i};')
   (ctx, Year, Charts, Invoices, $, { querySelectorAll: () => [] }, { getItem: () => null, setItem() {} },
    () => Promise.reject(new Error('no network in the check')), { open() {} });
 
@@ -29,7 +29,9 @@ const j = ctx.prep({
   types: ['Продуктова фотография'],
   tx: [tx('2026-02-03', 100, 'ф-ра: 0000000001'), tx('2026-02-10', -40, 'АМАЙЯ РЕНТ', 'Rent'),
        tx('2026-04-01', -60, 'Заплата · Вътрешнобанков превод'),
-       tx('2026-05-01', -20, 'Sent from myPOS', 'Transfer')]
+       tx('2026-05-01', -20, 'Swept to the company', 'Transfer'),
+       tx('2026-05-01', 20, 'Sent from myPOS', 'Transfer'),
+       tx('2026-05-02', -61.36, 'Revolut** top-up', 'Transfer')]
 });
 ctx.setData(j);
 ['overview', 'jobs', 'year', 'invoices', 'clients', 'spend'].forEach(t => {
@@ -47,7 +49,39 @@ assert.ok(/By client/.test(out.html) && /<svg/.test(out.html), 'the overview dra
 assert.ok(/class="bv b2"/.test(out.html), 'the averages sit beside their totals');
 ctx.tabs('spend'); ctx.render();
 assert.ok(/Salary/.test(out.html), 'salary is named on the company side');
-assert.ok(!/Transfer/.test(out.html), 'a transfer is not spending');
+assert.ok(!/Transfer/.test(out.html), 'a transfer between the company\u2019s own accounts is not spending');
+assert.ok(/Drawings/.test(out.html),
+  'but a transfer out with no matching leg is money he took out');
+/* Where the three records disagree. A booking's figures are never money, so
+   saying so is the only thing they can do against the bank and the invoices. */
+const gaps = (j, inv) => ctx.jobGaps(j, inv || {});
+const paidInv = { 7: { no: '7', amount_eur: 400, _paid: {}, _short: 0 } };
+const partInv = { 7: { no: '7', amount_eur: 400, _paid: null, _short: 150 } };
+assert.deepEqual(gaps({ shoot: '2026-01-01', price: 400, invoice: '7' }, paidInv), [],
+  'a booking that agrees with a paid invoice says nothing');
+assert.ok(/not in the register/.test(gaps({ shoot: '2026-01-01', invoice: '99' })[0]),
+  'an invoice number that does not exist is called out');
+assert.ok(/billed/.test(gaps({ shoot: '2026-01-01', price: 500, invoice: '7' }, paidInv)[0]),
+  'a price that does not match the invoice is called out');
+assert.ok(/has not arrived/.test(gaps({ shoot: '2026-01-01', price: 400, invoice: '7' }, partInv)[0]),
+  'and an invoice that is short');
+assert.ok(/no invoice/.test(gaps({ shoot: '2020-01-01', delivered: '2020-01-20', price: 400 })[0]),
+  'delivered with no invoice number is called out');
+assert.ok(/never marked as in/.test(gaps({ shoot: '2020-01-01', price: 400, deposit: 100 })[0]),
+  'a deposit on a past shoot that never arrived is called out');
+
+// Editing: the form must come back filled in, and save to the edit route.
+ctx.tabs('jobs');
+ctx.setData(Object.assign({}, j, { bookings: [{ id: 'j1', client: 'Someone', shoot: '2026-11-06',
+  price: 400, deposit: 100, deposit_in: 'yes', type: 'X', location: 'Plovdiv', note: 'hi' }] }));
+ctx.render();
+assert.ok(/data-act="jedit"/.test(out.html), 'a booking can be edited');
+ctx.edit('j1'); ctx.render();
+assert.ok(/Editing Someone/.test(out.html), 'and the form says so');
+assert.ok(/value="400"/.test(out.html) && /value="Plovdiv"/.test(out.html), 'filled in with what is there');
+assert.ok(/Save the changes/.test(out.html) && /jcancel/.test(out.html), 'with a save and a way out');
+ctx.edit(null); ctx.setData(j);
+
 // The form must be reachable, and open when there is nothing else on the tab.
 ctx.tabs('jobs'); ctx.render();
 assert.ok(/data-act="jadd"/.test(out.html), 'the Jobs tab has a way to add a booking');

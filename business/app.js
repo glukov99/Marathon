@@ -25,11 +25,33 @@ let jobFilter = 'open', jobEdit = null;
 
 /* What a company row counts as. Transfers are the same euro moving (the myPOS
    sweep, money sent to cover a card), so they are shown but never counted. */
+/* A "Transfer" on the personal side can be money LEAVING the company here.
+   The myPOS sweep is internal: both legs are the company's, so it cancels. The
+   card top-up of his personal Revolut (120 BGN, Jan 2025) is also tagged
+   Transfer, and it is not internal at all - that euro left. Counting it as a
+   move overstated what the company kept by 61.36, which is how it was found.
+
+   So a transfer only cancels when its opposite leg is also the company's:
+   pairTransfers() marks those, and every other transfer is treated by its sign
+   like any other row. */
 function classify(t) {
   const cat = String(t.cat || '').trim();
-  if (/^transfer$/i.test(cat)) return { k: 'move', cat: 'Transfer' };
-  if (t.a > 0) return { k: 'inc', cat: cat || 'Income' };
-  return { k: 'exp', cat: cat || here(t) || 'Uncategorised' };
+  if (t._internal) return { k: 'move', cat: 'Transfer' };
+  const tr = /^transfer$/i.test(cat);
+  if (t.a > 0) return { k: 'inc', cat: tr ? 'Income' : (cat || 'Income') };
+  // A transfer out that nothing in the company answers is money he took out.
+  return { k: 'exp', cat: tr ? 'Drawings' : (cat || here(t) || 'Uncategorised') };
+}
+
+function pairTransfers(tx) {
+  const mv = (tx || []).filter(t => t.c === 'EUR' && /^transfer$/i.test(String(t.cat || '')));
+  const out = mv.filter(t => t.a < 0), inn = mv.filter(t => t.a > 0);
+  mv.forEach(t => { t._internal = false; });
+  out.forEach(o => {
+    const m = inn.find(i => !i._internal && Math.abs(i.a + o.a) < 0.015 &&
+      Math.abs(new Date(i.d) - new Date(o.d)) <= 3 * 864e5);
+    if (m) { m._internal = true; o._internal = true; }
+  });
 }
 
 /* Two names that only mean something on this side of the money, so they are
@@ -46,6 +68,7 @@ const cancelled = i => Invoices.cancelled(i);
 const shortType = t => String(t).split(' (')[0];
 
 function prep(j) {
+  pairTransfers(j.tx);
   (j.tx || []).forEach(t => { const k = classify(t); t._k = k.k; t._cat = k.cat; });
   const r = Invoices.reconcile(j.invoices, j.tx);
   j.invoices = r.invoices; j.live = r.live; j.credits = r.credits; j.unbilled = r.unbilled;
@@ -177,10 +200,18 @@ function render() {
   show('main');
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.t === tab)));
   const m = money();
+  /* "Left" used to be in minus out, presented as if it were cash in hand. It
+     was not: the accounts held 76.65 more, which is older than the first row of
+     the statement export. So the real balance is shown when it is known, and
+     the difference is named rather than hidden in a rounding. */
+  const held = (data.balances || []).reduce((a, x) => a + (Number(x.amount) || 0), 0);
+  const before = (data.balances || []).length ? Math.round((held - m.net) * 100) / 100 : 0;
   $('#sum').innerHTML =
     `<div><span>Into the bank</span><b class="inc">${fmt(m.inn)}</b></div>` +
     `<div><span>Out of the bank</span><b class="exp">${fmt(m.out)}</b></div>` +
-    `<div><span>Left</span><b>${fmt(m.net)}</b></div>`;
+    `<div><span>${(data.balances || []).length ? 'In the accounts' : 'Left'}</span>` +
+      `<b>${fmt((data.balances || []).length ? held : m.net)}</b>` +
+      (Math.abs(before) > 0.01 ? `<i>${fmt(m.net)} of it earned here</i>` : '') + `</div>`;
   if (tab === 'jobs') renderJobs();
   else if (tab === 'year') renderYear();
   else if (tab === 'invoices') renderInvoices();
@@ -226,6 +257,13 @@ function workingDue(shoot, days) {
 
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 
+/* IMPORTANT: a booking's price and deposit are NEVER money.
+   They are what Georgi agreed, not what moved. Only the bank says what moved,
+   and the invoices say what was billed. So no figure typed into a booking is
+   added to a balance, a total, a year or a chart anywhere on this site: the
+   bookings are a record, and their one job against the money is to disagree
+   with it out loud when the three do not line up (see jobGaps). */
+
 /* What a booking is NOW. Nothing here is stored except `delivered` and the
    invoice number: a status written into a cell is out of date the next morning
    and then has to be corrected by hand, which is exactly the work this page is
@@ -241,12 +279,38 @@ function jobState(j, invByNo) {
   return { k: 'due', label: 'due ' + dshort(due), due };
 }
 
+/* Where the three records disagree. This is the whole point of keeping
+   bookings beside the invoices and the bank: each one knows something the
+   others do not, and a difference between them is either a mistake or a thing
+   still to do. Nothing is corrected automatically; it is only said. */
+function jobGaps(j, invByNo) {
+  const out = [];
+  const price = Number(j.price) || 0;
+  const no = String(j.invoice || '').trim();
+  const inv = no ? invByNo[no] : null;
+
+  if (no && !inv) out.push('invoice \u2116 ' + no + ' is not in the register');
+  if (inv && price && Math.abs((Number(inv.amount_eur) || 0) - price) > 0.01) {
+    out.push('billed ' + fmt(inv.amount_eur) + ', booked at ' + fmt(price));
+  }
+  if (inv && inv._short > 0.01) {
+    out.push(inv._paid ? '' : fmt(inv._short) + ' of that invoice has not arrived');
+  }
+  // Delivered, and the shoot is long enough past that an invoice would be out.
+  if (!no && j.delivered) out.push('delivered, no invoice \u2116 on it');
+  const dep = Number(j.deposit) || 0;
+  if (dep && price && dep > price + 0.01) out.push('the deposit is more than the price');
+  if (dep && !j.deposit_in && j.shoot < today()) out.push('the deposit was never marked as in');
+  return out.filter(Boolean);
+}
+
 const JOB_ORDER = { late: 0, due: 1, delivered: 2, booked: 3, invoiced: 4, paid: 5 };
 
 function renderJobs() {
   const invByNo = {};
   (data.invoices || []).forEach(i => { invByNo[String(i.no).trim()] = i; });
-  const all = (data.bookings || []).map(j => Object.assign({}, j, { _s: jobState(j, invByNo) }));
+  const all = (data.bookings || []).map(j => Object.assign({}, j,
+    { _s: jobState(j, invByNo), _gaps: jobGaps(j, invByNo) }));
   const sets = {
     open: all.filter(j => j._s.k !== 'paid'),
     all: all
@@ -258,7 +322,11 @@ function renderJobs() {
   $('#view').innerHTML = jobForm() +
     `<div class="chips">${Object.keys(sets).map(k =>
       `<button data-act="jfilter" data-f="${k}" aria-pressed="${jobFilter === k}">${names[k]} ${sets[k].length}</button>`).join('')}</div>` +
-    (list.length ? `<div class="card">${list.map(jobRow).join('')}</div>`
+    (list.length ? `<div class="card">${list.map(jobRow).join('')}</div>` +
+      `<div class="note2"><b>These figures are a record of what you agreed, not money.</b>
+        Nothing typed into a booking is added to a balance or a chart anywhere.
+        What the bank received is on the Year and Overview tabs; what was billed is on Invoices.
+        A booking's only job against those is to say so when the three disagree.</div>`
       : '<div class="empty">No bookings yet. Add the next shoot above.</div>');
 }
 
@@ -274,30 +342,41 @@ function jobRow(j) {
       ${j.price && owed > 0.01 && s.k !== 'paid' ? `<span class="tag">${fmt(owed)} to come</span>` : ''}
       ${j.delivered ? '' : `<button class="mk" data-act="jdone" data-id="${esc(j.id)}">Delivered</button>`}
       <button class="mk" data-act="jinv" data-id="${esc(j.id)}">${j.invoice ? '№ ' + esc(j.invoice) : 'Invoice №'}</button>
-      <button class="mk" data-act="jdel" data-id="${esc(j.id)}">Remove</button></span></div>`;
+      <button class="mk" data-act="jedit" data-id="${esc(j.id)}">Edit</button>
+      <button class="mk" data-act="jdel" data-id="${esc(j.id)}">Remove</button></span>
+    ${j._gaps && j._gaps.length ? `<span class="gap">${j._gaps.map(esc).join(' \u00b7 ')}</span>` : ''}</div>`;
 }
 
+/* One form, for a new booking and for correcting one. Getting a price wrong
+   and having to open the spreadsheet to fix it would undo the point of the
+   tab, so Edit fills this in and the same button saves it. */
 function jobForm() {
   const types = [...new Set((data.types || []).concat(
     (data.bookings || []).map(j => String(j.type || '').trim()).filter(Boolean)))];
-  // Open when there is nothing to show yet: a collapsed form on an empty tab
-  // leaves a page with one line of text on it and nothing to press.
-  const open = jobEdit || !(data.bookings || []).length;
+  const j = jobEdit ? (data.bookings || []).find(x => x.id === jobEdit) : null;
+  // Open while editing, and while there is nothing else to show: a collapsed
+  // form on an empty tab leaves a page with one line of text and nothing to press.
+  const open = j || !(data.bookings || []).length;
+  const v = k => esc(j ? (j[k] == null ? '' : j[k]) : '');
   return `<details class="card addj"${open ? ' open' : ''}>
-    <summary><span>Add a booking</span></summary>
+    <summary><span>${j ? 'Editing ' + esc(j.client) : 'Add a booking'}</span></summary>
     <div class="bkf">
-      <label>Client<input id="jClient" autocomplete="off"></label>
-      <label>Shoot date<input id="jShoot" type="date" value="${today()}"></label>
+      <label>Client<input id="jClient" autocomplete="off" value="${v('client')}"></label>
+      <label>Shoot date<input id="jShoot" type="date" value="${j ? v('shoot') : today()}"></label>
       <label>Type<select id="jType"><option value=""></option>
-        ${types.map(t => `<option value="${esc(t)}">${esc(shortType(t))}</option>`).join('')}</select></label>
-      <label>Location<input id="jLocation" autocomplete="off"></label>
-      <label>Contact<input id="jContact" autocomplete="off"></label>
-      <label>Total price<input id="jPrice" type="number" step="0.01" inputmode="decimal"></label>
-      <label>Deposit<input id="jDeposit" type="number" step="0.01" inputmode="decimal"></label>
-      <label class="ck"><input id="jDepIn" type="checkbox"> Deposit already in</label>
-      <label class="wide">Note<input id="jNote" autocomplete="off"></label>
-      <button class="go" data-act="jadd">Add the booking</button>
-      <div class="note2" id="jMsg">Delivery is set at ten working days after the shoot.</div>
+        ${types.map(t => `<option value="${esc(t)}"${j && j.type === t ? ' selected' : ''}>${esc(shortType(t))}</option>`).join('')}</select></label>
+      <label>Location<input id="jLocation" autocomplete="off" value="${v('location')}"></label>
+      <label>Contact<input id="jContact" autocomplete="off" value="${v('contact')}"></label>
+      <label>Total price<input id="jPrice" type="number" step="0.01" inputmode="decimal" value="${v('price')}"></label>
+      <label>Deposit<input id="jDeposit" type="number" step="0.01" inputmode="decimal" value="${v('deposit')}"></label>
+      <label class="ck"><input id="jDepIn" type="checkbox"${j && j.deposit_in ? ' checked' : ''}> Deposit already in</label>
+      ${j ? `<label>Invoice \u2116<input id="jInvoice" autocomplete="off" value="${v('invoice')}"></label>
+      <label>Delivered<input id="jDelivered" type="date" value="${v('delivered')}"></label>` : ''}
+      <label class="wide">Note<input id="jNote" autocomplete="off" value="${v('note')}"></label>
+      <button class="go" data-act="jadd">${j ? 'Save the changes' : 'Add the booking'}</button>
+      ${j ? `<button class="go ghost" data-act="jcancel">Leave it as it was</button>` : ''}
+      <div class="note2" id="jMsg">Delivery is set at ten working days after the shoot.
+        These figures are a record of what you agreed, never money.</div>
     </div>
   </details>`;
 }
@@ -307,15 +386,20 @@ async function addJob() {
   const q = { client: v('jClient'), shoot: v('jShoot'), type: v('jType'), location: v('jLocation'),
     contact: v('jContact'), price: v('jPrice'), deposit: v('jDeposit'), note: v('jNote'),
     deposit_in: ($('#jDepIn') || {}).checked ? 'yes' : '' };
+  if (jobEdit) { q.invoice = v('jInvoice'); q.delivered = v('jDelivered'); q.id = jobEdit; }
   if (!q.client || !q.shoot) { $('#jMsg').textContent = 'A client and a shoot date are the two it cannot do without.'; return; }
   $('#jMsg').textContent = 'Saving…';
+  const route = jobEdit ? '&biz=editjob&' : '&biz=book&';
   try {
-    const j = await api('&biz=book&' + Object.keys(q).map(k => k + '=' + encodeURIComponent(q[k])).join('&'));
+    const j = await api(route + Object.keys(q).map(k => k + '=' + encodeURIComponent(q[k])).join('&'));
     if (!j.ok) throw new Error(j.error || 'failed');
-    data.bookings = (data.bookings || []).concat([j.job]);
+    const was = jobEdit;
+    data.bookings = was
+      ? (data.bookings || []).map(x => (x.id === was ? j.job : x))
+      : (data.bookings || []).concat([j.job]);
     try { localStorage.setItem(CKEY, JSON.stringify(data)); } catch (e) {}
     jobEdit = null;
-    $('#status').textContent = q.client + ' booked for ' + dshort(q.shoot);
+    $('#status').textContent = was ? q.client + ' updated' : q.client + ' booked for ' + dshort(q.shoot);
     render();
   } catch (e) { $('#jMsg').textContent = 'Could not save: ' + e.message; }
 }
@@ -469,7 +553,9 @@ function charts() {
 }
 
 function renderOverview() {
-  const y = byYear();
+  const m = money(), y = byYear();
+  const held = (data.balances || []).reduce((a, x) => a + (Number(x.amount) || 0), 0);
+  const before = (data.balances || []).length ? Math.round((held - m.net) * 100) / 100 : 0;
   const open = data.live.filter(i => !i._paid);
   $('#view').innerHTML = `
     <div class="card">
@@ -477,7 +563,9 @@ function renderOverview() {
         `<span>in ${fmt0(y[k].inn)} · out ${fmt0(y[k].out)} · billed ${fmt0(y[k].billed)}</span></div>`).join('')}
       <div class="note2"><b>In and out are the bank: what the company actually earned and spent.</b>
         Billed is what the invoices say. The two are never added together, and they do not have to agree:
-        an invoice can be billed in one year and paid in the next.</div>
+        an invoice can be billed in one year and paid in the next.
+        ${Math.abs(before) > 0.01 ? `<br><b>${fmt(before)} of what the accounts hold is older than these records</b>,
+          which start ${dshort((data.tx || []).map(t => t.d).sort()[0] || '')}. In minus out comes to ${fmt(m.net)}.` : ''}</div>
     </div>
     <div class="card">
       <div class="arow tot"><b>Invoices</b><b>${data.live.length}</b></div>
@@ -570,6 +658,8 @@ $('#view').addEventListener('click', e => {
   }
   const a = b.dataset.act;
   if (a === 'jadd') { addJob(); return; }
+  if (a === 'jedit') { jobEdit = b.dataset.id; render(); window.scrollTo(0, 0); return; }
+  if (a === 'jcancel') { jobEdit = null; render(); return; }
   if (a === 'jdone') { setJob(b.dataset.id, 'delivered', today()); return; }
   if (a === 'jdel') { delJob(b.dataset.id); return; }
   if (a === 'jinv') {
