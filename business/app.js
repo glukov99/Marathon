@@ -19,24 +19,64 @@ const apiUrl = () => ((window.HubSync && HubSync.cfg()) || {}).url || '';
 const token = () => { try { return localStorage.getItem(TKEY) || ''; } catch (e) { return ''; } };
 let data = null, tab = 'overview', filter = 'open';
 
-/* The match: same amount to the cent, within 60 days. Invoices billed in BGN
-   carry an amount already converted at the peg, and so do the bank rows, so the
-   two are comparable across the changeover. */
+/* Matching invoices to money.
+
+   The bank descriptions name the invoice: "ф-ра: 0000000045", sometimes two of
+   them at once. That beats guessing from the amount, and it is the only way to
+   see the three things that really happen here: one invoice paid in two
+   instalments, one payment covering several invoices, and part payments.
+
+   So: numbers first, amounts second. Each credit can only be spent once.
+   Everything is reported, nothing is written back. */
+function invoiceNumbers(text) {
+  const out = [];
+  const m = String(text || '').match(/\d{5,}/g) || [];
+  m.forEach(x => { const n = x.replace(/^0+/, ''); if (n && +n < 100000) out.push(n); });
+  return out;
+}
+
 function matchPayments(inv, credits) {
-  const used = new Set();
+  const left = credits.map((c, i) => ({ i, c, rest: c.a }));
+  const byNo = {};
+  inv.forEach(i => { i._paid = null; i._got = 0; i._parts = []; byNo[String(i.no)] = i; });
+
+  // 1. The credit says which invoice it is for.
+  left.forEach(x => {
+    const nos = invoiceNumbers((x.c.who || '') + ' ' + (x.c.desc || '')).filter(n => byNo[n]);
+    if (!nos.length) return;
+    const share = x.rest / nos.length;        // one payment, several invoices
+    nos.forEach(n => {
+      byNo[n]._got += share;
+      byNo[n]._parts.push({ row: x.c, amount: share, by: 'number' });
+    });
+    x.rest = 0;
+  });
+
+  // 2. Otherwise the amount, to the cent, from a week before to sixty days after.
   inv.slice().sort((a, b) => (a.issued < b.issued ? -1 : 1)).forEach(i => {
-    const want = Number(i.amount_eur) || 0;
-    i._paid = null;
-    if (!(want > 0) || !i.issued) return;
+    const want = (Number(i.amount_eur) || 0) - i._got;
+    if (!(want > 0.015) || !i.issued) return;
     const t0 = new Date(i.issued + 'T12:00').getTime();
     let best = null;
-    credits.forEach((c, idx) => {
-      if (used.has(idx) || Math.abs(c.a - want) > 0.015) return;
-      const days = Math.round((new Date(c.d + 'T12:00').getTime() - t0) / 864e5);
-      if (days < -7 || days > 60) return;          // paid after billing, mostly
-      if (!best || Math.abs(days) < Math.abs(best.days)) best = { idx, row: c, days };
+    left.forEach(x => {
+      if (x.rest <= 0.015 || Math.abs(x.rest - want) > 0.015) return;
+      const days = Math.round((new Date(x.c.d + 'T12:00').getTime() - t0) / 864e5);
+      if (days < -7 || days > 60) return;
+      if (!best || Math.abs(days) < Math.abs(best.days)) best = { x, days };
     });
-    if (best) { used.add(best.idx); i._paid = best; }
+    if (best) {
+      i._got += best.x.rest;
+      i._parts.push({ row: best.x.c, amount: best.x.rest, by: 'amount' });
+      best.x.rest = 0;
+    }
+  });
+
+  inv.forEach(i => {
+    const want = Number(i.amount_eur) || 0;
+    i._got = Math.round(i._got * 100) / 100;
+    i._short = Math.round((want - i._got) * 100) / 100;
+    i._paid = i._parts.length && i._short <= 0.015 ? i._parts[i._parts.length - 1] : null;
+    i._part = !i._paid && i._parts.length ? i._parts[0] : null;
   });
 }
 
@@ -124,8 +164,10 @@ function renderOverview() {
 
 function invRow(i) {
   const tag = i._paid
-    ? `<span class="tag found">paid ${dshort(i._paid.row.d)}</span>`
-    : `<span class="tag owed">no payment matched</span>`;
+    ? `<span class="tag found">paid ${dshort(i._paid.row.d)}${i._parts.length > 1 ? ', ' + i._parts.length + ' parts' : ''}</span>`
+    : i._part
+      ? `<span class="tag owed">part paid, ${fmt(i._short)} short</span>`
+      : `<span class="tag owed">no payment matched</span>`;
   return `<div class="inv">
     <b>${esc(i.client)}</b><span class="amt">${fmt(i.amount_eur)}</span>
     <span class="svc">№ ${esc(i.no)} · ${dshort(i.issued)}${i.items ? ' · ' + esc(String(i.items).slice(0, 40)) : ''}</span>
