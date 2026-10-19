@@ -76,10 +76,16 @@ function render() {
   show('main');
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.t === tab)));
   const t = totals();
+  // Not "to collect": the sheet's paid/unpaid marks are a working note, not a
+  // ledger. Georgi, 19 Oct 2026: in reality only about EUR 1,000 from Zarena is
+  // outstanding. So the page reports what it can actually stand behind: what the
+  // company's bank account received.
+  const fromBank = (data.tx || []).filter(x => x.a > 0 && x.c === 'EUR')
+    .reduce((a, x) => a + x.a, 0);
   $('#sum').innerHTML =
-    `<div><span>Invoiced</span><b>${fmt(t.invoiced)}</b></div>` +
-    `<div><span>Received</span><b class="inc">${fmt(t.received)}</b></div>` +
-    `<div><span>To collect</span><b class="exp">${fmt(t.toCollect)}</b></div>`;
+    `<div><span>Invoiced (sheet)</span><b>${fmt(t.invoiced)}</b></div>` +
+    `<div><span>Into the bank</span><b class="inc">${fmt(fromBank)}</b></div>` +
+    `<div><span>Unmatched</span><b>${fmt(t.live.filter(i => i._owed > 0 && !i._hit).reduce((a, i) => a + i._owed, 0))}</b></div>`;
   if (tab === 'invoices') renderInvoices();
   else if (tab === 'clients') renderClients();
   else if (tab === 'spend') renderSpend();
@@ -104,7 +110,11 @@ function renderOverview() {
       <div class="arow tot"><b>Open invoices</b><b>${open.length}</b></div>
       <div class="arow"><span>Still owed</span><b class="exp">${fmt(open.reduce((a, i) => a + i._owed, 0))}</b></div>
       ${found.length ? `<div class="arow"><span>Of those, a matching payment is in the bank</span><b class="inc">${found.length}</b></div>` : ''}
-      <div class="note2">An invoice counts as found when a credit on the company account matches it to the cent, within 60 days. Nothing is written back to your sheet.</div>
+      <div class="note2"><b>Read this before trusting the figures.</b> The invoice rows come from the
+        "Отчет клиенти" sheet, which is a working note, not a ledger: its paid and unpaid marks are
+        unreliable, and Georgi says only about €1,000 from Zarena is really outstanding. What this page
+        can stand behind is the bank: a credit matching an invoice to the cent within 60 days. Nothing is
+        ever written back to the sheet.</div>
     </div>
     <div class="card">
       ${Object.keys(byYear).sort().reverse().map(y => `<div class="arow"><span>${y}</span>` +
