@@ -21,7 +21,7 @@ const token = () => { try { return localStorage.getItem(TKEY) || ''; } catch (e)
 let data = null, tab = 'overview', filter = 'open';
 let bizYear = null, yearKind = 'exp', yearCat = null, yearCell = null;
 let chartYear = 'all';
-let jobFilter = 'open', jobEdit = null;
+let jobFilter = 'open', jobEdit = null, cashSkip = [];
 
 /* What a company row counts as. Transfers are the same euro moving (the myPOS
    sweep, money sent to cover a card), so they are shown but never counted. */
@@ -311,6 +311,79 @@ function jobGaps(j, invByNo) {
 
 const JOB_ORDER = { late: 0, due: 1, delivered: 2, booked: 3, invoiced: 4, paid: 5 };
 
+/* Tying a cash deposit to the shoots behind it.
+
+   Georgi pays cash in at a machine, often several shoots in one go, so looking
+   for a deposit that equals one booking would miss most of them. This looks for
+   any combination of up to four unpaid cash bookings that comes to the deposit
+   exactly. Combinations are few (unpaid cash bookings are a handful) so the
+   cost is nothing, and a suggestion is only ever offered - confirming is his. */
+const cashCandidates = () => (data.bookings || []).filter(b =>
+  (Number(b.price) || 0) > 0 && !b.paid && !String(b.invoice || '').trim());
+
+function cashMatches() {
+  const open = cashCandidates();
+  const out = [];
+  if (!open.length) return out;
+  (data.cashIn || []).filter(dep => cashSkip.indexOf(dep.k) < 0).forEach(dep => {
+    // Only shoots already done by the day the money was paid in, and not too
+    // long before: cash sits in a wallet for days, not seasons.
+    const near = open.filter(b => b.shoot <= dep.d &&
+      (new Date(dep.d) - new Date(b.shoot)) <= 120 * 864e5);
+    const hit = subsetFor(near, dep.a);
+    if (hit) out.push({ dep, jobs: hit });
+  });
+  return out;
+}
+
+function subsetFor(list, target) {
+  const n = Math.min(list.length, 12);
+  let best = null;
+  const walk = (i, picked, sum) => {
+    if (best || picked.length > 4) return;
+    if (Math.abs(sum - target) < 0.015 && picked.length) { best = picked.slice(); return; }
+    if (i >= n || sum > target + 0.015) return;
+    walk(i + 1, picked.concat([list[i]]), sum + (Number(list[i].price) || 0));
+    walk(i + 1, picked, sum);
+  };
+  walk(0, [], 0);
+  return best;
+}
+
+function cashCard() {
+  const m = cashMatches();
+  if (!m.length) return '';
+  return m.map(x => `<div class="card cashm">
+    <b>${fmt(x.dep.a)} paid in on ${dshort(x.dep.d)}</b>
+    <span class="svc">looks like ${x.jobs.length === 1 ? 'this shoot' : 'these ' + x.jobs.length + ' shoots'}:
+      ${x.jobs.map(j => esc(j.client) + ' ' + fmt(j.price)).join(' \u00b7 ')}</span>
+    <span class="st">
+      <button class="mk go2" data-act="cashok" data-dep="${esc(x.dep.k)}" data-d="${esc(x.dep.d)}"
+        data-ids="${esc(x.jobs.map(j => j.id).join(','))}">Yes, mark them paid</button>
+      <button class="mk" data-act="cashno" data-dep="${esc(x.dep.k)}">Not this</button></span>
+  </div>`).join('');
+}
+
+/* Confirming does two things at once: each shoot is marked paid on the day the
+   money was paid in, and the deposit itself is named Photography on the Money
+   page, so a cash-in row stops reading as an unexplained lump of income. */
+async function cashConfirm(depKey, when, ids) {
+  $('#status').textContent = 'Saving…';
+  try {
+    for (const id of ids.split(',')) {
+      const j = await api('&biz=setjob&id=' + encodeURIComponent(id) + '&f=paid&v=' + encodeURIComponent(when));
+      if (!j.ok) throw new Error(j.error || 'failed');
+      const b = (data.bookings || []).find(x => x.id === id);
+      if (b) b.paid = when;
+    }
+    await api('&setcat=' + encodeURIComponent(depKey) + '&cat=Photography').catch(() => null);
+    (data.cashIn || []).forEach(c => { if (c.k === depKey) c.cat = 'Photography'; });
+    try { localStorage.setItem(CKEY, JSON.stringify(data)); } catch (e) {}
+    $('#status').textContent = 'Marked paid, and the deposit is now Photography';
+    render();
+  } catch (e) { $('#status').textContent = 'Could not save: ' + e.message; }
+}
+
 function renderJobs() {
   const invByNo = {};
   (data.invoices || []).forEach(i => { invByNo[String(i.no).trim()] = i; });
@@ -324,7 +397,7 @@ function renderJobs() {
   const list = (sets[jobFilter] || []).slice().sort((a, b) =>
     (JOB_ORDER[a._s.k] - JOB_ORDER[b._s.k]) || (a.shoot < b.shoot ? -1 : 1));
 
-  $('#view').innerHTML = jobForm() +
+  $('#view').innerHTML = jobForm() + cashCard() +
     `<div class="chips">${Object.keys(sets).map(k =>
       `<button data-act="jfilter" data-f="${k}" aria-pressed="${jobFilter === k}">${names[k]} ${sets[k].length}</button>`).join('')}</div>` +
     (list.length ? `<div class="card">${list.map(jobRow).join('')}</div>` +
@@ -522,12 +595,29 @@ function charts() {
   const types = Object.entries(perType).sort((a, b) => b[1].sum - a[1].sum);
   const pcTagged = billed ? Math.round(tagged / billed * 100) : 0;
 
+  /* Earned from photography, invoiced and cash side by side but never added
+     into the bank figures. His call: "that's different from the invoiced cash,
+     so I don't want it in the same metrics, but I still want to know what it
+     is". So it is its own card, above the charts, and the charts stay as they
+     were: invoiced is what an invoice proves, cash is what a booking records. */
+  const earned = cashSum
+    ? `<div class="card">
+        <div class="chh">Earned from photography${chartYear === 'all' ? '' : ' in ' + chartYear}</div>
+        <div class="arow"><span>Invoiced</span><b>${fmt(billed)}</b></div>
+        <div class="arow"><span>Paid in cash, ${cash.length} shoot${cash.length === 1 ? '' : 's'}</span><b>${fmt(cashSum)}</b></div>
+        <div class="arow tot"><b>Together</b><b>${fmt(billed + cashSum)}</b></div>
+        <div class="note2">Invoiced is what an invoice says was billed; cash is what you recorded on the
+          booking, money that went straight to your personal account. They are kept apart on purpose and
+          neither is added to the bank figures below.</div>
+      </div>`
+    : '';
+
   const byCat = {};
   tx.filter(t => t._k === 'exp').forEach(t => { byCat[t._cat] = (byCat[t._cat] || 0) + -t.a; });
   const costs = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 9);
   const costTotal = costs.reduce((a, [, v]) => a + v, 0);
 
-  return chips + `<div class="card">
+  return chips + earned + `<div class="card">
       <div class="chh">In, out and what was kept${chartYear === 'all' ? ', per year' : ', month by month'}</div>
       ${chartYear === 'all'
         ? Charts.groups(periods.map(p => ({ label: p.label, parts: [
@@ -682,6 +772,8 @@ $('#view').addEventListener('click', e => {
   if (a === 'jcancel') { jobEdit = null; render(); return; }
   if (a === 'jdone') { setJob(b.dataset.id, 'delivered', today()); return; }
   if (a === 'jcash') { setJob(b.dataset.id, 'paid', today()); return; }
+  if (a === 'cashok') { cashConfirm(b.dataset.dep, b.dataset.d, b.dataset.ids); return; }
+  if (a === 'cashno') { cashSkip.push(b.dataset.dep); render(); return; }
   if (a === 'jdel') { delJob(b.dataset.id); return; }
   if (a === 'jinv') {
     const j = (data.bookings || []).find(x => x.id === b.dataset.id);

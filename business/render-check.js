@@ -16,7 +16,8 @@ const ctx = {};
 new Function('ctx', 'Year', 'Charts', 'Invoices', '$', 'document', 'localStorage', 'fetch', 'CatPick',
   body + '\nctx.prep=prep;ctx.render=render;ctx.setData=d=>{data=d};' +
   'ctx.tabs=t=>{tab=t};ctx.filter=f=>{filter=f};ctx.out=()=>out;' +
-  'ctx.workingDue=workingDue;ctx.jobState=jobState;ctx.jobGaps=jobGaps;ctx.edit=i=>{jobEdit=i};')
+  'ctx.workingDue=workingDue;ctx.jobState=jobState;ctx.jobGaps=jobGaps;ctx.edit=i=>{jobEdit=i};' +
+  'ctx.subsetFor=subsetFor;ctx.cashMatches=cashMatches;')
   (ctx, Year, Charts, Invoices, $, { querySelectorAll: () => [] }, { getItem: () => null, setItem() {} },
    () => Promise.reject(new Error('no network in the check')), { open() {} });
 
@@ -98,6 +99,29 @@ assert.ok(/Editing Someone/.test(out.html), 'and the form says so');
 assert.ok(/value="400"/.test(out.html) && /value="Plovdiv"/.test(out.html), 'filled in with what is there');
 assert.ok(/Save the changes/.test(out.html) && /jcancel/.test(out.html), 'with a save and a way out');
 ctx.edit(null); ctx.setData(j);
+
+/* One cash deposit is often several shoots at once, which is why this looks
+   for a combination rather than a single matching price. */
+const P = p => ({ price: p });
+assert.deepEqual(ctx.subsetFor([P(300), P(250), P(200)], 750).map(x => x.price), [300, 250, 200],
+  'three shoots paid in together are found');
+assert.deepEqual(ctx.subsetFor([P(300), P(250), P(200)], 500).map(x => x.price), [300, 200],
+  'and any two of them');
+assert.equal(ctx.subsetFor([P(300), P(250)], 1000), null, 'no combination means no suggestion');
+assert.equal(ctx.subsetFor([], 100), null, 'and nothing to work with means none either');
+
+ctx.setData(Object.assign({}, j, {
+  bookings: [{ id: 'a', client: 'A', shoot: '2026-10-01', price: 300 },
+             { id: 'b', client: 'B', shoot: '2026-10-05', price: 55 },
+             { id: 'c', client: 'C', shoot: '2026-10-06', price: 900 },
+             { id: 'd', client: 'D', shoot: '2026-12-01', price: 355 }],
+  cashIn: [{ k: 'dep1', d: '2026-10-14', a: 355, cat: 'Income' }] }));
+const m = ctx.cashMatches();
+assert.equal(m.length, 1, 'the deposit is matched');
+assert.deepEqual(m[0].jobs.map(x => x.id), ['a', 'b'], 'to the two shoots that come to it');
+ctx.tabs('jobs'); ctx.render();
+assert.ok(/data-act="cashok"/.test(out.html), 'and it is offered, not applied');
+ctx.setData(j);
 
 // The form must be reachable, and open when there is nothing else on the tab.
 ctx.tabs('jobs'); ctx.render();
