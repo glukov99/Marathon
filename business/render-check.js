@@ -3,19 +3,20 @@
    render time. Run: node business/render-check.js */
 const fs = require('fs'), assert = require('assert'), path = require('path');
 const dir = __dirname;
-const Year = {};
-new Function('window', fs.readFileSync(path.join(dir, '../shared/year.js'), 'utf8'))
-  ({ set Year(v) { Object.assign(Year, v); } });
+const shared = {};
+['year', 'charts'].forEach(f => new Function('window',
+  fs.readFileSync(path.join(dir, '../shared/' + f + '.js'), 'utf8'))(shared));
+const { Year, Charts } = shared;
 
 const src = fs.readFileSync(path.join(dir, 'app.js'), 'utf8');
 const body = src.slice(src.indexOf('const esc = '), src.indexOf("$('#tabs').addEventListener"));
 const out = {};
 const $ = () => ({ set innerHTML(v) { out.html = v; }, set textContent(v) {} , classList: { toggle() {} } });
 const ctx = {};
-new Function('ctx', 'Year', '$', 'document', 'localStorage', 'fetch', 'CatPick',
+new Function('ctx', 'Year', 'Charts', '$', 'document', 'localStorage', 'fetch', 'CatPick',
   body + '\nctx.prep=prep;ctx.render=render;ctx.setData=d=>{data=d};' +
   'ctx.tabs=t=>{tab=t};ctx.filter=f=>{filter=f};ctx.out=()=>out;')
-  (ctx, Year, $, { querySelectorAll: () => [] }, { getItem: () => null, setItem() {} },
+  (ctx, Year, Charts, $, { querySelectorAll: () => [] }, { getItem: () => null, setItem() {} },
    () => Promise.reject(new Error('no network in the check')), { open() {} });
 
 const tx = (d, a, desc, cat) => ({ k: 'k' + d + a, d, a, c: 'EUR', desc, who: '', cat: cat || '' });
@@ -34,6 +35,8 @@ ctx.setData(j);
   ctx.render();
   assert.ok(out.html && out.html.length > 20, t + ' rendered nothing');
 });
+ctx.tabs('overview'); ctx.render();
+assert.ok(/Who it came from/.test(out.html) && /<svg/.test(out.html), 'the overview draws its charts');
 ctx.tabs('spend'); ctx.render();
 assert.ok(/Salary/.test(out.html), 'salary is named on the company side');
 assert.ok(!/Transfer/.test(out.html), 'a transfer is not spending');

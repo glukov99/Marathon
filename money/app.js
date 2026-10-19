@@ -7,7 +7,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmt = (n, cur) => (cur === 'GBP' ? '£' : '€') + Math.abs(n).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const sfmt = (n, cur) => (n < 0 ? '−' : '') + fmt(n, cur);
-const PAL = ['#E07A63', '#D99A6C', '#E2C46B', '#B9C46B', '#7FB98A', '#6E9A97', '#8FC0B6', '#9DB6C4', '#8A9BD0', '#B58AC9', '#C98BA0', '#A7B4AD'];
+const { donut, PAL } = Charts;
 const MON = m => new Date(m + '-01T12:00').toLocaleDateString('en-GB', { month: 'short' });
 let data = null, month = null, owner = 'All', tab = 'accounts', statKind = 'exp', drill = null, yearCat = null, yearCell = null, yearKind = 'exp';
 const OWNERS = ['All', 'Personal', 'Joint'];
@@ -265,17 +265,6 @@ function catSums(rows, kind) {
   const m = {};
   eur(rows).filter(t => t._k === kind).forEach(t => { m[t._cat] = (m[t._cat] || 0) + Math.abs(t.a); });
   return Object.entries(m).sort((a, b) => b[1] - a[1]);
-}
-function donut(list, total) {
-  const R = 70, C = 2 * Math.PI * R;
-  let off = 0;
-  const segs = list.map(([, v], i) => {
-    const len = v / total * C;
-    const s = `<circle r="${R}" cx="100" cy="100" fill="none" stroke="${PAL[i % PAL.length]}" stroke-width="34"
-      stroke-dasharray="${len.toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`;
-    off += len; return s;
-  }).join('');
-  return `<svg viewBox="0 0 200 200" class="donut" aria-hidden="true"><g transform="rotate(-90 100 100)">${segs}</g></svg>`;
 }
 function renderStats(rows) {
   const s = totals(rows);

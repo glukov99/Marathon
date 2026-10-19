@@ -254,7 +254,7 @@ function render() {
 
 function byYear() {
   const y = {};
-  (data.tx || []).filter(t => t.c === 'EUR').forEach(t => {
+  (data.tx || []).filter(t => t.c === 'EUR' && t._k !== 'move').forEach(t => {
     const k = t.d.slice(0, 4);
     (y[k] = y[k] || { inn: 0, out: 0, billed: 0 });
     if (t.a > 0) y[k].inn += t.a; else y[k].out += -t.a;
@@ -264,6 +264,54 @@ function byYear() {
     (y[k] = y[k] || { inn: 0, out: 0, billed: 0 }).billed += i.amount_eur;
   });
   return y;
+}
+
+/* The three pictures worth having, each one from a source that can carry it:
+   the years from the bank, the clients from the invoices, the costs from the
+   categories. Profit by type of shoot is the one Georgi most wants and the one
+   missing: 48 of his 76 live invoices only say "Фотографски услуги", so it has
+   to come from the bookings, not from here. */
+function charts() {
+  const tx = (data.tx || []).filter(t => t.c === 'EUR');
+  const y = byYear();
+  const years = Object.keys(y).sort();
+
+  const byClient = {};
+  data.live.forEach(i => { byClient[i.client || '—'] = (byClient[i.client || '—'] || 0) + i.amount_eur; });
+  const clients = Object.entries(byClient).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  const byCat = {};
+  tx.filter(t => t._k === 'exp').forEach(t => { byCat[t._cat] = (byCat[t._cat] || 0) + -t.a; });
+  const costs = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 9);
+  const costTotal = costs.reduce((a, [, v]) => a + v, 0);
+
+  return `<div class="card">
+      <div class="chh">In, out and what was kept</div>
+      ${Charts.groups(years.map(k => ({ label: k, parts: [
+        { v: y[k].inn, cls: 'in', name: 'in' },
+        { v: y[k].out, cls: 'out', name: 'out' },
+        { v: y[k].inn - y[k].out, cls: 'net', name: 'kept' }] })), fmt0)}
+      <div class="note2">The bank, not the invoices. A small company runs near break-even on purpose:
+        what is left in it at the end of a year is what was not taken out.</div>
+    </div>
+    <div class="card">
+      <div class="chh">Who it came from</div>
+      ${Charts.bars(clients, fmt0)}
+      <div class="note2">Billed per client, cancelled invoices left out. Top ${clients.length} of
+        ${Object.keys(byClient).length}.</div>
+    </div>
+    <div class="card">
+      <div class="chh">Where it went</div>
+      ${Charts.donut(costs, costTotal)}
+      ${Charts.bars(costs, fmt0)}
+      <div class="note2">Every euro the company spent, by category, all years together.
+        Tap a row on the Year tab to see a single year.</div>
+    </div>
+    <div class="card">
+      <div class="note2"><b>Not here yet: what each kind of shoot earns.</b> 48 of ${data.live.length}
+        invoices only say "Фотографски услуги", so the type cannot be read from them. It will come
+        from the bookings, where you choose the type when you enter the job.</div>
+    </div>`;
 }
 
 function renderOverview() {
@@ -283,7 +331,7 @@ function renderOverview() {
       <div class="arow"><span>Not matched</span><b>${open.length}</b></div>
       <div class="note2">Not matched is not the same as unpaid: cash, a payment bundled with others, or an
         amount that differs by a cent all land here. Check them rather than chase them.</div>
-    </div>`;
+    </div>` + charts();
 }
 
 function invRow(i) {

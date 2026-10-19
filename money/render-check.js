@@ -3,9 +3,10 @@
    which is the risk whenever code moves between files.
    Run: node money/render-check.js */
 const fs = require('fs'), assert = require('assert'), path = require('path');
-const Year = {};
-new Function('window', fs.readFileSync(path.join(__dirname, '../shared/year.js'), 'utf8'))
-  ({ set Year(v) { Object.assign(Year, v); } });
+const shared = {};
+['year', 'charts'].forEach(f => new Function('window',
+  fs.readFileSync(path.join(__dirname, '../shared/' + f + '.js'), 'utf8'))(shared));
+const { Year, Charts } = shared;
 
 const src = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
 const body = src.slice(src.indexOf('const esc = '), src.indexOf("$('#mPrev').addEventListener"));
@@ -13,10 +14,10 @@ const out = {};
 const node = sel => { const id = String(sel).replace('#', ''); return ({ set innerHTML(v) { out[id] = v; }, set textContent(v) { out[id] = v; },
   classList: { toggle() {} }, querySelectorAll: () => [] }); };
 const ctx = {};
-new Function('ctx', 'Year', '$', 'document', 'localStorage', 'window',
+new Function('ctx', 'Year', 'Charts', '$', 'document', 'localStorage', 'window',
   body + '\nctx.render=render;ctx.prep=prep;ctx.setData=d=>{data=d};' +
   'ctx.tabs=t=>{tab=t};ctx.setMonth=m=>{month=m};')
-  (ctx, Year, node, { querySelectorAll: () => [], querySelector: node },
+  (ctx, Year, Charts, node, { querySelectorAll: () => [], querySelector: node },
    { getItem: () => null, setItem() {} }, {});
 
 const row = (d, a, cat, acc) => ({ k: 'k' + d + a, d, a, c: 'EUR', cat, acc: acc || 'Main',
