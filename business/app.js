@@ -289,10 +289,9 @@ function byYear() {
    What each is allowed to say:
    - the years, the months and the quarters come from the BANK, which is complete;
    - billed and pay-per-job come from the INVOICES, which are complete for money
-     but bundle several shoots into one invoice for Фешън Лаб, his agent;
-   - the type of shoot comes from the `category` column, which is only part
-     filled, so that chart says how much of the money it covers and is a floor,
-     never a ranking. */
+     but can bill several shoots on one invoice, mostly for Фешън Лаб;
+   - the type of shoot comes from the `category` column, which says how much of
+     the money it covers rather than implying it covers all of it. */
 const shortType = t => String(t).split(' (')[0];
 
 function chartRows(year) {
@@ -358,6 +357,7 @@ function charts() {
     perType[t].sum += i.amount_eur; perType[t].n++;
   });
   const types = Object.entries(perType).sort((a, b) => b[1].sum - a[1].sum);
+  const pcTagged = billed ? Math.round(tagged / billed * 100) : 0;
 
   const byCat = {};
   tx.filter(t => t._k === 'exp').forEach(t => { byCat[t._cat] = (byCat[t._cat] || 0) + -t.a; });
@@ -389,16 +389,19 @@ function charts() {
       <div class="chh">What one invoice is worth</div>
       ${Charts.bars(rate.map(([k, v]) => [k + ' · ' + v.n, v.sum / v.n]), fmt0)}
       <div class="note2"><b>Average per invoice, biggest first: the closest thing to pay per job.</b>
-        The number after the name is how many invoices it is over. Read Фешън Лаб with care —
-        one of its invoices covers several shoots at once, so its average is a bundle, not a job.</div>
+        The number after the name is how many invoices it is over. One invoice can cover several
+        shoots, mostly for Фешън Лаб, so a big client's average is a month of work rather than a day.</div>
     </div>
     <div class="card">
-      <div class="chh">By type of shoot</div>
+      <div class="chh">Which type earns the most</div>
       ${types.length ? Charts.bars(types.map(([k, v]) => [shortType(k) + ' · ' + v.n, v.sum]), fmt0)
         : '<div class="empty">Nothing tagged yet.</div>'}
-      <div class="note2"><b>${fmt0(tagged)} of ${fmt0(billed)} billed is tagged with a type</b>, so this is a
-        floor, not a ranking. Фешън Лаб is more than half of all billing and its invoices carry no type,
-        so product work is badly under-counted here. Tap an invoice on the Invoices tab to set its type.</div>
+      <div class="chh">And what one of them is worth</div>
+      ${types.length ? Charts.bars(types.slice().sort((a, b) => b[1].sum / b[1].n - a[1].sum / a[1].n)
+        .map(([k, v]) => [shortType(k) + ' · ' + v.n, v.sum / v.n]), fmt0) : ''}
+      <div class="note2"><b>${fmt0(tagged)} of ${fmt0(billed)} billed carries a type</b>
+        (${pcTagged}%), so the shape is sound and the totals are still a little low.
+        Tap <i>Set type</i> on any invoice to add one.</div>
     </div>
     <div class="card">
       <div class="chh">Where it went</div>
