@@ -236,7 +236,9 @@ function renderClients() {
 }
 
 function renderSpend() {
-  const rows = (data.tx || []).filter(t => t.a < 0);
+  // Transfers are not spending: the sweep from myPOS and the money moved to
+  // cover a card are the same euro twice.
+  const rows = (data.tx || []).filter(t => t.a < 0 && !/^transfer$/i.test(String(t.cat || '')));
   const by = {};
   rows.forEach(t => { by[t.cat || 'Uncategorised'] = (by[t.cat || 'Uncategorised'] || 0) + -t.a; });
   $('#view').innerHTML = `<div class="card">` +
