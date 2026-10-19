@@ -40,8 +40,9 @@ const HERE = [[/заплата|аванс/i, 'Salary'], [/дивидент/i, 'D
 const here = t => (HERE.find(([re]) => re.test((t.who || '') + ' ' + (t.desc || ''))) || [])[1] || '';
 
 // Matching lives in shared/invoices.js, so this page and the home page can
-// never give different answers to "what is still owed".
-const cancelled = Invoices.cancelled;
+// never give different answers to "what is still owed". Called through, not
+// pulled out at load: see the boot guard at the foot of this file.
+const cancelled = i => Invoices.cancelled(i);
 const shortType = t => String(t).split(' (')[0];
 
 function prep(j) {
@@ -594,5 +595,21 @@ $('#tokSave').addEventListener('click', () => {
   try { localStorage.setItem(TKEY, v); } catch (e) {}
   $('#tokIn').value = ''; load();
 });
-load();
+/* index.html carries no version of its own, so a browser can serve a cached
+   copy of it beside a fresh app.js. When that cached copy predates a shared
+   file, the page used to die on the first line that touched it and render
+   nothing at all. Now it fetches whatever is missing and carries on. */
+function boot() {
+  const need = { Invoices: 'invoices.js', Year: 'year.js', Charts: 'charts.js', CatPick: 'catpick.js' };
+  const missing = Object.keys(need).filter(k => !window[k]);
+  if (!missing.length) return load();
+  let left = missing.length;
+  missing.forEach(k => {
+    const s = document.createElement('script');
+    s.src = '../shared/' + need[k];
+    s.onload = s.onerror = () => { if (!--left) load(); };
+    document.head.appendChild(s);
+  });
+}
+boot();
 })();

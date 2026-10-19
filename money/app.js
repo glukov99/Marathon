@@ -7,7 +7,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmt = (n, cur) => (cur === 'GBP' ? '£' : '€') + Math.abs(n).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const sfmt = (n, cur) => (n < 0 ? '−' : '') + fmt(n, cur);
-const { donut, PAL } = Charts;
+const donut = (list, total) => Charts.donut(list, total);
 const MON = m => new Date(m + '-01T12:00').toLocaleDateString('en-GB', { month: 'short' });
 let data = null, month = null, owner = 'All', tab = 'accounts', statKind = 'exp', drill = null, yearCat = null, yearCell = null, yearKind = 'exp';
 const OWNERS = ['All', 'Personal', 'Joint'];
@@ -275,7 +275,7 @@ function renderStats(rows) {
     <button data-act="kind" data-k="exp" aria-pressed="${statKind === 'exp'}">Expenses ${fmt(s.exp)}</button></div>
     <div class="card">` + (list.length ? donut(list, total) + list.map(([k, v], i) => `
       <button class="crow" data-act="drill" data-c="${esc(k)}">
-        <span class="badge" style="background:${PAL[i % PAL.length]}">${Math.round(v / total * 100)}%</span>
+        <span class="badge" style="background:${Charts.PAL[i % Charts.PAL.length]}">${Math.round(v / total * 100)}%</span>
         <b>${esc(k)}</b><span class="v">${fmt(v)}</span></button>`).join('')
       : '<div class="empty">Nothing this month.</div>') + `</div>`;
 }
@@ -465,5 +465,20 @@ $('#tokSave').addEventListener('click', () => {
   $('#tokIn').value = ''; load();
 });
 
-load();
+/* index.html carries no version of its own, so a cached copy of it can sit
+   beside a fresh app.js and be missing a shared file this code needs. Fetch
+   whatever is absent rather than dying on the first line that touches it. */
+function boot() {
+  const need = { Year: 'year.js', Charts: 'charts.js', CatPick: 'catpick.js' };
+  const missing = Object.keys(need).filter(k => !window[k]);
+  if (!missing.length) return load();
+  let left = missing.length;
+  missing.forEach(k => {
+    const s = document.createElement('script');
+    s.src = '../shared/' + need[k];
+    s.onload = s.onerror = () => { if (!--left) load(); };
+    document.head.appendChild(s);
+  });
+}
+boot();
 })();
