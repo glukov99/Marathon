@@ -14,11 +14,13 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmt = n => '€' + Math.abs(Number(n) || 0).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmt0 = n => '€' + Math.round(Math.abs(Number(n) || 0)).toLocaleString('en-GB');
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const dshort = d => d ? new Date(d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' }) : '';
 const apiUrl = () => ((window.HubSync && HubSync.cfg()) || {}).url || '';
 const token = () => { try { return localStorage.getItem(TKEY) || ''; } catch (e) { return ''; } };
 let data = null, tab = 'overview', filter = 'open';
 let bizYear = null, yearKind = 'exp', yearCat = null, yearCell = null;
+let chartYear = 'all';
 
 /* What a company row counts as. Transfers are the same euro moving (the myPOS
    sweep, money sent to cover a card), so they are shown but never counted. */
@@ -222,14 +224,29 @@ async function setCat(key) {
   });
 }
 
-async function markInvoice(no, issued, value) {
+/* The type of shoot, set on the invoice. His seven, plus whatever the sheet or
+   he himself has already used, so the list grows with him. */
+function pickType(no, issued) {
+  const i = data.invoices.find(x => String(x.no) === String(no) && x.issued === issued);
+  if (!i) return;
+  const known = [...new Set((data.types || []).concat(
+    data.invoices.map(x => String(x.category || '').trim()).filter(Boolean)))];
+  CatPick.open({
+    cats: known, current: String(i.category || ''), title: i.client || 'Type of shoot',
+    note: `№ ${i.no} · ${dshort(i.issued)} · ${fmt(i.amount_eur)}`,
+    onPick: v => markInvoice(no, issued, v, 'category')
+  });
+}
+
+async function markInvoice(no, issued, value, field) {
   $('#status').textContent = 'Saving…';
   try {
+    const f = field || 'status';
     const j = await api('&biz=setinv&no=' + encodeURIComponent(no) + '&issued=' + encodeURIComponent(issued) +
-      '&f=status&v=' + encodeURIComponent(value));
+      '&f=' + f + '&v=' + encodeURIComponent(value));
     if (!j.ok) throw new Error(j.error || 'failed');
     const i = data.invoices.find(x => String(x.no) === String(no) && x.issued === issued);
-    if (i) i.status = value;
+    if (i) i[f] = value;
     data = prep(data);
     try { localStorage.setItem(CKEY, JSON.stringify(data)); } catch (e) {}
     $('#status').textContent = value ? 'Marked ' + value : 'Mark removed';
@@ -266,51 +283,128 @@ function byYear() {
   return y;
 }
 
-/* The three pictures worth having, each one from a source that can carry it:
-   the years from the bank, the clients from the invoices, the costs from the
-   categories. Profit by type of shoot is the one Georgi most wants and the one
-   missing: 48 of his 76 live invoices only say "Фотографски услуги", so it has
-   to come from the bookings, not from here. */
-function charts() {
-  const tx = (data.tx || []).filter(t => t.c === 'EUR');
-  const y = byYear();
-  const years = Object.keys(y).sort();
+/* The pictures. Every one of them obeys the year chips at the top, so "all" and
+   a single year are the same code.
 
-  const byClient = {};
-  data.live.forEach(i => { byClient[i.client || '—'] = (byClient[i.client || '—'] || 0) + i.amount_eur; });
-  const clients = Object.entries(byClient).sort((a, b) => b[1] - a[1]).slice(0, 8);
+   What each is allowed to say:
+   - the years, the months and the quarters come from the BANK, which is complete;
+   - billed and pay-per-job come from the INVOICES, which are complete for money
+     but bundle several shoots into one invoice for Фешън Лаб, his agent;
+   - the type of shoot comes from the `category` column, which is only part
+     filled, so that chart says how much of the money it covers and is a floor,
+     never a ranking. */
+const shortType = t => String(t).split(' (')[0];
+
+function chartRows(year) {
+  const tx = (data.tx || []).filter(t => t.c === 'EUR' && (year === 'all' || t.d.startsWith(year)));
+  const inv = data.live.filter(i => year === 'all' || String(i.issued || '').startsWith(year));
+  return { tx, inv };
+}
+
+function quarters(tx) {
+  const q = [0, 0, 0, 0], qi = [0, 0, 0, 0];
+  tx.forEach(t => {
+    const k = Math.floor((+t.d.slice(5, 7) - 1) / 3);
+    if (t._k === 'inc') qi[k] += t.a; else if (t._k === 'exp') q[k] += -t.a;
+  });
+  return { out: q, inn: qi };
+}
+
+function charts() {
+  const years = [...new Set((data.tx || []).map(t => t.d.slice(0, 4)))].sort();
+  const { tx, inv } = chartRows(chartYear);
+  const y = byYear();
+
+  const chips = `<div class="chips">` +
+    [['all', 'All']].concat(years.map(k => [k, k])).map(([k, label]) =>
+      `<button data-act="cyear" data-y="${k}" aria-pressed="${chartYear === k}">${label}</button>`).join('') +
+    `</div>`;
+
+  // Years, or months when a single year is chosen: the same in / out / kept.
+  const periods = chartYear === 'all'
+    ? years.map(k => ({ label: k, inn: y[k].inn, out: y[k].out }))
+    : MONTHS.map((m, i) => {
+      const rows = tx.filter(t => +t.d.slice(5, 7) === i + 1);
+      return { label: m,
+        inn: rows.filter(t => t._k === 'inc').reduce((a, t) => a + t.a, 0),
+        out: rows.filter(t => t._k === 'exp').reduce((a, t) => a - t.a, 0) };
+    }).filter(p => p.inn || p.out);
+
+  const best = periods.slice().sort((a, b) => b.inn - a.inn)[0];
+  const dear = periods.slice().sort((a, b) => b.out - a.out)[0];
+  const q = quarters(tx);
+  const qBest = q.inn.indexOf(Math.max(...q.inn));
+
+  // Billed per client, and what one invoice is worth on average: the closest
+  // thing to "what is worth my time" that the invoices can honestly carry.
+  const perClient = {};
+  inv.forEach(i => {
+    const k = i.client || '—';
+    (perClient[k] = perClient[k] || { sum: 0, n: 0 });
+    perClient[k].sum += i.amount_eur; perClient[k].n++;
+  });
+  const clients = Object.entries(perClient).sort((a, b) => b[1].sum - a[1].sum);
+  const rate = clients.slice().sort((a, b) => b[1].sum / b[1].n - a[1].sum / a[1].n).slice(0, 10);
+
+  // By type of shoot, from the category column. Only part filled, so it says so.
+  const perType = {};
+  let tagged = 0, billed = 0;
+  inv.forEach(i => {
+    billed += i.amount_eur;
+    const t = String(i.category || '').trim();
+    if (!t) return;
+    tagged += i.amount_eur;
+    (perType[t] = perType[t] || { sum: 0, n: 0 });
+    perType[t].sum += i.amount_eur; perType[t].n++;
+  });
+  const types = Object.entries(perType).sort((a, b) => b[1].sum - a[1].sum);
 
   const byCat = {};
   tx.filter(t => t._k === 'exp').forEach(t => { byCat[t._cat] = (byCat[t._cat] || 0) + -t.a; });
   const costs = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 9);
   const costTotal = costs.reduce((a, [, v]) => a + v, 0);
 
-  return `<div class="card">
-      <div class="chh">In, out and what was kept</div>
-      ${Charts.groups(years.map(k => ({ label: k, parts: [
-        { v: y[k].inn, cls: 'in', name: 'in' },
-        { v: y[k].out, cls: 'out', name: 'out' },
-        { v: y[k].inn - y[k].out, cls: 'net', name: 'kept' }] })), fmt0)}
-      <div class="note2">The bank, not the invoices. A small company runs near break-even on purpose:
-        what is left in it at the end of a year is what was not taken out.</div>
+  return chips + `<div class="card">
+      <div class="chh">In, out and what was kept${chartYear === 'all' ? ', per year' : ', month by month'}</div>
+      ${Charts.groups(periods.map(p => ({ label: p.label, parts: [
+        { v: p.inn, cls: 'in', name: 'in' },
+        { v: p.out, cls: 'out', name: 'out' },
+        { v: p.inn - p.out, cls: 'net', name: 'kept' }] })), fmt0)}
+      <div class="note2">${best ? `<b>${esc(best.label)} brought in the most, ${fmt0(best.inn)}.</b> ` : ''}
+        ${dear && dear.label !== (best || {}).label ? `${esc(dear.label)} cost the most, ${fmt0(dear.out)}. ` : ''}
+        The bank, not the invoices.</div>
+    </div>
+    <div class="card">
+      <div class="chh">Quarters</div>
+      ${Charts.groups(q.inn.map((v, i) => ({ label: 'Q' + (i + 1), parts: [
+        { v: v, cls: 'in', name: 'in' }, { v: q.out[i], cls: 'out', name: 'out' }] })), fmt0)}
+      <div class="note2">${q.inn[qBest] ? `<b>Q${qBest + 1} is your strongest quarter at ${fmt0(q.inn[qBest])} in.</b>` : 'Nothing here yet.'}</div>
     </div>
     <div class="card">
       <div class="chh">Who it came from</div>
-      ${Charts.bars(clients, fmt0)}
-      <div class="note2">Billed per client, cancelled invoices left out. Top ${clients.length} of
-        ${Object.keys(byClient).length}.</div>
+      ${Charts.bars(clients.slice(0, 8).map(([k, v]) => [k, v.sum]), fmt0)}
+      <div class="note2">Billed per client, cancelled invoices left out.</div>
+    </div>
+    <div class="card">
+      <div class="chh">What one invoice is worth</div>
+      ${Charts.bars(rate.map(([k, v]) => [k + ' · ' + v.n, v.sum / v.n]), fmt0)}
+      <div class="note2"><b>Average per invoice, biggest first: the closest thing to pay per job.</b>
+        The number after the name is how many invoices it is over. Read Фешън Лаб with care —
+        one of its invoices covers several shoots at once, so its average is a bundle, not a job.</div>
+    </div>
+    <div class="card">
+      <div class="chh">By type of shoot</div>
+      ${types.length ? Charts.bars(types.map(([k, v]) => [shortType(k) + ' · ' + v.n, v.sum]), fmt0)
+        : '<div class="empty">Nothing tagged yet.</div>'}
+      <div class="note2"><b>${fmt0(tagged)} of ${fmt0(billed)} billed is tagged with a type</b>, so this is a
+        floor, not a ranking. Фешън Лаб is more than half of all billing and its invoices carry no type,
+        so product work is badly under-counted here. Tap an invoice on the Invoices tab to set its type.</div>
     </div>
     <div class="card">
       <div class="chh">Where it went</div>
       ${Charts.donut(costs, costTotal)}
       ${Charts.bars(costs, fmt0)}
-      <div class="note2">Every euro the company spent, by category, all years together.
-        Tap a row on the Year tab to see a single year.</div>
-    </div>
-    <div class="card">
-      <div class="note2"><b>Not here yet: what each kind of shoot earns.</b> 48 of ${data.live.length}
-        invoices only say "Фотографски услуги", so the type cannot be read from them. It will come
-        from the bookings, where you choose the type when you enter the job.</div>
+      <div class="note2">Every euro the company spent, by category.</div>
     </div>`;
 }
 
@@ -345,7 +439,9 @@ function invRow(i) {
   return `<div class="inv">
     <b>${esc(i.client)}</b><span class="amt">${fmt(i.amount_eur)}</span>
     <span class="svc">№ ${esc(i.no)} · ${dshort(i.issued)}${i.items ? ' · ' + esc(String(i.items).slice(0, 40)) : ''}</span>
-    <span class="st">${tag}<button class="mk" data-act="mark" data-n="${esc(i.no)}" data-i="${esc(i.issued)}"
+    <span class="st">${tag}<button class="mk" data-act="type" data-n="${esc(i.no)}" data-i="${esc(i.issued)}">${
+      i.category ? esc(shortType(i.category)) : 'Set type'}</button>
+      <button class="mk" data-act="mark" data-n="${esc(i.no)}" data-i="${esc(i.issued)}"
       data-v="${cancelled(i) ? '' : 'cancelled'}">${cancelled(i) ? 'Not cancelled' : 'Cancel'}</button></span></div>`;
 }
 
@@ -414,7 +510,9 @@ $('#view').addEventListener('click', e => {
   }
   const a = b.dataset.act;
   if (a === 'mark') { markInvoice(b.dataset.n, b.dataset.i, b.dataset.v); return; }
+  if (a === 'type') { pickType(b.dataset.n, b.dataset.i); return; }
   if (a === 'filter') filter = b.dataset.f;
+  else if (a === 'cyear') { chartYear = b.dataset.y; }
   else if (a === 'byear') { bizYear = b.dataset.y; yearCat = null; yearCell = null; }
   else if (a === 'ykind') { yearKind = b.dataset.k; yearCat = null; yearCell = null; }
   else if (a === 'ycat') { yearCat = yearCat === b.dataset.c ? null : b.dataset.c; yearCell = null; }

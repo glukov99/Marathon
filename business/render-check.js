@@ -25,6 +25,7 @@ const j = ctx.prep({
     { no: '1', issued: '2026-02-01', client: 'A', amount_eur: 100, items: 'x' },
     { no: '2', issued: '2026-03-01', client: 'B', amount_eur: 500, items: 'y', status: 'cancelled' }
   ],
+  types: ['Продуктова фотография'],
   tx: [tx('2026-02-03', 100, 'ф-ра: 0000000001'), tx('2026-02-10', -40, 'АМАЙЯ РЕНТ', 'Rent'),
        tx('2026-04-01', -60, 'Заплата · Вътрешнобанков превод'),
        tx('2026-05-01', -20, 'Sent from myPOS', 'Transfer')]
@@ -44,4 +45,5 @@ ctx.tabs('invoices'); ctx.render();
 assert.ok(!/cancelled/.test(out.html), 'a cancelled invoice is not waiting for money');
 ctx.filter('all'); ctx.render();
 assert.ok(/cancelled/.test(out.html), 'but it is still in the list, marked');
+assert.ok(/Set type/.test(out.html), 'and its type can be set');
 console.log('render ok: every tab builds');
