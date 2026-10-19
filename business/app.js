@@ -37,8 +37,16 @@ function invoiceNumbers(text) {
 
 function matchPayments(inv, credits) {
   const left = credits.map((c, i) => ({ i, c, rest: c.a }));
+  // A number can belong to more than one invoice: two here are both "1", from
+  // different series. So a number holds a list, and the credit goes to the one
+  // issued nearest to it, which told the two apart by five months.
   const byNo = {};
-  inv.forEach(i => { i._paid = null; i._got = 0; i._parts = []; byNo[String(i.no)] = i; });
+  inv.forEach(i => {
+    i._paid = null; i._got = 0; i._parts = [];
+    (byNo[String(i.no)] = byNo[String(i.no)] || []).push(i);
+  });
+  const nearest = (n, d) => byNo[n].slice().sort((a, b) =>
+    Math.abs(new Date(a.issued) - new Date(d)) - Math.abs(new Date(b.issued) - new Date(d)))[0];
 
   // 1. The credit says which invoice it is for.
   left.forEach(x => {
@@ -46,13 +54,17 @@ function matchPayments(inv, credits) {
     if (!nos.length) return;
     const share = x.rest / nos.length;        // one payment, several invoices
     nos.forEach(n => {
-      byNo[n]._got += share;
-      byNo[n]._parts.push({ row: x.c, amount: share, by: 'number' });
+      const i = nearest(n, x.c.d);
+      i._got += share;
+      i._parts.push({ row: x.c, amount: share, by: 'number' });
     });
     x.rest = 0;
   });
 
-  // 2. Otherwise the amount, to the cent, from a week before to sixty days after.
+  // 2. Otherwise the amount, to the cent, within sixty days either way. It
+  // looks back as far as it looks forward because the money often comes first:
+  // a card payment on myPOS lands on the day of the shoot, and Zonia pays for a
+  // month of hours before the invoice for it is written.
   inv.slice().sort((a, b) => (a.issued < b.issued ? -1 : 1)).forEach(i => {
     const want = (Number(i.amount_eur) || 0) - i._got;
     if (!(want > 0.015) || !i.issued) return;
@@ -61,7 +73,7 @@ function matchPayments(inv, credits) {
     left.forEach(x => {
       if (x.rest <= 0.015 || Math.abs(x.rest - want) > 0.015) return;
       const days = Math.round((new Date(x.c.d + 'T12:00').getTime() - t0) / 864e5);
-      if (days < -7 || days > 60) return;
+      if (days < -60 || days > 60) return;
       if (!best || Math.abs(days) < Math.abs(best.days)) best = { x, days };
     });
     if (best) {
@@ -70,6 +82,9 @@ function matchPayments(inv, credits) {
       best.x.rest = 0;
     }
   });
+
+  // Money in that no invoice claimed. Georgi reads this as "still to issue".
+  left.forEach(x => { x.c._left = Math.round(x.rest * 100) / 100; });
 
   inv.forEach(i => {
     const want = Number(i.amount_eur) || 0;
@@ -82,8 +97,13 @@ function matchPayments(inv, credits) {
 
 function prep(j) {
   j.invoices = (j.invoices || []).map(i => Object.assign({}, i, { amount_eur: Number(i.amount_eur) || 0 }));
-  j.credits = (j.tx || []).filter(t => t.a > 0 && t.c === 'EUR');
+  // Money in that is not a client paying: the myPOS sweep is the same payment
+  // arriving a second time, and art.134 is Georgi's own money. Either could sit
+  // on an invoice's amount by chance and report it paid.
+  j.credits = (j.tx || []).filter(t => t.a > 0 && t.c === 'EUR' &&
+    !/^(transfer|gl studio)$/i.test(String(t.cat || '')));
   matchPayments(j.invoices, j.credits);
+  j.unbilled = j.credits.filter(c => c._left > 0.015);
   return j;
 }
 
@@ -174,17 +194,29 @@ function invRow(i) {
     <span class="st">${tag}</span></div>`;
 }
 
+const chips = (sets, names) => `<div class="chips">${Object.keys(sets).map(k =>
+  `<button data-act="filter" data-f="${k}" aria-pressed="${filter === k}">${names[k]} ${sets[k].length}</button>`).join('')}</div>`;
+
 function renderInvoices() {
   const sets = {
     open: data.invoices.filter(i => !i._paid),
     paid: data.invoices.filter(i => i._paid),
-    all: data.invoices
+    all: data.invoices,
+    unbilled: data.unbilled || []
   };
-  const names = { open: 'Not matched', paid: 'Paid', all: 'All' };
+  const names = { open: 'Not matched', paid: 'Paid', all: 'All', unbilled: 'To invoice' };
+  if (filter === 'unbilled') {
+    const u = sets.unbilled.slice().sort((a, b) => (a.d < b.d ? 1 : -1));
+    $('#view').innerHTML = chips(sets, names) + (u.length
+      ? `<div class="card">${u.map(c => `<div class="inv">
+          <b>${esc(c.who || c.desc.split(' · ')[0] || 'Payment')}</b><span class="amt">${fmt(c._left)}</span>
+          <span class="svc">${dshort(c.d)} · ${esc(String(c.desc).slice(0, 50))}</span></div>`).join('')}
+         <div class="note2">Money into the company that no invoice claims.</div></div>`
+      : '<div class="empty">Every payment is on an invoice.</div>');
+    return;
+  }
   const rows = (sets[filter] || []).slice().sort((a, b) => (a.issued < b.issued ? 1 : -1));
-  $('#view').innerHTML =
-    `<div class="chips">${Object.keys(sets).map(k =>
-      `<button data-act="filter" data-f="${k}" aria-pressed="${filter === k}">${names[k]} ${sets[k].length}</button>`).join('')}</div>` +
+  $('#view').innerHTML = chips(sets, names) +
     (rows.length ? `<div class="card">${rows.map(invRow).join('')}</div>` : '<div class="empty">Nothing here.</div>');
 }
 

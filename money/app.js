@@ -26,7 +26,7 @@ function show(id) {
 // A small bank mark in front of each account, so the list is easy to scan.
 // The bank name comes from the API; a payload cached before that fall backs to
 // the label, where only UniCredit and the company account are not Revolut.
-const BANKS = [[/unicredit/i, 'uni', 'UC'], [/revolut/i, 'rev', 'R']];
+const BANKS = [[/unicredit/i, 'uni', 'UC'], [/revolut/i, 'rev', 'R'], [/mypos/i, 'mps', 'mP']];
 function bankMark(a) {
   const name = a.bank || (/^UniCredit|^GL Studio/.test(a.account || '') ? 'UniCredit Bulbank' : 'Revolut');
   const hit = BANKS.find(([re]) => re.test(name));
