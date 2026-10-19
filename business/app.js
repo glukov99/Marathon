@@ -2,7 +2,10 @@
    Money is personal finance. This page is the company: what was invoiced, what
    came in, and what is still owed. Two sources, neither of them copied here:
    the client sheet Georgi keeps in Sheets, and the company's bank rows, which
-   the Money sheet already holds with owner Business. */
+   the Money sheet already holds with owner Business.
+
+   Everything is counted from the invoice rows ("Плащания"). The client tab
+   ("Информация") is not read: Georgi does not trust it below row 69. */
 (() => {
 const TKEY = 'lifehub-money-token', CKEY = 'lifehub-biz-cache';
 const $ = s => document.querySelector(s);
@@ -139,20 +142,24 @@ function renderInvoices() {
                  : '<div class="empty">Nothing here.</div>');
 }
 
+/* Built from the invoice rows, not from the client tab: Georgi does not trust
+   that tab below row 69, and what is invoiced is the record that counts. */
 function renderClients() {
   const by = {};
-  data.clients.forEach(c => {
-    const k = c.client || '—';
-    (by[k] = by[k] || { n: 0, sum: 0, last: '', services: {} });
-    by[k].n++; by[k].sum += c.price || 0;
-    if (c.date > by[k].last) by[k].last = c.date;
-    if (c.service) by[k].services[c.service] = (by[k].services[c.service] || 0) + 1;
+  totals().live.forEach(i => {
+    const k = i.client || '—';
+    (by[k] = by[k] || { n: 0, inv: 0, rec: 0, owed: 0, last: '', services: {} });
+    by[k].n++; by[k].inv += i.invoiced || 0; by[k].rec += i.received || 0;
+    if (i._owed > 0 && !i._hit) by[k].owed += i._owed;
+    if (i.date > by[k].last) by[k].last = i.date;
+    if (i.service) by[k].services[i.service] = (by[k].services[i.service] || 0) + 1;
   });
-  const list = Object.entries(by).sort((a, b) => b[1].sum - a[1].sum);
+  const list = Object.entries(by).sort((a, b) => b[1].inv - a[1].inv);
   $('#view').innerHTML = `<div class="card">${list.map(([name, v]) => {
     const top = Object.entries(v.services).sort((a, b) => b[1] - a[1])[0];
-    return `<div class="inv"><b>${esc(name)}</b><span class="amt">${fmt(v.sum)}</span>
-      <span class="svc">${v.n} job${v.n > 1 ? 's' : ''}${top ? ' · ' + esc(top[0]) : ''} · last ${dshort(v.last)}</span></div>`;
+    return `<div class="inv"><b>${esc(name)}</b><span class="amt">${fmt(v.inv)}</span>
+      <span class="svc">${v.n} invoice${v.n > 1 ? 's' : ''}${top ? ' · ' + esc(top[0]) : ''} · last ${dshort(v.last)}</span>
+      ${v.owed > 0.01 ? `<span class="st"><span class="tag owed">owes ${fmt(v.owed)}</span></span>` : ''}</div>`;
   }).join('')}</div>`;
 }
 
