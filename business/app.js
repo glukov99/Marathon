@@ -366,19 +366,32 @@ function charts() {
 
   return chips + `<div class="card">
       <div class="chh">In, out and what was kept${chartYear === 'all' ? ', per year' : ', month by month'}</div>
-      ${Charts.groups(periods.map(p => ({ label: p.label, parts: [
-        { v: p.inn, cls: 'in', name: 'in' },
-        { v: p.out, cls: 'out', name: 'out' },
-        { v: p.inn - p.out, cls: 'net', name: 'kept' }] })), fmt0)}
+      ${chartYear === 'all'
+        ? Charts.groups(periods.map(p => ({ label: p.label, parts: [
+            { v: p.inn, cls: 'in', name: 'in' },
+            { v: p.out, cls: 'out', name: 'out' },
+            { v: p.inn - p.out, cls: 'net', name: 'kept' }] })), fmt0)
+        : Charts.inOut(periods, fmt0)}
       <div class="note2">${best ? `<b>${esc(best.label)} brought in the most, ${fmt0(best.inn)}.</b> ` : ''}
         ${dear && dear.label !== (best || {}).label ? `${esc(dear.label)} cost the most, ${fmt0(dear.out)}. ` : ''}
-        The bank, not the invoices.</div>
+        The bank, not the invoices. Every month's own figures are on the Year tab.</div>
     </div>
     <div class="card">
       <div class="chh">Quarters</div>
       ${Charts.groups(q.inn.map((v, i) => ({ label: 'Q' + (i + 1), parts: [
         { v: v, cls: 'in', name: 'in' }, { v: q.out[i], cls: 'out', name: 'out' }] })), fmt0)}
       <div class="note2">${q.inn[qBest] ? `<b>Q${qBest + 1} is your strongest quarter at ${fmt0(q.inn[qBest])} in.</b>` : 'Nothing here yet.'}</div>
+    </div>
+    <div class="card">
+      <div class="chh">Which type earns the most</div>
+      ${types.length ? Charts.bars(types.map(([k, v]) => [shortType(k) + ' · ' + v.n, v.sum]), fmt0)
+        : '<div class="empty">Nothing tagged yet.</div>'}
+      <div class="chh">What one shoot of each type is worth</div>
+      ${types.length ? Charts.bars(types.slice().sort((a, b) => b[1].sum / b[1].n - a[1].sum / a[1].n)
+        .map(([k, v]) => [shortType(k) + ' · ' + v.n, v.sum / v.n]), fmt0) : ''}
+      <div class="note2"><b>${fmt0(tagged)} of ${fmt0(billed)} billed carries a type</b>
+        (${pcTagged}%), so the shape is sound and the totals are still a little low.
+        Tap <i>Set type</i> on any invoice to add one.</div>
     </div>
     <div class="card">
       <div class="chh">Who it came from</div>
@@ -391,17 +404,6 @@ function charts() {
       <div class="note2"><b>Average per invoice, biggest first: the closest thing to pay per job.</b>
         The number after the name is how many invoices it is over. One invoice can cover several
         shoots, mostly for Фешън Лаб, so a big client's average is a month of work rather than a day.</div>
-    </div>
-    <div class="card">
-      <div class="chh">Which type earns the most</div>
-      ${types.length ? Charts.bars(types.map(([k, v]) => [shortType(k) + ' · ' + v.n, v.sum]), fmt0)
-        : '<div class="empty">Nothing tagged yet.</div>'}
-      <div class="chh">And what one of them is worth</div>
-      ${types.length ? Charts.bars(types.slice().sort((a, b) => b[1].sum / b[1].n - a[1].sum / a[1].n)
-        .map(([k, v]) => [shortType(k) + ' · ' + v.n, v.sum / v.n]), fmt0) : ''}
-      <div class="note2"><b>${fmt0(tagged)} of ${fmt0(billed)} billed carries a type</b>
-        (${pcTagged}%), so the shape is sound and the totals are still a little low.
-        Tap <i>Set type</i> on any invoice to add one.</div>
     </div>
     <div class="card">
       <div class="chh">Where it went</div>

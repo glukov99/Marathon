@@ -47,5 +47,22 @@
           `<b class="${p.cls}">${fmt(p.v)}</b>`).join('')}</span></div>`).join('') + `</div>`;
   }
 
-  root.Charts = { donut, bars, groups, PAL };
+  /* Twelve months of in and out. The grouped-column chart cannot carry that
+     many: on a phone it became 36 bars with three rows of figures that ran off
+     the screen. One row per month reads instead of being decoded, and the
+     figures it drops are on the Year tab in full. */
+  function inOut(rows, fmt) {
+    const max = Math.max(1, ...rows.map(r => Math.max(r.inn, r.out)));
+    const w = v => (v / max * 100).toFixed(1);
+    return `<div class="io">` + rows.map(r => {
+      const net = r.inn - r.out;
+      return `<div class="ior"><span class="iol">${esc(r.label)}</span>
+        <span class="iob"><i class="in" style="width:${w(r.inn)}%" title="in ${fmt(r.inn)}"></i>
+          <i class="out" style="width:${w(r.out)}%" title="out ${fmt(r.out)}"></i></span>
+        <span class="iov ${net >= 0 ? 'up' : 'dn'}">${net >= 0 ? '+' : '\u2212'}${fmt(net)}</span></div>`;
+    }).join('') + `<div class="iok"><span class="in"></span>in<span class="out"></span>out
+      <b>right: what was kept</b></div></div>`;
+  }
+
+  root.Charts = { donut, bars, groups, inOut, PAL };
 })(typeof window !== 'undefined' ? window : globalThis);
