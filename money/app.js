@@ -106,6 +106,40 @@ async function load() {
     setStatus(data ? 'Offline: showing saved data' : 'Could not load: ' + e.message);
   }
 }
+/* Tapping a transaction sets its category by hand. It writes column M through
+   the API, which always wins over a rule, so the choice survives every redo.
+   The row is updated here as well, so the screen does not wait for a reload. */
+let cats = null;
+async function setCat(key) {
+  const t = data.tx.find(x => x.k === key);
+  if (!t) return;
+  if (!cats) {
+    try {
+      const r = await fetch(apiUrl() + '?action=money&cats=go&mt=' + encodeURIComponent(token()));
+      cats = (await r.json()).cats || [];
+    } catch (e) { cats = [...new Set(data.tx.map(x => x._cat).filter(Boolean))]; }
+  }
+  CatPick.open({
+    cats, current: t.cat, title: t.who || t.desc || 'Category',
+    note: `${t.d} · ${sfmt(t.a, t.c)} · ${t.acc}`,
+    onPick: async cat => {
+      setStatus('Saving…');
+      try {
+        const r = await fetch(apiUrl() + '?action=money&mt=' + encodeURIComponent(token()) +
+          '&setcat=' + encodeURIComponent(key) + '&cat=' + encodeURIComponent(cat));
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || 'failed');
+        t.cat = j.now; t.mine = !!cat;
+        const k = classify(t); t._k = k.k; t._cat = k.cat;
+        if (cat && cats.indexOf(cat) < 0) cats.push(cat);
+        try { localStorage.setItem(CKEY, JSON.stringify(data)); } catch (e) {}
+        setStatus(cat ? 'Set to ' + cat : 'Back to the rules');
+        render();
+      } catch (e) { setStatus('Could not save: ' + e.message); }
+    }
+  });
+}
+
 function forget() {
   try { localStorage.removeItem(TKEY); localStorage.removeItem(CKEY); } catch (e) {}
   data = null; show('setup');
@@ -130,10 +164,14 @@ function render() {
   const period = (tab === 'business' ? businessRows() : mine())
     .filter(t => t.d.startsWith(yearly ? year : month));
   const s = totals(period), g = totals(period, 'GBP');
+  // On a year, every figure also gets what it is a month, over the months that
+  // actually hold data. That is the number to plan with.
+  const nm = yearly ? new Set(period.map(t => t.d.slice(0, 7))).size : 0;
+  const av = v => (nm > 1 ? `<i>${fmt(v / nm)} a month</i>` : '');
   $('#sum').innerHTML =
-    `<div><span>Income</span><b class="inc">${fmt(s.inc)}</b></div>` +
-    `<div><span>Expenses</span><b class="exp">${fmt(s.exp)}</b></div>` +
-    `<div><span>Total</span><b>${sfmt(s.net)}</b></div>` +
+    `<div><span>Income</span><b class="inc">${fmt(s.inc)}</b>${av(s.inc)}</div>` +
+    `<div><span>Expenses</span><b class="exp">${fmt(s.exp)}</b>${av(s.exp)}</div>` +
+    `<div><span>Total</span><b>${sfmt(s.net)}</b>${av(s.net)}</div>` +
     (g.inc || g.exp
       ? `<div class="g"><span>GBP in</span><b class="inc">${fmt(g.inc, 'GBP')}</b></div>` +
         `<div class="g"><span>GBP out</span><b class="exp">${fmt(g.exp, 'GBP')}</b></div>` +
@@ -158,7 +196,7 @@ function rowHtml(t) {
   const cls = t._k === 'inc' ? 'inc' : t._k === 'exp' ? 'exp' : 'mv';
   const title = t.who || t.desc || '—';
   const sub = [t.acc, t.note].filter(Boolean).map(esc).join(' · ');
-  return `<div class="tr"><div class="tc">${esc(t._cat)}</div>
+  return `<div class="tr" data-k="${esc(t.k)}"><div class="tc${t.mine ? ' mine' : ''}">${esc(t._cat)}</div>
     <div class="tb"><b>${esc(title)}</b><span>${sub}</span></div>
     <div class="ta ${cls}">${t._k === 'exp' || t._k === 'inc' ? fmt(t.a, t.c) : sfmt(t.a, t.c)}</div></div>`;
 }
@@ -180,13 +218,14 @@ function renderDaily(rows) { $('#view').innerHTML = dayList(rows); }
 // ===== Monthly =====
 function renderMonthly(year) {
   const rows = mine();
-  const d = yearData(rows, year);
-  const prev = yearData(rows, String(+year - 1));
-  const story = yearStory(d, prev.total ? prev : null);
+  const d = Year.data(eur(rows), year);
+  const prev = Year.data(eur(rows), String(+year - 1));
+  const story = Year.story(d, prev.total ? prev : null);
   const ms = allMonths().filter(m => m.startsWith(year));
   $('#view').innerHTML =
     (story.length ? `<div class="card story">${story.map(x => `<p>${esc(x)}</p>`).join('')}</div>` : '') +
-    `<div class="card">${yearGrid(d, eur(rows).filter(t => t.d.startsWith(year)))}</div>` +
+    `<div class="card">${Year.grid(d, { kind: yearKind, cat: yearCat, cell: yearCell,
+      tx: eur(rows).filter(t => t.d.startsWith(year)), dayList })}</div>` +
     `<div class="card">` + ms.map(m => {
     const inMonth = rows.filter(t => t.d.startsWith(m));
     const s = totals(inMonth), g = totals(inMonth, 'GBP');
@@ -204,145 +243,6 @@ function renderMonthly(year) {
 // Categories down, months across, so a year reads in one screen instead of
 // stepping back month by month. Pure computation here, HTML below, so the same
 // numbers can be checked in Node (tools: money/year-check.js).
-const M_INIT = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-const kfmt = n => (n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k' : String(Math.round(n)));
-const fmt0 = n => '\u20ac' + Math.round(Math.abs(n)).toLocaleString('en-GB');
-const sfmt0 = n => (n < 0 ? '\u2212' : '') + fmt0(n);
-const mIdx = t => +t.d.slice(5, 7) - 1;
-const z12 = () => new Array(12).fill(0);
-
-function yearData(rows, year) {
-  const inYear = eur(rows).filter(t => t.d.startsWith(year));
-  const inc = z12(), exp = z12(), cats = {}, icats = {}, has = new Array(12).fill(false);
-  inYear.forEach(t => {
-    const i = mIdx(t);
-    if (t._k === 'inc' || t._k === 'exp') has[i] = true;
-    if (t._k === 'inc') {
-      inc[i] += t.a;
-      (icats[t._cat] = icats[t._cat] || z12())[i] += t.a;
-    } else if (t._k === 'exp') {
-      exp[i] -= t.a;
-      (cats[t._cat] = cats[t._cat] || z12())[i] -= t.a;
-    }
-  });
-  const rank = o => Object.entries(o)
-    .map(([cat, months]) => ({ cat, months, total: months.reduce((a, b) => a + b, 0) }))
-    .sort((a, b) => b.total - a.total);
-  const list = rank(cats);
-  const net = inc.map((v, i) => v - exp[i]);
-  // Months with any activity, so a part year is not read as twelve months.
-  const live = inYear.length ? inYear.map(mIdx) : [];
-  const from = live.length ? Math.min(...live) : 0, to = live.length ? Math.max(...live) : -1;
-  return { year, inc, exp, net, cats: list, incCats: rank(icats), from, to, has,
-    total: list.reduce((a, c) => a + c.total, 0), months: to - from + 1 };
-}
-
-// Three plain sentences about the year. Each one is a fact from the grid above,
-// not a judgement: where the money went, which month stands out and why, and
-// how it compares with the year before over the same months.
-function yearStory(d, prev) {
-  const out = [];
-  if (!d.cats.length) return out;
-  const top = d.cats[0];
-  const share = d.total ? Math.round(top.total / d.total * 100) : 0;
-  out.push(`${top.cat} is the biggest at ${fmt(top.total)}, ${share}% of everything you spent.`);
-
-  const peak = d.exp.indexOf(Math.max(...d.exp));
-  if (d.exp[peak] > 0) {
-    // What made that month stand out: the category furthest above its own average
-    // in the other live months.
-    let drv = null;
-    d.cats.forEach(c => {
-      const others = c.months.filter((v, i) => i !== peak && i >= d.from && i <= d.to);
-      const avg = others.length ? others.reduce((a, b) => a + b, 0) / others.length : 0;
-      const over = c.months[peak] - avg;
-      if (c.months[peak] > 0 && (!drv || over > drv.over)) drv = { cat: c.cat, over, v: c.months[peak] };
-    });
-    out.push(`${MON(d.year + '-' + String(peak + 1).padStart(2, '0'))} was the dearest month at ${fmt(d.exp[peak])}` +
-      (drv && drv.over > 0 ? `, mostly ${drv.cat} at ${fmt(drv.v)}.` : '.'));
-  }
-
-  if (prev) {
-    // Only the months both years actually hold data for. A part year, or a year the
-    // bank history barely reaches, would otherwise produce a true but useless number.
-    const both = d.has.map((h, i) => h && prev.has[i]);
-    const n = both.filter(Boolean).length;
-    const sum = (arr) => arr.reduce((x, y, i) => x + (both[i] ? y : 0), 0);
-    const a = sum(d.exp), b = sum(prev.exp);
-    if (n >= 2 && b > 0) {
-      const diff = a - b, pc = Math.round(Math.abs(diff) / b * 100);
-      out.push(`Over the ${n} months both years cover, that is ${fmt(Math.abs(diff))} ` +
-        `${diff >= 0 ? 'more' : 'less'} than ${prev.year} (${pc}%).`);
-    }
-  }
-  const saved = d.net.filter((v, i) => i >= d.from && i <= d.to && v > 0).length;
-  if (d.months > 1) out.push(`You ended ${saved} of ${d.months} months in the black.`);
-  return out.slice(0, 3);
-}
-
-function heatCell(v, max, cls) {
-  if (!v) return `<span class="yc z"></span>`;
-  const o = 0.18 + 0.82 * (max ? v / max : 0);
-  return `<span class="yc ${cls}" style="opacity:${o.toFixed(2)}"></span>`;
-}
-
-const Y_KINDS = [['net', 'Net'], ['exp', 'Expenses'], ['inc', 'Income']];
-
-function yearGrid(d, tx) {
-  if (!d.cats.length && !d.incCats.length) return '<div class="empty">Nothing in this year.</div>';
-  // Average over the months the year actually holds, not over twelve, or a part
-  // year would read as if the quiet months were spending nothing.
-  const per = n => n / Math.max(d.months, 1);
-  const head = `<div class="ygh"><span></span>${M_INIT.map((m, i) =>
-    `<span class="${i < d.from || i > d.to ? 'off' : ''}">${m}</span>`).join('')}` +
-    `<span class="yt">Total</span><span class="yt">Avg</span></div>`;
-  const chips = `<div class="chips yk">${Y_KINDS.map(([k, label]) =>
-    `<button data-act="ykind" data-k="${k}" aria-pressed="${yearKind === k}">${label}</button>`).join('')}</div>`;
-
-  // One summary row: twelve cells, the year total, and the average per month with
-  // data. The Net row has no average on purpose: an average net month says nothing.
-  const sumRow = (label, arr, cls, avg) => {
-    const max = Math.max(...arr.map(Math.abs), 1);
-    const tot = arr.reduce((a, b) => a + b, 0);
-    return `<div class="yr net"><span class="yn">${label}</span>` +
-      arr.map((v, i) => (i < d.from || i > d.to
-        ? '<span class="yc z"></span>'
-        : heatCell(Math.abs(v), max, typeof cls === 'function' ? cls(v) : cls))).join('') +
-      `<span class="yt">${sfmt0(tot)}</span><span class="yt av">${avg ? sfmt0(per(tot)) : ''}</span></div>`;
-  };
-
-  if (yearKind === 'net') {
-    return `<div class="yg">${chips}${head}` +
-      sumRow('Income', d.inc, 'up', true) +
-      sumRow('Expenses', d.exp, 'ex', true) +
-      `<div class="ysep"></div>` + sumRow('Net', d.net, v => (v >= 0 ? 'up' : 'dn'), false) +
-      `</div><div class="note2">Money in, money out and what was left, month by month. ` +
-      `Tap Expenses or Income above for the categories behind them. EUR only.</div>`;
-  }
-
-  const kind = yearKind === 'inc' ? d.incCats : d.cats;
-  if (!kind.length) return `<div class="yg">${chips}</div>` +
-    `<div class="empty">No ${yearKind === 'inc' ? 'money in' : 'spending'} in this year.</div>`;
-  const rows = kind.map(c => {
-    const max = Math.max(...c.months);
-    const open = yearCat === c.cat;
-    return `<button class="yr${open ? ' open' : ''}" data-act="ycat" data-c="${esc(c.cat)}">` +
-      `<span class="yn">${esc(c.cat)}</span>` +
-      c.months.map(v => heatCell(v, max, yearKind === 'inc' ? 'up' : 'ex')).join('') +
-      `<span class="yt">${fmt0(c.total)}</span><span class="yt av">${fmt0(per(c.total))}</span></button>` +
-      (open ? `<div class="ym">${c.months.map((v, i) => v
-        ? `<button class="ymb${yearCell === i ? ' on' : ''}" data-act="ycell" data-i="${i}">` +
-          `${MON(d.year + '-' + String(i + 1).padStart(2, '0'))} ${kfmt(v)}</button>`
-        : '').join('')}<span class="av">${fmt(c.total)} in all, ${fmt(per(c.total))} a month</span></div>` +
-        (yearCell != null
-          ? `<div class="ye">${dayList(tx.filter(t => t._cat === c.cat && mIdx(t) === yearCell))}</div>`
-          : '')
-        : '');
-  }).join('');
-  return `<div class="yg">${chips}${head}${rows}</div>` +
-    `<div class="note2">Shading is each category against its own best month, so a small one still shows its shape. Tap a row for the months, then a month for what is in it. Avg is per month with data (${d.months} this year). EUR only.</div>`;
-}
-
 // ===== Stats =====
 function catSums(rows, kind) {
   const m = {};
@@ -537,6 +437,8 @@ $('#tabs').addEventListener('click', e => {
   tab = b.dataset.t; drill = null; render();
 });
 $('#view').addEventListener('click', e => {
+  const r = e.target.closest('.tr[data-k]');
+  if (r) { setCat(r.dataset.k); return; }
   const b = e.target.closest('[data-act]'); if (!b) return;
   const act = b.dataset.act;
   if (act === 'month') { month = b.dataset.m; tab = 'daily'; }

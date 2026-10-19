@@ -7,7 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../shared/theme.css?v=202610191503">
+<link rel="stylesheet" href="../shared/year.css?v=202610191518">
+<link rel="stylesheet" href="../shared/theme.css?v=202610191518">
 <style>
 :root{
   --paper:#ECEAE4; --card:#FBFAF7; --card2:#F2F0EA; --ink:#1B1E1A; --soft:#5F665D; --faint:#8C9289; --rule:#D6D3CA;
@@ -196,6 +197,7 @@ ul.steps li{margin:5px 0}
 .tag.paid{background:var(--done);border-color:transparent;color:var(--acc)}
 .tag.owed{background:rgba(224,122,99,.14);border-color:transparent;color:var(--big)}
 .tag.found{background:rgba(125,178,115,.16);border-color:transparent;color:var(--acc)}
+.mk{margin-left:7px;background:none;border:0;padding:0;font:inherit;font-size:11px;color:var(--faint);text-decoration:underline;cursor:pointer}
 .big2{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);border-radius:4px;overflow:hidden;margin-top:12px}
 .big2 div{background:var(--card);padding:11px 12px}
 .big2 span{display:block;font-size:12px;color:var(--soft)}
@@ -213,11 +215,13 @@ ul.steps li{margin:5px 0}
   </div></div>
   <div id="main" class="hidden">
     <div class="sum" id="sum"></div>
-    <nav id="tabs"><button data-t="overview">Overview</button><button data-t="invoices">Invoices</button><button data-t="clients">Clients</button><button data-t="spend">Spending</button></nav>
+    <nav id="tabs"><button data-t="overview">Overview</button><button data-t="year">Year</button><button data-t="invoices">Invoices</button><button data-t="clients">Clients</button><button data-t="spend">Spending</button></nav>
     <div id="view"></div>
   </div>
 </div>
-<script src="../shared/sync.js?v=202610191503"></script>
-<script src="app.js?v=202610191503"></script>
+<script src="../shared/catpick.js?v=202610191518"></script>
+<script src="../shared/year.js?v=202610191518"></script>
+<script src="../shared/sync.js?v=202610191518"></script>
+<script src="app.js?v=202610191518"></script>
 </body>
 </html>

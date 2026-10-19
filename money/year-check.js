@@ -1,7 +1,8 @@
-/* Self-check for the Year grid: yearData() and yearStory() in app.js.
+/* Self-check for the Year grid: Year.data() and Year.story() in shared/year.js,
+   with classify() from the Money page deciding what each row counts as.
    Run on made-up rows:            node money/year-check.js
    Or print a real year as text:   curl -sL "<exec>?action=money&mt=..." | node money/year-check.js 2026
-   Reads the functions out of app.js so there is no second copy to keep in step. */
+   Reads the real files, so there is no second copy to keep in step. */
 const a = require('assert'), fs = require('fs');
 const src = fs.readFileSync(__dirname + '/app.js', 'utf8');
 const grab = n => {
@@ -14,10 +15,14 @@ const konst = n => {
   a.ok(m, n + ' not found in app.js');
   return m[0];
 };
+const Year = {};
+new Function('window', fs.readFileSync(__dirname + '/../shared/year.js', 'utf8'))({ set Year(v) { Object.assign(Year, v); } });
 const env = new Function(
-  [konst('M_INIT'), konst('kfmt'), konst('mIdx'), konst('z12'), konst('MON'), konst('eur'),
-   konst('fmt'), konst('sfmt'), grab('classify'), grab('yearData'), grab('yearStory')].join('\n') +
-  '; return { yearData, yearStory, classify };')();
+  [konst('eur'), konst('fmt'), konst('sfmt'), grab('classify')].join('\n') +
+  '; return { classify, eur };')();
+// The page hands Year only its EUR rows; the shared file does not know currencies.
+env.yearData = (rows, y) => Year.data(env.eur(rows), y);
+env.yearStory = Year.story;
 
 const row = (d, amt, cat) => { const t = { d, a: amt, c: 'EUR', cat, acc: 'Main' };
   const k = env.classify(t); t._k = k.k; t._cat = k.cat; return t; };

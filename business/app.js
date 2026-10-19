@@ -18,6 +18,23 @@ const dshort = d => d ? new Date(d + 'T12:00').toLocaleDateString('en-GB', { day
 const apiUrl = () => ((window.HubSync && HubSync.cfg()) || {}).url || '';
 const token = () => { try { return localStorage.getItem(TKEY) || ''; } catch (e) { return ''; } };
 let data = null, tab = 'overview', filter = 'open';
+let bizYear = null, yearKind = 'exp', yearCat = null, yearCell = null;
+
+/* What a company row counts as. Transfers are the same euro moving (the myPOS
+   sweep, money sent to cover a card), so they are shown but never counted. */
+function classify(t) {
+  const cat = String(t.cat || '').trim();
+  if (/^transfer$/i.test(cat)) return { k: 'move', cat: 'Transfer' };
+  if (t.a > 0) return { k: 'inc', cat: cat || 'Income' };
+  return { k: 'exp', cat: cat || here(t) || 'Uncategorised' };
+}
+
+/* Two names that only mean something on this side of the money, so they are
+   read here instead of in the shared rules. "Заплата · Вътрешнобанков превод"
+   is worded identically when the company pays it and when Georgi receives it,
+   so a shared rule would read his salary as a personal expense. */
+const HERE = [[/заплата|аванс/i, 'Salary'], [/дивидент/i, 'Dividend']];
+const here = t => (HERE.find(([re]) => re.test((t.who || '') + ' ' + (t.desc || ''))) || [])[1] || '';
 
 /* Matching invoices to money.
 
@@ -95,14 +112,21 @@ function matchPayments(inv, credits) {
   });
 }
 
+const cancelled = i => /^cancel/i.test(String(i.status || ''));
+
 function prep(j) {
-  j.invoices = (j.invoices || []).map(i => Object.assign({}, i, { amount_eur: Number(i.amount_eur) || 0 }));
+  j.invoices = (j.invoices || []).map(i => Object.assign({}, i,
+    { no: String(i.no), amount_eur: Number(i.amount_eur) || 0 }));
+  // A cancelled invoice was never money: it is not billed and nothing is owed
+  // on it. It stays in the list, marked, so the number is not simply missing.
+  j.live = j.invoices.filter(i => !cancelled(i));
   // Money in that is not a client paying: the myPOS sweep is the same payment
   // arriving a second time, and art.134 is Georgi's own money. Either could sit
   // on an invoice's amount by chance and report it paid.
   j.credits = (j.tx || []).filter(t => t.a > 0 && t.c === 'EUR' &&
     !/^(transfer|gl studio)$/i.test(String(t.cat || '')));
-  matchPayments(j.invoices, j.credits);
+  (j.tx || []).forEach(t => { const k = classify(t); t._k = k.k; t._cat = k.cat; });
+  matchPayments(j.live, j.credits);
   j.unbilled = j.credits.filter(c => c._left > 0.015);
   return j;
 }
@@ -128,11 +152,90 @@ async function load() {
 function show(id) { $('#setup').classList.toggle('hidden', id !== 'setup'); $('#main').classList.toggle('hidden', id !== 'main'); }
 
 const money = () => {
-  const tx = (data.tx || []).filter(t => t.c === 'EUR');
+  const tx = (data.tx || []).filter(t => t.c === 'EUR' && t._k !== 'move');
   const inn = tx.filter(t => t.a > 0).reduce((a, t) => a + t.a, 0);
   const out = tx.filter(t => t.a < 0).reduce((a, t) => a - t.a, 0);
   return { inn, out, net: inn - out };
 };
+
+const dayList = rows => {
+  const days = {};
+  rows.forEach(t => (days[t.d] = days[t.d] || []).push(t));
+  const keys = Object.keys(days).sort().reverse();
+  if (!keys.length) return '<div class="empty">Nothing here.</div>';
+  return keys.map(d => {
+    const dt = new Date(d + 'T12:00');
+    const inn = days[d].filter(t => t._k === 'inc').reduce((a, t) => a + t.a, 0);
+    const out = days[d].filter(t => t._k === 'exp').reduce((a, t) => a - t.a, 0);
+    return `<div class="day"><div class="dh"><b>${dt.getDate()}</b>
+      <span class="dw">${dt.toLocaleDateString('en-GB', { weekday: 'short' })}</span>
+      <span class="inc">${inn ? fmt(inn) : ''}</span><span class="exp">${out ? fmt(out) : ''}</span></div>` +
+      days[d].map(t => `<div class="tr" data-k="${esc(t.k)}"><div class="tc${t.mine ? ' mine' : ''}">${esc(t._cat)}</div>
+        <div class="tb"><b>${esc(t.who || t.desc || '—')}</b><span>${esc(t.desc || '')}</span></div>
+        <div class="ta ${t._k === 'inc' ? 'inc' : t._k === 'exp' ? 'exp' : 'mv'}">${fmt(t.a)}</div></div>`).join('') +
+      `</div>`;
+  }).join('');
+};
+
+function renderYear() {
+  const rows = (data.tx || []).filter(t => t.c === 'EUR');
+  const years = [...new Set(rows.map(t => t.d.slice(0, 4)))].sort().reverse();
+  if (!years.length) { $('#view').innerHTML = '<div class="empty">No bank rows yet.</div>'; return; }
+  if (!bizYear || years.indexOf(bizYear) < 0) bizYear = years[0];
+  const d = Year.data(rows, bizYear);
+  const prev = Year.data(rows, String(+bizYear - 1));
+  const story = Year.story(d, prev.total ? prev : null);
+  $('#view').innerHTML =
+    `<div class="chips">${years.map(y =>
+      `<button data-act="byear" data-y="${y}" aria-pressed="${bizYear === y}">${y}</button>`).join('')}</div>` +
+    (story.length ? `<div class="card story">${story.map(x => `<p>${esc(x)}</p>`).join('')}</div>` : '') +
+    `<div class="card">${Year.grid(d, { kind: yearKind, cat: yearCat, cell: yearCell,
+      tx: rows.filter(t => t.d.startsWith(bizYear)), dayList })}</div>`;
+}
+
+let cats = null;
+const api = q => fetch(apiUrl() + '?action=money&mt=' + encodeURIComponent(token()) + q).then(r => r.json());
+
+async function setCat(key) {
+  const t = (data.tx || []).find(x => x.k === key);
+  if (!t) return;
+  if (!cats) {
+    try { cats = (await api('&cats=go')).cats || []; }
+    catch (e) { cats = [...new Set((data.tx || []).map(x => x._cat).filter(Boolean))]; }
+  }
+  CatPick.open({
+    cats, current: t.cat, title: t.who || t.desc || 'Category',
+    note: `${t.d} · ${fmt(t.a)} · the company's account`,
+    onPick: async cat => {
+      $('#status').textContent = 'Saving…';
+      try {
+        const j = await api('&setcat=' + encodeURIComponent(key) + '&cat=' + encodeURIComponent(cat));
+        if (!j.ok) throw new Error(j.error || 'failed');
+        t.cat = j.now; t.mine = !!cat;
+        const k = classify(t); t._k = k.k; t._cat = k.cat;
+        if (cat && cats.indexOf(cat) < 0) cats.push(cat);
+        try { localStorage.setItem(CKEY, JSON.stringify(data)); } catch (e) {}
+        $('#status').textContent = cat ? 'Set to ' + cat : 'Back to the rules';
+        render();
+      } catch (e) { $('#status').textContent = 'Could not save: ' + e.message; }
+    }
+  });
+}
+
+async function markInvoice(no, issued, value) {
+  $('#status').textContent = 'Saving…';
+  try {
+    const j = await api('&biz=setinv&no=' + encodeURIComponent(no) + '&issued=' + encodeURIComponent(issued) +
+      '&f=status&v=' + encodeURIComponent(value));
+    if (!j.ok) throw new Error(j.error || 'failed');
+    const i = data.invoices.find(x => String(x.no) === String(no) && x.issued === issued);
+    if (i) i.status = value;
+    data = prep(data);
+    try { localStorage.setItem(CKEY, JSON.stringify(data)); } catch (e) {}
+    $('#status').textContent = value ? 'Marked ' + value : 'Mark removed';
+    render();
+  } catch (e) { $('#status').textContent = 'Could not save: ' + e.message; }
+}
 
 function render() {
   show('main');
@@ -142,7 +245,8 @@ function render() {
     `<div><span>Into the bank</span><b class="inc">${fmt(m.inn)}</b></div>` +
     `<div><span>Out of the bank</span><b class="exp">${fmt(m.out)}</b></div>` +
     `<div><span>Left</span><b>${fmt(m.net)}</b></div>`;
-  if (tab === 'invoices') renderInvoices();
+  if (tab === 'year') renderYear();
+  else if (tab === 'invoices') renderInvoices();
   else if (tab === 'clients') renderClients();
   else if (tab === 'spend') renderSpend();
   else renderOverview();
@@ -155,7 +259,7 @@ function byYear() {
     (y[k] = y[k] || { inn: 0, out: 0, billed: 0 });
     if (t.a > 0) y[k].inn += t.a; else y[k].out += -t.a;
   });
-  data.invoices.forEach(i => {
+  data.live.forEach(i => {
     const k = (i.issued || '').slice(0, 4); if (!k) return;
     (y[k] = y[k] || { inn: 0, out: 0, billed: 0 }).billed += i.amount_eur;
   });
@@ -164,7 +268,7 @@ function byYear() {
 
 function renderOverview() {
   const y = byYear();
-  const open = data.invoices.filter(i => !i._paid);
+  const open = data.live.filter(i => !i._paid);
   $('#view').innerHTML = `
     <div class="card">
       ${Object.keys(y).sort().reverse().map(k => `<div class="arow"><b>${k}</b>` +
@@ -174,8 +278,8 @@ function renderOverview() {
         an invoice can be billed in one year and paid in the next.</div>
     </div>
     <div class="card">
-      <div class="arow tot"><b>Invoices</b><b>${data.invoices.length}</b></div>
-      <div class="arow"><span>Matched to a payment in the bank</span><b class="inc">${data.invoices.length - open.length}</b></div>
+      <div class="arow tot"><b>Invoices</b><b>${data.live.length}</b></div>
+      <div class="arow"><span>Matched to a payment in the bank</span><b class="inc">${data.live.length - open.length}</b></div>
       <div class="arow"><span>Not matched</span><b>${open.length}</b></div>
       <div class="note2">Not matched is not the same as unpaid: cash, a payment bundled with others, or an
         amount that differs by a cent all land here. Check them rather than chase them.</div>
@@ -183,7 +287,9 @@ function renderOverview() {
 }
 
 function invRow(i) {
-  const tag = i._paid
+  const tag = cancelled(i)
+    ? `<span class="tag">cancelled</span>`
+    : i._paid
     ? `<span class="tag found">paid ${dshort(i._paid.row.d)}${i._parts.length > 1 ? ', ' + i._parts.length + ' parts' : ''}</span>`
     : i._part
       ? `<span class="tag owed">part paid, ${fmt(i._short)} short</span>`
@@ -191,7 +297,8 @@ function invRow(i) {
   return `<div class="inv">
     <b>${esc(i.client)}</b><span class="amt">${fmt(i.amount_eur)}</span>
     <span class="svc">№ ${esc(i.no)} · ${dshort(i.issued)}${i.items ? ' · ' + esc(String(i.items).slice(0, 40)) : ''}</span>
-    <span class="st">${tag}</span></div>`;
+    <span class="st">${tag}<button class="mk" data-act="mark" data-n="${esc(i.no)}" data-i="${esc(i.issued)}"
+      data-v="${cancelled(i) ? '' : 'cancelled'}">${cancelled(i) ? 'Not cancelled' : 'Cancel'}</button></span></div>`;
 }
 
 const chips = (sets, names) => `<div class="chips">${Object.keys(sets).map(k =>
@@ -199,8 +306,8 @@ const chips = (sets, names) => `<div class="chips">${Object.keys(sets).map(k =>
 
 function renderInvoices() {
   const sets = {
-    open: data.invoices.filter(i => !i._paid),
-    paid: data.invoices.filter(i => i._paid),
+    open: data.live.filter(i => !i._paid),
+    paid: data.live.filter(i => i._paid),
     all: data.invoices,
     unbilled: data.unbilled || []
   };
@@ -222,7 +329,7 @@ function renderInvoices() {
 
 function renderClients() {
   const by = {};
-  data.invoices.forEach(i => {
+  data.live.forEach(i => {
     const k = i.client || '—';
     (by[k] = by[k] || { n: 0, sum: 0, open: 0, last: '' });
     by[k].n++; by[k].sum += i.amount_eur;
@@ -238,9 +345,9 @@ function renderClients() {
 function renderSpend() {
   // Transfers are not spending: the sweep from myPOS and the money moved to
   // cover a card are the same euro twice.
-  const rows = (data.tx || []).filter(t => t.a < 0 && !/^transfer$/i.test(String(t.cat || '')));
+  const rows = (data.tx || []).filter(t => t._k === 'exp');
   const by = {};
-  rows.forEach(t => { by[t.cat || 'Uncategorised'] = (by[t.cat || 'Uncategorised'] || 0) + -t.a; });
+  rows.forEach(t => { by[t._cat] = (by[t._cat] || 0) + -t.a; });
   $('#view').innerHTML = `<div class="card">` +
     Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
       `<div class="arow"><span>${esc(k)}</span><b>${fmt(v)}</b></div>`).join('') +
@@ -251,7 +358,21 @@ $('#tabs').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return; tab = b.dataset.t; render();
 });
 $('#view').addEventListener('click', e => {
-  const b = e.target.closest('[data-act="filter"]'); if (!b) return; filter = b.dataset.f; render();
+  const b = e.target.closest('[data-act]');
+  if (!b) {
+    const r = e.target.closest('.tr[data-k]');
+    if (r) setCat(r.dataset.k);
+    return;
+  }
+  const a = b.dataset.act;
+  if (a === 'mark') { markInvoice(b.dataset.n, b.dataset.i, b.dataset.v); return; }
+  if (a === 'filter') filter = b.dataset.f;
+  else if (a === 'byear') { bizYear = b.dataset.y; yearCat = null; yearCell = null; }
+  else if (a === 'ykind') { yearKind = b.dataset.k; yearCat = null; yearCell = null; }
+  else if (a === 'ycat') { yearCat = yearCat === b.dataset.c ? null : b.dataset.c; yearCell = null; }
+  else if (a === 'ycell') { const i = +b.dataset.i; yearCell = yearCell === i ? null : i; }
+  else return;
+  render();
 });
 $('#tokSave').addEventListener('click', () => {
   const v = $('#tokIn').value.trim(); if (!v) return;

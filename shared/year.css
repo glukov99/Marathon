@@ -1,0 +1,66 @@
+/* The day list and the year grid, shared by the Money page and the Business
+   page. Both render the same rows with shared/year.js, so the styles live with
+   it rather than being copied into each page. */
+.day{background:var(--card);border-radius:16px;margin-top:12px;overflow:hidden;box-shadow:var(--shadow)}
+.dh{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--rule)}
+.dh b{font-size:22px;font-weight:800;min-width:30px}
+.dh .dw{font-size:12px;font-weight:700;background:rgba(255,255,255,.08);border-radius:6px;padding:2px 7px;color:var(--soft)}
+.dh .inc,.dh .exp{margin-left:auto;font-size:14px;font-weight:600;min-width:70px;text-align:right}
+.dh .exp{margin-left:10px}
+.tr{display:flex;gap:10px;padding:10px 14px;align-items:flex-start}
+.tr+.tr{border-top:1px solid var(--rule)}
+.tc{flex:0 0 92px;font-size:12.5px;color:var(--faint);padding-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb{flex:1;min-width:0}
+.tb b{display:block;font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb span{display:block;font-size:12.5px;color:var(--soft)}
+.ta{font-weight:700;white-space:nowrap}
+.yg{padding:10px 12px 12px}
+.chips.yk{margin:0 0 12px}
+.ygh,.yr{display:grid;grid-template-columns:minmax(0,1fr) repeat(12,10px) 44px 36px;gap:1px;align-items:center}
+/* Room to spare: the label stops at 180px and the cells take the rest. */
+@media(min-width:560px){.ygh,.yr{grid-template-columns:180px repeat(12,minmax(10px,1fr)) 46px 40px;gap:2px}}
+.ygh{font-size:9.5px;color:var(--faint);text-align:center;padding-bottom:4px}
+.ygh .off{opacity:.3}
+.yr{width:100%;background:none;border:0;padding:3px 0;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.yr.open{background:var(--card2)}
+.yn{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:4px}
+.yc{display:block;height:15px;border-radius:2px}
+.yc.ex,.yc.dn{background:var(--big)}
+.yc.up{background:var(--acc)}
+.yc.z{background:var(--rule);opacity:.45}
+.yt{font-size:10.5px;text-align:right;font-variant-numeric:tabular-nums}
+.yt.av{color:var(--faint)}
+.yr.net .yn{font-weight:700}
+.ysep{height:1px;background:var(--rule);margin:7px 0}
+.ym{display:flex;flex-wrap:wrap;gap:4px 9px;padding:1px 0 7px 2px;font-size:11.5px;color:var(--soft);font-variant-numeric:tabular-nums}
+.ym .av{color:var(--faint)}
+.ymb{background:var(--card2);border:1px solid var(--rule);border-radius:3px;padding:2px 7px;font:inherit;font-size:11.5px;color:inherit;cursor:pointer;font-variant-numeric:tabular-nums}
+.ymb.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.ye{padding:0 0 8px}
+.ye .day{margin-top:0}
+.ye .tc{display:none}
+.story p{margin:0;padding:9px 14px;font-size:13.5px;line-height:1.45}
+.story p+p{border-top:1px solid var(--rule)}
+
+/* The category picker (shared/catpick.js), used by both pages. */
+.cpk{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.cpkb{position:absolute;inset:0;background:rgba(0,0,0,.55)}
+.cpkc{position:relative;width:100%;max-width:520px;max-height:82vh;overflow:auto;
+  background:var(--card);border-radius:18px 18px 0 0;padding:14px 14px 20px;box-shadow:var(--shadow)}
+@media(min-width:560px){.cpk{align-items:center}.cpkc{border-radius:18px}}
+.cpkh{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.cpkh b{font-size:16px}
+.cpkh button{margin-left:auto;background:none;border:0;color:var(--soft);font-size:24px;line-height:1;cursor:pointer}
+.cpkn{font-size:12.5px;color:var(--soft);margin-bottom:10px;line-height:1.4}
+.cpkl{display:flex;flex-wrap:wrap;gap:6px}
+.cpkl button{background:var(--card2);border:1px solid var(--rule);border-radius:999px;
+  padding:6px 12px;font:inherit;font-size:13px;color:inherit;cursor:pointer}
+.cpkl button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.cpkf{display:flex;gap:6px;margin-top:12px}
+.cpkf input{flex:1;min-width:0;background:var(--card2);border:1px solid var(--rule);
+  border-radius:8px;padding:8px 10px;font:inherit;font-size:13px;color:inherit}
+.cpkf button,.cpkr{background:var(--card2);border:1px solid var(--rule);border-radius:8px;
+  padding:8px 12px;font:inherit;font-size:13px;color:inherit;cursor:pointer}
+.cpkr{display:block;width:100%;margin-top:8px;color:var(--soft)}
+.tr[data-k]{cursor:pointer}
+.tc.mine{color:var(--acc)}
