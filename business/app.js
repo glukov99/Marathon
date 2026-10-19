@@ -362,8 +362,11 @@ function jobRow(j) {
 function jobForm() {
   const types = [...new Set((data.types || []).concat(
     (data.bookings || []).map(j => String(j.type || '').trim()).filter(Boolean)))];
-  return `<details class="card bk"${jobEdit ? ' open' : ''}>
-    <summary>Add a booking</summary>
+  // Open when there is nothing to show yet: a collapsed form on an empty tab
+  // leaves a page with one line of text on it and nothing to press.
+  const open = jobEdit || !(data.bookings || []).length;
+  return `<details class="card bk"${open ? ' open' : ''}>
+    <summary><span>Add a booking</span></summary>
     <div class="bkf">
       <label>Client<input id="jClient" autocomplete="off"></label>
       <label>Shoot date<input id="jShoot" type="date" value="${today()}"></label>

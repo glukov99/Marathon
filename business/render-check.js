@@ -48,6 +48,11 @@ assert.ok(/class="bv b2"/.test(out.html), 'the averages sit beside their totals'
 ctx.tabs('spend'); ctx.render();
 assert.ok(/Salary/.test(out.html), 'salary is named on the company side');
 assert.ok(!/Transfer/.test(out.html), 'a transfer is not spending');
+// The form must be reachable, and open when there is nothing else on the tab.
+ctx.tabs('jobs'); ctx.render();
+assert.ok(/data-act="jadd"/.test(out.html), 'the Jobs tab has a way to add a booking');
+assert.ok(/<details class="card bk" open>/.test(out.html), 'and it starts open while there are none');
+
 ctx.tabs('invoices'); ctx.render();
 assert.ok(!/cancelled/.test(out.html), 'a cancelled invoice is not waiting for money');
 ctx.filter('all'); ctx.render();
