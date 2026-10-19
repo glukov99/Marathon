@@ -32,10 +32,16 @@ const BANKS = [[/unicredit/i, 'uni', 'UC'], [/revolut/i, 'rev', 'R'], [/mypos/i,
    so it must not wear the same red dot. The figure beside it is the last good
    reading either way. */
 function warnDot(a) {
-  const cap = a.why === 'capped';
+  // Red only when we KNOW the consent has gone. A rate limit, a bank having a
+  // bad morning, or a payload cached before the reason was recorded all mean
+  // "the last reading is what you are looking at", not "go and re-approve".
+  const act = a.why === 'reapprove';
   const seen = a.as_of ? ' · last read ' + new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
-  return ` <span class="rdot${cap ? ' soft' : ''}" title="${cap
-    ? 'The bank capped today\u2019s balance requests' : 'Needs re-approval'}${seen}"></span>`;
+  const why = act ? 'Needs re-approval'
+    : a.why === 'capped' ? 'The bank capped today\u2019s balance requests'
+    : a.why === 'bank down' ? 'The bank did not answer'
+    : 'Could not read the balance just now';
+  return ` <span class="rdot${act ? '' : ' soft'}" title="${why}${seen}"></span>`;
 }
 
 function bankMark(a) {
