@@ -354,6 +354,38 @@ function bankFresh() {
   }).join('');
 }
 
+/* Pull whatever the banks have had since the last sync, on demand.
+
+   The daily trigger already does this each morning; this is for the evening
+   when he has just spent something and wants to see it. Transactions first,
+   because that is the half that works even when the balance endpoint is
+   capped (a bank allows only a few balance reads a day, see bankMark/warnDot),
+   and the result says plainly which half came back. */
+async function syncNow(btn) {
+  const url = apiUrl(), tok = token();
+  if (!url || !tok) return;
+  btn.disabled = true;
+  const was = btn.textContent;
+  btn.textContent = 'Checking…';
+  const call = q => fetch(url + (url.includes('?') ? '&' : '?') +
+    'action=money&mt=' + encodeURIComponent(tok) + q).then(r => r.json());
+  try {
+    const s = await call('&sync=go');
+    if (!s.ok) throw new Error(s.error || 'the sync did not run');
+    const b = await call('&balances=go').catch(() => null);
+    const capped = b && b.accounts ? b.accounts.filter(a => a.why === 'capped').length : 0;
+    const added = Number(s.added) || 0;
+    setStatus((added ? added + ' new row' + (added === 1 ? '' : 's') : 'Nothing new') +
+      ((s.skipped || []).length ? ', ' + s.skipped.length + ' account not read' : '') +
+      (capped ? ', ' + capped + ' balance capped for today' : ''));
+    await load();
+  } catch (e) {
+    setStatus('Could not check: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = was;
+  }
+}
+
 // Starts a bank approval from this device. The bank app or page sends us back to
 // the hub home page with the code, and that page finishes it by itself, so there
 // is nothing to copy. One tap here, approve in the bank, done.
@@ -415,6 +447,8 @@ function renderAccounts(rows) {
     </div>
     <div class="card">
       ${bankFresh()}
+      <div class="arow"><span>Check the banks for anything new</span>
+        <button class="btn ghost" data-act="sync" id="syncBtn">Check now</button></div>
       ${approved}
       <div class="note2">UniCredit sessions expire within hours. Approve personal, then business, and sync at least once a month. Each sync looks back 90 days, so nothing is lost.</div>
     </div>
@@ -456,6 +490,7 @@ $('#view').addEventListener('click', e => {
   else if (act === 'ycell') { const i = +b.dataset.i; yearCell = yearCell === i ? null : i; }
   else if (act === 'ykind') { yearKind = b.dataset.k; yearCat = null; yearCell = null; }
   else if (act === 'approve') { startApproval(b.dataset.bank, b.dataset.psu, b); return; }
+  else if (act === 'sync') { syncNow(b); return; }
   else if (act === 'forget') { if (confirm('Remove the Money token and saved data from this device?')) forget(); return; }
   render();
 });

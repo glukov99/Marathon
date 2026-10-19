@@ -39,6 +39,9 @@ ctx.setMonth('2026-02');
 ctx.tabs('daily'); ctx.render();
 assert.ok(/data-k="/.test(out.view), 'a transaction can be tapped to set its category');
 assert.ok(!/a month/.test(out.sum), 'a single month has no average');
+ctx.tabs('accounts'); ctx.render();
+assert.ok(/data-act="sync"/.test(out.view), 'the Accounts tab can ask the banks for anything new');
+
 ctx.tabs('monthly'); ctx.render();
 assert.ok(/a month/.test(out.sum), 'a year says what each figure is a month');
 console.log('render ok: every tab builds');
