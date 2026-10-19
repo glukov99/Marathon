@@ -15,7 +15,8 @@ const $ = () => ({ set innerHTML(v) { out.html = v; }, set textContent(v) {} , c
 const ctx = {};
 new Function('ctx', 'Year', 'Charts', '$', 'document', 'localStorage', 'fetch', 'CatPick',
   body + '\nctx.prep=prep;ctx.render=render;ctx.setData=d=>{data=d};' +
-  'ctx.tabs=t=>{tab=t};ctx.filter=f=>{filter=f};ctx.out=()=>out;')
+  'ctx.tabs=t=>{tab=t};ctx.filter=f=>{filter=f};ctx.out=()=>out;' +
+  'ctx.workingDue=workingDue;ctx.jobState=jobState;')
   (ctx, Year, Charts, $, { querySelectorAll: () => [] }, { getItem: () => null, setItem() {} },
    () => Promise.reject(new Error('no network in the check')), { open() {} });
 
@@ -31,7 +32,7 @@ const j = ctx.prep({
        tx('2026-05-01', -20, 'Sent from myPOS', 'Transfer')]
 });
 ctx.setData(j);
-['overview', 'year', 'invoices', 'clients', 'spend'].forEach(t => {
+['overview', 'jobs', 'year', 'invoices', 'clients', 'spend'].forEach(t => {
   ctx.tabs(t); out.html = '';
   ctx.render();
   assert.ok(out.html && out.html.length > 20, t + ' rendered nothing');
@@ -46,4 +47,28 @@ assert.ok(!/cancelled/.test(out.html), 'a cancelled invoice is not waiting for m
 ctx.filter('all'); ctx.render();
 assert.ok(/cancelled/.test(out.html), 'but it is still in the list, marked');
 assert.ok(/Set type/.test(out.html), 'and its type can be set');
-console.log('render ok: every tab builds');
+/* Ten working days after the shoot: the deadline the whole Jobs tab turns on,
+   so it is worth more than one case. */
+const due = ctx.workingDue;
+assert.equal(due('2026-11-06'), '2026-11-20', 'a Friday shoot is due the Friday two weeks later');
+assert.equal(due('2026-11-02'), '2026-11-16', 'and a Monday the Monday');
+assert.equal(due('2026-11-05'), '2026-11-19', 'a Thursday keeps its weekday');
+assert.equal(due('2026-11-07'), '2026-11-20', 'a Saturday shoot lands with the Friday before it');
+assert.equal(due('2026-11-08'), '2026-11-20', 'and so does a Sunday');
+assert.equal(due('2026-12-24'), '2027-01-07', 'it carries over a year end');
+[0, 1, 2, 3, 4, 5, 6].forEach(off => {
+  const d = new Date('2026-11-02T12:00'); d.setDate(d.getDate() + off);
+  const w = new Date(due(d.toISOString().slice(0, 10)) + 'T12:00').getDay();
+  assert.ok(w !== 0 && w !== 6, 'a due date is never a weekend');
+});
+assert.equal(due('not a date'), '', 'and a bad date gives nothing, not a crash');
+
+const st = (j, inv) => ctx.jobState(j, inv || {});
+const far = '2099-01-01', old = '2020-01-01';
+assert.equal(st({ shoot: far }).k, 'booked', 'a future shoot is booked');
+assert.equal(st({ shoot: old }).k, 'late', 'a shoot long past with nothing done is late');
+assert.equal(st({ shoot: old, delivered: old }).k, 'delivered', 'delivered but not billed');
+assert.equal(st({ shoot: old, invoice: '7' }, { 7: { no: '7' } }).k, 'invoiced', 'billed, waiting');
+assert.equal(st({ shoot: old, invoice: '7' }, { 7: { no: '7', _paid: {} } }).k, 'paid', 'and paid');
+
+console.log('render ok: every tab builds, due dates land on working days');

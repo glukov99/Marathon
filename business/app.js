@@ -21,6 +21,7 @@ const token = () => { try { return localStorage.getItem(TKEY) || ''; } catch (e)
 let data = null, tab = 'overview', filter = 'open';
 let bizYear = null, yearKind = 'exp', yearCat = null, yearCell = null;
 let chartYear = 'all';
+let jobFilter = 'open', jobEdit = null;
 
 /* What a company row counts as. Transfers are the same euro moving (the myPOS
    sweep, money sent to cover a card), so they are shown but never counted. */
@@ -262,7 +263,8 @@ function render() {
     `<div><span>Into the bank</span><b class="inc">${fmt(m.inn)}</b></div>` +
     `<div><span>Out of the bank</span><b class="exp">${fmt(m.out)}</b></div>` +
     `<div><span>Left</span><b>${fmt(m.net)}</b></div>`;
-  if (tab === 'year') renderYear();
+  if (tab === 'jobs') renderJobs();
+  else if (tab === 'year') renderYear();
   else if (tab === 'invoices') renderInvoices();
   else if (tab === 'clients') renderClients();
   else if (tab === 'spend') renderSpend();
@@ -281,6 +283,145 @@ function byYear() {
     (y[k] = y[k] || { inn: 0, out: 0, billed: 0 }).billed += i.amount_eur;
   });
   return y;
+}
+
+/* ===== Bookings ====================================================
+   A shoot exists before it is billed. Everything else on this page looks
+   backwards at money that has already moved; this is the one part that looks
+   forwards, which is why the deadline lives here and nowhere else. */
+
+/* Delivery is owed ten WORKING days after the shoot (Georgi's own rule), so a
+   Friday shoot is due the Friday two weeks later, not the Sunday. Bulgarian
+   public holidays are not in this: there is no table for them here, and being
+   a day early is the safe direction to be wrong in. */
+function workingDue(shoot, days) {
+  const d = new Date(shoot + 'T12:00');
+  if (isNaN(d)) return '';
+  let left = days == null ? 10 : days;
+  while (left > 0) {
+    d.setDate(d.getDate() + 1);
+    const w = d.getDay();
+    if (w !== 0 && w !== 6) left--;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+
+/* What a booking is NOW. Nothing here is stored except `delivered` and the
+   invoice number: a status written into a cell is out of date the next morning
+   and then has to be corrected by hand, which is exactly the work this page is
+   meant to remove. */
+function jobState(j, invByNo) {
+  const now = today(), due = workingDue(j.shoot);
+  const inv = j.invoice ? invByNo[String(j.invoice).trim()] : null;
+  if (inv && inv._paid) return { k: 'paid', label: 'paid', due };
+  if (inv) return { k: 'invoiced', label: 'invoiced, waiting for the money', due };
+  if (j.delivered) return { k: 'delivered', label: 'delivered ' + dshort(j.delivered) + ', not invoiced', due };
+  if (j.shoot > now) return { k: 'booked', label: 'booked', due };
+  if (due < now) return { k: 'late', label: 'late, due ' + dshort(due), due };
+  return { k: 'due', label: 'due ' + dshort(due), due };
+}
+
+const JOB_ORDER = { late: 0, due: 1, delivered: 2, booked: 3, invoiced: 4, paid: 5 };
+
+function renderJobs() {
+  const invByNo = {};
+  (data.invoices || []).forEach(i => { invByNo[String(i.no).trim()] = i; });
+  const all = (data.bookings || []).map(j => Object.assign({}, j, { _s: jobState(j, invByNo) }));
+  const sets = {
+    open: all.filter(j => j._s.k !== 'paid'),
+    all: all
+  };
+  const names = { open: 'Open', all: 'All' };
+  const list = (sets[jobFilter] || []).slice().sort((a, b) =>
+    (JOB_ORDER[a._s.k] - JOB_ORDER[b._s.k]) || (a.shoot < b.shoot ? -1 : 1));
+
+  $('#view').innerHTML = jobForm() +
+    `<div class="chips">${Object.keys(sets).map(k =>
+      `<button data-act="jfilter" data-f="${k}" aria-pressed="${jobFilter === k}">${names[k]} ${sets[k].length}</button>`).join('')}</div>` +
+    (list.length ? `<div class="card">${list.map(jobRow).join('')}</div>`
+      : '<div class="empty">No bookings yet. Add the next shoot above.</div>');
+}
+
+function jobRow(j) {
+  const s = j._s;
+  const owed = (Number(j.price) || 0) - (j.deposit_in ? (Number(j.deposit) || 0) : 0);
+  const bits = [j.type, j.location].filter(Boolean).map(esc).join(' · ');
+  return `<div class="inv job ${s.k}">
+    <b>${esc(j.client)}</b><span class="amt">${j.price ? fmt(j.price) : ''}</span>
+    <span class="svc">${dshort(j.shoot)}${bits ? ' · ' + bits : ''}${j.contact ? ' · ' + esc(j.contact) : ''}</span>
+    <span class="st"><span class="tag ${s.k === 'paid' || s.k === 'delivered' ? 'found' : s.k === 'late' ? 'owed' : ''}">${esc(s.label)}</span>
+      ${j.deposit ? `<span class="tag">${j.deposit_in ? 'deposit in' : 'deposit due'} ${fmt(j.deposit)}</span>` : ''}
+      ${j.price && owed > 0.01 && s.k !== 'paid' ? `<span class="tag">${fmt(owed)} to come</span>` : ''}
+      ${j.delivered ? '' : `<button class="mk" data-act="jdone" data-id="${esc(j.id)}">Delivered</button>`}
+      <button class="mk" data-act="jinv" data-id="${esc(j.id)}">${j.invoice ? '№ ' + esc(j.invoice) : 'Invoice №'}</button>
+      <button class="mk" data-act="jdel" data-id="${esc(j.id)}">Remove</button></span></div>`;
+}
+
+function jobForm() {
+  const types = [...new Set((data.types || []).concat(
+    (data.bookings || []).map(j => String(j.type || '').trim()).filter(Boolean)))];
+  return `<details class="card bk"${jobEdit ? ' open' : ''}>
+    <summary>Add a booking</summary>
+    <div class="bkf">
+      <label>Client<input id="jClient" autocomplete="off"></label>
+      <label>Shoot date<input id="jShoot" type="date" value="${today()}"></label>
+      <label>Type<select id="jType"><option value=""></option>
+        ${types.map(t => `<option value="${esc(t)}">${esc(shortType(t))}</option>`).join('')}</select></label>
+      <label>Location<input id="jLocation" autocomplete="off"></label>
+      <label>Contact<input id="jContact" autocomplete="off"></label>
+      <label>Total price<input id="jPrice" type="number" step="0.01" inputmode="decimal"></label>
+      <label>Deposit<input id="jDeposit" type="number" step="0.01" inputmode="decimal"></label>
+      <label class="ck"><input id="jDepIn" type="checkbox"> Deposit already in</label>
+      <label class="wide">Note<input id="jNote" autocomplete="off"></label>
+      <button class="go" data-act="jadd">Add the booking</button>
+      <div class="note2" id="jMsg">Delivery is set at ten working days after the shoot.</div>
+    </div>
+  </details>`;
+}
+
+async function addJob() {
+  const v = id => (($('#' + id) || {}).value || '').trim();
+  const q = { client: v('jClient'), shoot: v('jShoot'), type: v('jType'), location: v('jLocation'),
+    contact: v('jContact'), price: v('jPrice'), deposit: v('jDeposit'), note: v('jNote'),
+    deposit_in: ($('#jDepIn') || {}).checked ? 'yes' : '' };
+  if (!q.client || !q.shoot) { $('#jMsg').textContent = 'A client and a shoot date are the two it cannot do without.'; return; }
+  $('#jMsg').textContent = 'Saving…';
+  try {
+    const j = await api('&biz=book&' + Object.keys(q).map(k => k + '=' + encodeURIComponent(q[k])).join('&'));
+    if (!j.ok) throw new Error(j.error || 'failed');
+    data.bookings = (data.bookings || []).concat([j.job]);
+    try { localStorage.setItem(CKEY, JSON.stringify(data)); } catch (e) {}
+    jobEdit = null;
+    $('#status').textContent = q.client + ' booked for ' + dshort(q.shoot);
+    render();
+  } catch (e) { $('#jMsg').textContent = 'Could not save: ' + e.message; }
+}
+
+async function setJob(id, field, value) {
+  $('#status').textContent = 'Saving…';
+  try {
+    const j = await api('&biz=setjob&id=' + encodeURIComponent(id) + '&f=' + field + '&v=' + encodeURIComponent(value));
+    if (!j.ok) throw new Error(j.error || 'failed');
+    const b = (data.bookings || []).find(x => x.id === id);
+    if (b) b[field] = j.set;
+    try { localStorage.setItem(CKEY, JSON.stringify(data)); } catch (e) {}
+    $('#status').textContent = 'Saved';
+    render();
+  } catch (e) { $('#status').textContent = 'Could not save: ' + e.message; }
+}
+
+async function delJob(id) {
+  const b = (data.bookings || []).find(x => x.id === id);
+  if (!b || !confirm('Remove the booking for ' + b.client + '?')) return;
+  try {
+    const j = await api('&biz=deljob&id=' + encodeURIComponent(id));
+    if (!j.ok) throw new Error(j.error || 'failed');
+    data.bookings = (data.bookings || []).filter(x => x.id !== id);
+    try { localStorage.setItem(CKEY, JSON.stringify(data)); } catch (e) {}
+    render();
+  } catch (e) { $('#status').textContent = 'Could not remove: ' + e.message; }
 }
 
 /* The pictures. Every one of them obeys the year chips at the top, so "all" and
@@ -514,6 +655,16 @@ $('#view').addEventListener('click', e => {
     return;
   }
   const a = b.dataset.act;
+  if (a === 'jadd') { addJob(); return; }
+  if (a === 'jdone') { setJob(b.dataset.id, 'delivered', today()); return; }
+  if (a === 'jdel') { delJob(b.dataset.id); return; }
+  if (a === 'jinv') {
+    const j = (data.bookings || []).find(x => x.id === b.dataset.id);
+    const v = prompt('Which invoice number is this shoot on?', (j && j.invoice) || '');
+    if (v != null) setJob(b.dataset.id, 'invoice', v.trim());
+    return;
+  }
+  if (a === 'jfilter') { jobFilter = b.dataset.f; render(); return; }
   if (a === 'mark') { markInvoice(b.dataset.n, b.dataset.i, b.dataset.v); return; }
   if (a === 'type') { pickType(b.dataset.n, b.dataset.i); return; }
   if (a === 'filter') filter = b.dataset.f;
