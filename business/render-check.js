@@ -41,6 +41,14 @@ ctx.setData(j);
 });
 ctx.tabs('overview'); ctx.render();
 assert.ok(/By client/.test(out.html) && /<svg/.test(out.html), 'the overview draws its charts');
+// The charts read invoices and the bank. Cash shoots are in neither, so they
+// must say so rather than quietly under-report what he earned.
+ctx.setData(Object.assign({}, j, { bookings: [
+  { id: 'c1', client: 'Cash client', shoot: '2026-02-01', price: 250, paid: '2026-02-01' }] }));
+ctx.render();
+assert.ok(/paid in cash\s+\(€250\)\s+is not in this/.test(out.html),
+  'the charts name the cash work they cannot see');
+ctx.setData(j); ctx.render();
 // He asked "where is my avg per invoice" twice while it was one card below its
 // total. Every bar chart that has an average must now carry it on the same row.
 (out.html.match(/<div class="bars two">[\s\S]*?<\/div><\/div>/g) || []).forEach(block => {
@@ -65,8 +73,17 @@ assert.ok(/billed/.test(gaps({ shoot: '2026-01-01', price: 500, invoice: '7' }, 
   'a price that does not match the invoice is called out');
 assert.ok(/has not arrived/.test(gaps({ shoot: '2026-01-01', price: 400, invoice: '7' }, partInv)[0]),
   'and an invoice that is short');
-assert.ok(/no invoice/.test(gaps({ shoot: '2020-01-01', delivered: '2020-01-20', price: 400 })[0]),
-  'delivered with no invoice number is called out');
+assert.ok(/nothing says it was paid/.test(gaps({ shoot: '2020-01-01', delivered: '2020-01-20', price: 400 })[0]),
+  'delivered with nothing saying the money came is called out');
+// Cash jobs are normal: no invoice will ever exist and the company's bank will
+// never see them, so neither absence is a fault.
+assert.deepEqual(gaps({ shoot: '2020-01-01', delivered: '2020-01-20', price: 400, paid: '2020-01-20' }), [],
+  'a shoot paid in cash is complete with no invoice at all');
+assert.ok(/marked paid in cash and billed/.test(
+  gaps({ shoot: '2020-01-01', price: 400, paid: '2020-01-20', invoice: '7' }, paidInv)[0]),
+  'but cash AND an invoice is a contradiction worth saying');
+assert.equal(ctx.jobState({ shoot: '2020-01-01', paid: '2020-01-20' }, {}).k, 'paid',
+  'and it counts as paid');
 assert.ok(/never marked as in/.test(gaps({ shoot: '2020-01-01', price: 400, deposit: 100 })[0]),
   'a deposit on a past shoot that never arrived is called out');
 

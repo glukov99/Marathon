@@ -271,9 +271,12 @@ const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000
 function jobState(j, invByNo) {
   const now = today(), due = workingDue(j.shoot);
   const inv = j.invoice ? invByNo[String(j.invoice).trim()] : null;
+  // Cash, straight into his personal account: no invoice and nothing in the
+  // company's bank will ever show it, so the booking is the only record there is.
+  if (j.paid && !inv) return { k: 'paid', label: 'paid in cash ' + dshort(j.paid), due, cash: true };
   if (inv && inv._paid) return { k: 'paid', label: 'paid', due };
   if (inv) return { k: 'invoiced', label: 'invoiced, waiting for the money', due };
-  if (j.delivered) return { k: 'delivered', label: 'delivered ' + dshort(j.delivered) + ', not invoiced', due };
+  if (j.delivered) return { k: 'delivered', label: 'delivered ' + dshort(j.delivered) + ', not paid yet', due };
   if (j.shoot > now) return { k: 'booked', label: 'booked', due };
   if (due < now) return { k: 'late', label: 'late, due ' + dshort(due), due };
   return { k: 'due', label: 'due ' + dshort(due), due };
@@ -296,8 +299,10 @@ function jobGaps(j, invByNo) {
   if (inv && inv._short > 0.01) {
     out.push(inv._paid ? '' : fmt(inv._short) + ' of that invoice has not arrived');
   }
-  // Delivered, and the shoot is long enough past that an invoice would be out.
-  if (!no && j.delivered) out.push('delivered, no invoice \u2116 on it');
+  // A shoot with no invoice is normal: plenty are paid in cash. It is only
+  // worth saying when it is finished and nothing says the money came.
+  if (!no && !j.paid && j.delivered) out.push('delivered, and nothing says it was paid');
+  if (j.paid && no) out.push('marked paid in cash and billed on \u2116 ' + no);
   const dep = Number(j.deposit) || 0;
   if (dep && price && dep > price + 0.01) out.push('the deposit is more than the price');
   if (dep && !j.deposit_in && j.shoot < today()) out.push('the deposit was never marked as in');
@@ -341,7 +346,8 @@ function jobRow(j) {
       ${j.deposit ? `<span class="tag">${j.deposit_in ? 'deposit in' : 'deposit due'} ${fmt(j.deposit)}</span>` : ''}
       ${j.price && owed > 0.01 && s.k !== 'paid' ? `<span class="tag">${fmt(owed)} to come</span>` : ''}
       ${j.delivered ? '' : `<button class="mk" data-act="jdone" data-id="${esc(j.id)}">Delivered</button>`}
-      <button class="mk" data-act="jinv" data-id="${esc(j.id)}">${j.invoice ? '№ ' + esc(j.invoice) : 'Invoice №'}</button>
+      ${j.paid || j.invoice ? '' : `<button class="mk" data-act="jcash" data-id="${esc(j.id)}">Paid in cash</button>`}
+      ${j.paid ? '' : `<button class="mk" data-act="jinv" data-id="${esc(j.id)}">${j.invoice ? '№ ' + esc(j.invoice) : 'Invoice №'}</button>`}
       <button class="mk" data-act="jedit" data-id="${esc(j.id)}">Edit</button>
       <button class="mk" data-act="jdel" data-id="${esc(j.id)}">Remove</button></span>
     ${j._gaps && j._gaps.length ? `<span class="gap">${j._gaps.map(esc).join(' \u00b7 ')}</span>` : ''}</div>`;
@@ -371,7 +377,8 @@ function jobForm() {
       <label>Deposit<input id="jDeposit" type="number" step="0.01" inputmode="decimal" value="${v('deposit')}"></label>
       <label class="ck"><input id="jDepIn" type="checkbox"${j && j.deposit_in ? ' checked' : ''}> Deposit already in</label>
       ${j ? `<label>Invoice \u2116<input id="jInvoice" autocomplete="off" value="${v('invoice')}"></label>
-      <label>Delivered<input id="jDelivered" type="date" value="${v('delivered')}"></label>` : ''}
+      <label>Delivered<input id="jDelivered" type="date" value="${v('delivered')}"></label>
+      <label class="wide">Paid in cash on<input id="jPaid" type="date" value="${v('paid')}"></label>` : ''}
       <label class="wide">Note<input id="jNote" autocomplete="off" value="${v('note')}"></label>
       <button class="go" data-act="jadd">${j ? 'Save the changes' : 'Add the booking'}</button>
       ${j ? `<button class="go ghost" data-act="jcancel">Leave it as it was</button>` : ''}
@@ -386,7 +393,7 @@ async function addJob() {
   const q = { client: v('jClient'), shoot: v('jShoot'), type: v('jType'), location: v('jLocation'),
     contact: v('jContact'), price: v('jPrice'), deposit: v('jDeposit'), note: v('jNote'),
     deposit_in: ($('#jDepIn') || {}).checked ? 'yes' : '' };
-  if (jobEdit) { q.invoice = v('jInvoice'); q.delivered = v('jDelivered'); q.id = jobEdit; }
+  if (jobEdit) { q.invoice = v('jInvoice'); q.delivered = v('jDelivered'); q.paid = v('jPaid'); q.id = jobEdit; }
   if (!q.client || !q.shoot) { $('#jMsg').textContent = 'A client and a shoot date are the two it cannot do without.'; return; }
   $('#jMsg').textContent = 'Saving…';
   const route = jobEdit ? '&biz=editjob&' : '&biz=book&';
@@ -455,6 +462,19 @@ function quarters(tx) {
 
 function charts() {
   const years = [...new Set((data.tx || []).map(t => t.d.slice(0, 4)))].sort();
+  /* Shoots paid in cash are invisible to every chart here: no invoice is ever
+     written for them and the money goes to his personal account, so neither
+     source this page reads has heard of them. Counting them in would mix what
+     the bank proves with what a booking claims, so instead the charts say what
+     they are missing and leave the figures alone. */
+  const cash = (data.bookings || []).filter(b => b.paid && !String(b.invoice || '').trim()
+    && (chartYear === 'all' || String(b.paid).startsWith(chartYear)));
+  const cashSum = cash.reduce((a, b) => a + (Number(b.price) || 0), 0);
+  const cashNote = cash.length
+    ? `<br><b>${cash.length} shoot${cash.length === 1 ? '' : 's'} paid in cash
+       (${fmt0(cashSum)}) ${cash.length === 1 ? 'is' : 'are'} not in this</b>, because no invoice
+       was written and the money went to your personal account. The Jobs tab has them.`
+    : '';
   const { tx, inv } = chartRows(chartYear);
   const y = byYear();
 
@@ -533,13 +553,13 @@ function charts() {
         : '<div class="empty">Nothing tagged yet.</div>'}
       <div class="note2"><b>${fmt0(tagged)} of ${fmt0(billed)} billed carries a type</b>
         (${pcTagged}%), so the shape is sound and the totals are still a little low.
-        Tap <i>Set type</i> on any invoice to add one.</div>
+        Tap <i>Set type</i> on any invoice to add one.${cashNote}</div>
     </div>
     <div class="card">
       <div class="chh">By client</div>
       <div class="barh"><span></span><span></span><span>billed</span><span>each</span></div>
       ${Charts.bars(clients.slice(0, 10).map(([k, v]) => [k + ' \u00b7 ' + v.n, v.sum, v.sum / v.n]), fmt0)}
-      <div class="note2"><b>Billed per client, and what one of its invoices is worth.</b>
+      <div class="note2">${cashNote ? cashNote.replace('<br>', '') + '<br>' : ''}<b>Billed per client, and what one of its invoices is worth.</b>
         The number after the name is how many invoices that is. One invoice can cover several
         shoots, mostly for Фешън Лаб, so a big client's "each" is a run of work rather than a day.
         Cancelled invoices are left out.</div>
@@ -661,6 +681,7 @@ $('#view').addEventListener('click', e => {
   if (a === 'jedit') { jobEdit = b.dataset.id; render(); window.scrollTo(0, 0); return; }
   if (a === 'jcancel') { jobEdit = null; render(); return; }
   if (a === 'jdone') { setJob(b.dataset.id, 'delivered', today()); return; }
+  if (a === 'jcash') { setJob(b.dataset.id, 'paid', today()); return; }
   if (a === 'jdel') { delJob(b.dataset.id); return; }
   if (a === 'jinv') {
     const j = (data.bookings || []).find(x => x.id === b.dataset.id);
