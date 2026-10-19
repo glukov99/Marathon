@@ -51,7 +51,10 @@ assert.ok(!/Transfer/.test(out.html), 'a transfer is not spending');
 // The form must be reachable, and open when there is nothing else on the tab.
 ctx.tabs('jobs'); ctx.render();
 assert.ok(/data-act="jadd"/.test(out.html), 'the Jobs tab has a way to add a booking');
-assert.ok(/<details class="card bk" open>/.test(out.html), 'and it starts open while there are none');
+assert.ok(/<details class="card addj" open>/.test(out.html), 'and it starts open while there are none');
+// .bk is the round bank badge. A booking card wearing it came out as an 18px
+// circle with the text clipped, and the markup looked perfectly fine.
+assert.ok(!/class="[^"]*\bbk\b/.test(out.html), 'the booking card does not borrow the badge class');
 
 ctx.tabs('invoices'); ctx.render();
 assert.ok(!/cancelled/.test(out.html), 'a cancelled invoice is not waiting for money');

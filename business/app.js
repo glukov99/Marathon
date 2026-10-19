@@ -365,7 +365,7 @@ function jobForm() {
   // Open when there is nothing to show yet: a collapsed form on an empty tab
   // leaves a page with one line of text on it and nothing to press.
   const open = jobEdit || !(data.bookings || []).length;
-  return `<details class="card bk"${open ? ' open' : ''}>
+  return `<details class="card addj"${open ? ' open' : ''}>
     <summary><span>Add a booking</span></summary>
     <div class="bkf">
       <label>Client<input id="jClient" autocomplete="off"></label>

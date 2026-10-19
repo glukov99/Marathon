@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../shared/year.css?v=202610191751">
-<link rel="stylesheet" href="../shared/theme.css?v=202610191751">
+<link rel="stylesheet" href="../shared/year.css?v=202610191754">
+<link rel="stylesheet" href="../shared/theme.css?v=202610191754">
 <style>
 :root{
   --paper:#ECEAE4; --card:#FBFAF7; --card2:#F2F0EA; --ink:#1B1E1A; --soft:#5F665D; --faint:#8C9289; --rule:#D6D3CA;
@@ -197,15 +197,17 @@ ul.steps li{margin:5px 0}
 .tag.paid{background:var(--done);border-color:transparent;color:var(--acc)}
 .tag.owed{background:rgba(224,122,99,.14);border-color:transparent;color:var(--big)}
 .tag.found{background:rgba(125,178,115,.16);border-color:transparent;color:var(--acc)}
-.bk{padding:0}
-.bk>summary{padding:11px 13px;cursor:pointer;list-style:none}
-.bk>summary::-webkit-details-marker{display:none}
-.bk>summary span{display:flex;align-items:center;justify-content:center;gap:8px;
+/* The booking form. NOT .bk: that is the round bank badge above, and a
+   booking card wearing it came out as an 18px circle with the text clipped. */
+.addj{padding:0}
+.addj>summary{padding:11px 13px;cursor:pointer;list-style:none}
+.addj>summary::-webkit-details-marker{display:none}
+.addj>summary span{display:flex;align-items:center;justify-content:center;gap:8px;
   background:var(--acc);color:var(--paper);border-radius:10px;padding:12px;
   font-weight:700;font-size:15px}
-.bk>summary span::before{content:"+";font-size:19px;line-height:1}
-.bk[open]>summary span{background:none;color:var(--soft);border:1px solid var(--rule);padding:9px}
-.bk[open]>summary span::before{content:"−"}
+.addj>summary span::before{content:"+";font-size:19px;line-height:1}
+.addj[open]>summary span{background:none;color:var(--soft);border:1px solid var(--rule);padding:9px}
+.addj[open]>summary span::before{content:"−"}
 .bkf{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:0 15px 15px}
 .bkf label{display:block;font-size:11.5px;color:var(--soft)}
 .bkf label.wide,.bkf .go,.bkf .note2{grid-column:1/-1}
@@ -241,10 +243,10 @@ ul.steps li{margin:5px 0}
     <div id="view"></div>
   </div>
 </div>
-<script src="../shared/catpick.js?v=202610191751"></script>
-<script src="../shared/charts.js?v=202610191751"></script>
-<script src="../shared/year.js?v=202610191751"></script>
-<script src="../shared/sync.js?v=202610191751"></script>
-<script src="app.js?v=202610191751"></script>
+<script src="../shared/catpick.js?v=202610191754"></script>
+<script src="../shared/charts.js?v=202610191754"></script>
+<script src="../shared/year.js?v=202610191754"></script>
+<script src="../shared/sync.js?v=202610191754"></script>
+<script src="app.js?v=202610191754"></script>
 </body>
 </html>
