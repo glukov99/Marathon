@@ -421,10 +421,11 @@ function renderBusiness(rows) {
 // (interest, a hold, a pending card payment). So show what is actually free:
 // own money + free overdraft = available, which a reader can check.
 function odRow(a) {
+  const f = a.overdraft || a.credit;
   const free = (a.available != null && a.amount != null)
     ? Math.round((a.available - a.amount) * 100) / 100 : null;
-  const limit = `Overdraft ${fmt(a.overdraft.eur)} (${a.overdraft.bgn.toLocaleString('en-GB')} лв)`;
-  const left = free != null && Math.abs(free - a.overdraft.eur) > 0.01
+  const limit = `${a.credit ? 'Credit limit' : 'Overdraft'} ${fmt(f.eur)} (${f.bgn.toLocaleString('en-GB')} лв)`;
+  const left = free != null && Math.abs(free - f.eur) > 0.01
     ? `, ${fmt(free)} free` : '';
   return `<div class="arow od"><span>${limit}${left}</span>` +
     `<span>${a.available != null ? 'available ' + fmt(a.available) : ''}</span></div>`;
@@ -496,7 +497,7 @@ function renderAccounts(rows) {
     <div class="card">
       ${Object.entries(tot).map(([c, v]) => `<div class="arow tot"><b>Total ${c}</b><b>${sfmt(v, c)}</b></div>`).join('')}
       ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${bankMark(a)}${esc(a.account)}${a.est ? ' <small>(est.)</small>' : ''}${a.error ? ` <span class="rdot" title="Needs re-approval${a.as_of ? ' · last read ' + new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}"></span>` : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}${a.error && a.as_of ? `<small class="asof">${new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</small>` : ''}</span></div>` +
-        (a.overdraft ? odRow(a) : '')).join('')}
+        (a.overdraft || a.credit ? odRow(a) : '')).join('')}
       ${b ? `<div class="note2">As of ${new Date(b.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.</div>` : ''}
       ${data.fund ? `<div class="note2">Flexible Cash Funds: statement ${new Date(data.fund.statement_date + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} plus moves since. Interest after that date shows when a new statement is added.</div>` : ''}
     </div>
