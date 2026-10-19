@@ -484,7 +484,6 @@ function charts() {
     perClient[k].sum += i.amount_eur; perClient[k].n++;
   });
   const clients = Object.entries(perClient).sort((a, b) => b[1].sum - a[1].sum);
-  const rate = clients.slice().sort((a, b) => b[1].sum / b[1].n - a[1].sum / a[1].n).slice(0, 10);
 
   // By type of shoot, from the category column. Only part filled, so it says so.
   const perType = {};
@@ -524,27 +523,23 @@ function charts() {
       <div class="note2">${q.inn[qBest] ? `<b>Q${qBest + 1} is your strongest quarter at ${fmt0(q.inn[qBest])} in.</b>` : 'Nothing here yet.'}</div>
     </div>
     <div class="card">
-      <div class="chh">Which type earns the most</div>
-      ${types.length ? Charts.bars(types.map(([k, v]) => [shortType(k) + ' · ' + v.n, v.sum]), fmt0)
+      <div class="chh">By type of shoot</div>
+      <div class="barh"><span></span><span></span><span>billed</span><span>each</span></div>
+      ${types.length ? Charts.bars(types.map(([k, v]) =>
+        [shortType(k) + ' \u00b7 ' + v.n, v.sum, v.sum / v.n]), fmt0)
         : '<div class="empty">Nothing tagged yet.</div>'}
-      <div class="chh">What one shoot of each type is worth</div>
-      ${types.length ? Charts.bars(types.slice().sort((a, b) => b[1].sum / b[1].n - a[1].sum / a[1].n)
-        .map(([k, v]) => [shortType(k) + ' · ' + v.n, v.sum / v.n]), fmt0) : ''}
       <div class="note2"><b>${fmt0(tagged)} of ${fmt0(billed)} billed carries a type</b>
         (${pcTagged}%), so the shape is sound and the totals are still a little low.
         Tap <i>Set type</i> on any invoice to add one.</div>
     </div>
     <div class="card">
-      <div class="chh">Who it came from</div>
-      ${Charts.bars(clients.slice(0, 8).map(([k, v]) => [k, v.sum]), fmt0)}
-      <div class="note2">Billed per client, cancelled invoices left out.</div>
-    </div>
-    <div class="card">
-      <div class="chh">What one invoice is worth</div>
-      ${Charts.bars(rate.map(([k, v]) => [k + ' · ' + v.n, v.sum / v.n]), fmt0)}
-      <div class="note2"><b>Average per invoice, biggest first: the closest thing to pay per job.</b>
-        The number after the name is how many invoices it is over. One invoice can cover several
-        shoots, mostly for Фешън Лаб, so a big client's average is a month of work rather than a day.</div>
+      <div class="chh">By client</div>
+      <div class="barh"><span></span><span></span><span>billed</span><span>each</span></div>
+      ${Charts.bars(clients.slice(0, 10).map(([k, v]) => [k + ' \u00b7 ' + v.n, v.sum, v.sum / v.n]), fmt0)}
+      <div class="note2"><b>Billed per client, and what one of its invoices is worth.</b>
+        The number after the name is how many invoices that is. One invoice can cover several
+        shoots, mostly for Фешън Лаб, so a big client's "each" is a run of work rather than a day.
+        Cancelled invoices are left out.</div>
     </div>
     <div class="card">
       <div class="chh">Where it went</div>

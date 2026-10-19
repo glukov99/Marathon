@@ -38,7 +38,13 @@ ctx.setData(j);
   assert.ok(out.html && out.html.length > 20, t + ' rendered nothing');
 });
 ctx.tabs('overview'); ctx.render();
-assert.ok(/Who it came from/.test(out.html) && /<svg/.test(out.html), 'the overview draws its charts');
+assert.ok(/By client/.test(out.html) && /<svg/.test(out.html), 'the overview draws its charts');
+// He asked "where is my avg per invoice" twice while it was one card below its
+// total. Every bar chart that has an average must now carry it on the same row.
+(out.html.match(/<div class="bars two">[\s\S]*?<\/div><\/div>/g) || []).forEach(block => {
+  assert.ok(/class="bv b2"/.test(block), 'a two-figure chart shows both figures');
+});
+assert.ok(/class="bv b2"/.test(out.html), 'the averages sit beside their totals');
 ctx.tabs('spend'); ctx.render();
 assert.ok(/Salary/.test(out.html), 'salary is named on the company side');
 assert.ok(!/Transfer/.test(out.html), 'a transfer is not spending');

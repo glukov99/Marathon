@@ -24,14 +24,20 @@
   }
 
   /* Horizontal bars, the shape Georgi's own sheet uses for "profit vs service".
-     fmt turns a value into the figure printed at the end of each bar. */
+     Each item is [label, value] or [label, value, second] — a second figure
+     printed beside the first, dimmer. That is there because an average on its
+     own chart, one card below its total, is an average nobody finds: he asked
+     "where is my avg per invoice" twice while it was on the screen below. */
   function bars(list, fmt, opts) {
     const o = opts || {};
     const max = Math.max(1, ...list.map(([, v]) => v));
-    return `<div class="bars">` + list.map(([label, v], i) =>
+    const two = list.some(x => x.length > 2 && x[2] != null);
+    return `<div class="bars${two ? ' two' : ''}">` + list.map(([label, v, second], i) =>
       `<div class="bar"><span class="bl">${esc(label)}</span>
         <span class="bt"><i style="width:${(v / max * 100).toFixed(1)}%;background:${o.flat || PAL[i % PAL.length]}"></i></span>
-        <span class="bv">${fmt(v)}</span></div>`).join('') + `</div>`;
+        <span class="bv">${fmt(v)}</span>` +
+        (two ? `<span class="bv b2">${second == null ? '' : fmt(second)}</span>` : '') +
+      `</div>`).join('') + `</div>`;
   }
 
   /* One group of bars per period: the "in, out, what was kept" picture.
