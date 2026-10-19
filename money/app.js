@@ -27,6 +27,17 @@ function show(id) {
 // The bank name comes from the API; a payload cached before that fall backs to
 // the label, where only UniCredit and the company account are not Revolut.
 const BANKS = [[/unicredit/i, 'uni', 'UC'], [/revolut/i, 'rev', 'R'], [/mypos/i, 'mps', 'mP']];
+/* A balance the bank would not give us. Only a lapsed consent needs Georgi to
+   do anything; a 429 is the daily cap on balance requests and clears by itself,
+   so it must not wear the same red dot. The figure beside it is the last good
+   reading either way. */
+function warnDot(a) {
+  const cap = a.why === 'capped';
+  const seen = a.as_of ? ' · last read ' + new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '';
+  return ` <span class="rdot${cap ? ' soft' : ''}" title="${cap
+    ? 'The bank capped today\u2019s balance requests' : 'Needs re-approval'}${seen}"></span>`;
+}
+
 function bankMark(a) {
   const name = a.bank || (/^UniCredit|^GL Studio/.test(a.account || '') ? 'UniCredit Bulbank' : 'Revolut');
   const hit = BANKS.find(([re]) => re.test(name));
@@ -307,7 +318,7 @@ function renderDrill(rows) {
 function renderBusiness(rows) {
   const b = data.balances && data.balances.accounts
     ? data.balances.accounts.filter(a => a.own === 'Business') : [];
-  const bal = b.map(a => `<div class="arow"><span>${bankMark(a)}${esc(a.account)}${a.error ? ` <span class="rdot" title="Needs re-approval${a.as_of ? ' · last read ' + new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}"></span>` : ''}</span>` +
+  const bal = b.map(a => `<div class="arow"><span>${bankMark(a)}${esc(a.account)}${a.error ? warnDot(a) : ''}</span>` +
     `<span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}</span></div>`).join('');
   $('#view').innerHTML =
     (bal ? `<div class="card">${bal}</div>` : '') +
@@ -396,7 +407,7 @@ function renderAccounts(rows) {
   $('#view').innerHTML = `
     <div class="card">
       ${Object.entries(tot).map(([c, v]) => `<div class="arow tot"><b>Total ${c}</b><b>${sfmt(v, c)}</b></div>`).join('')}
-      ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${bankMark(a)}${esc(a.account)}${a.est ? ' <small>(est.)</small>' : ''}${a.error ? ` <span class="rdot" title="Needs re-approval${a.as_of ? ' · last read ' + new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}"></span>` : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}${a.error && a.as_of ? `<small class="asof">${new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</small>` : ''}</span></div>` +
+      ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${bankMark(a)}${esc(a.account)}${a.est ? ' <small>(est.)</small>' : ''}${a.error ? warnDot(a) : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}${a.error && a.as_of ? `<small class="asof">${new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</small>` : ''}</span></div>` +
         (a.overdraft || a.credit ? odRow(a) : '')).join('')}
       ${b ? `<div class="note2">As of ${new Date(b.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.</div>` : ''}
       ${data.fund ? `<div class="note2">Flexible Cash Funds: statement ${new Date(data.fund.statement_date + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} plus moves since. Interest after that date shows when a new statement is added.</div>` : ''}
