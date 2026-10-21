@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cookie jar — Life hub</title>
+<style>
+:root{
+  --paper:#ECEAE4; --card:#FBFAF7; --card2:#F2F0EA; --ink:#1B1E1A; --soft:#5F665D; --faint:#8C9289; --rule:#D6D3CA;
+  --acc:#3F6B3A; --acc2:#B5782B; --big:#A8432F; --sand:#E2D3BC; --shadow:0 1px 2px rgba(27,30,26,.06),0 4px 14px rgba(27,30,26,.05);
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--paper)}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 80px}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+.hidden{display:none!important}
+.hubnav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:10px 16px 0;max-width:820px;margin:0 auto}
+.hubnav::-webkit-scrollbar{display:none}
+.hubnav a{flex-shrink:0;font-size:13px;font-weight:600;text-decoration:none;color:var(--soft);padding:5px 11px;border-radius:14px;border:1px solid var(--rule)}
+.hubnav a[aria-current="page"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.hero{padding:22px 0 6px}
+.hero .k{font-size:13px;color:var(--soft)}
+.hero h1{margin:2px 0 0}
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:3px;margin-top:14px;box-shadow:var(--shadow);padding:14px 16px}
+.sub{font-size:13px;color:var(--soft)}
+.add textarea{width:100%;min-height:64px;resize:vertical;padding:10px 12px;border:1px solid var(--rule);border-radius:12px;background:rgba(255,255,255,.04);font-size:16px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chips button{border:1px solid var(--rule);background:rgba(255,255,255,.04);border-radius:12px;padding:4px 12px;font-size:13px;cursor:pointer;color:var(--soft)}
+.chips button[aria-pressed="true"]{background:var(--sand);color:#1E2522;border-color:var(--sand)}
+.chips .lbl{font-size:12px;color:var(--faint);align-self:center;min-width:44px}
+.row{display:flex;gap:8px;align-items:center;margin-top:12px}
+.btn{background:var(--ink);color:var(--paper);border:0;border-radius:3px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:14px}
+.btn.ghost{background:none;color:var(--ink);border:1px solid var(--rule)}
+.btn.sm{padding:4px 10px;font-size:12.5px}
+.tabs{display:flex;gap:4px;margin-top:18px;border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 10px 8px;cursor:pointer;font-weight:700;color:var(--soft);white-space:nowrap;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--acc2)}
+.tabs i{font-style:normal;font-weight:500;color:var(--faint);margin-left:4px}
+.day{margin:16px 0 2px;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.idea{background:var(--card);border-radius:14px;padding:12px 14px;margin-top:8px;box-shadow:var(--shadow)}
+.idea p{margin:0;font-size:15.5px;white-space:pre-wrap;word-break:break-word}
+.meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--faint)}
+.tag{font-size:12px;font-weight:700;padding:2px 9px;border-radius:10px;background:rgba(255,255,255,.06);color:var(--soft)}
+.tag.done{color:var(--acc)}
+.tag.dropped{color:var(--faint);text-decoration:line-through}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.empty{padding:28px 4px;text-align:center;color:var(--faint)}
+.foot{margin-top:24px;font-size:12.5px;color:var(--faint)}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:7px 14px;border-radius:3px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:40}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<link rel="stylesheet" href="../shared/theme.css?v=202610211416">
+</head>
+<body>
+<nav class="hubnav" aria-label="Life hub"><a href="../">Life hub</a><a href="../training/">Training</a><a href="../meals/">Meals</a><a href="../holidays/">Holidays</a><a href="../car/">Car</a><a href="../money/">Money</a><a href="../business/">Business</a><a href="./" aria-current="page">Cookie jar</a></nav>
+<div class="wrap">
+  <header class="hero">
+    <div class="k">Put it here, then rest</div>
+    <h1>Cookie jar</h1>
+  </header>
+  <form class="panel add" id="addF" autocomplete="off">
+    <label class="sub" for="addT">One sentence is enough.</label>
+    <textarea id="addT" rows="2" placeholder="Categorise ticket errors with tags in the review comments" enterkeyhint="done"></textarea>
+    <div class="chips" id="addA"></div>
+    <div class="row"><button class="btn" type="submit">Into the jar</button><span class="sub" id="addMsg"></span></div>
+  </form>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <div class="chips" id="fArea"></div>
+  <div class="chips" id="fWhen"></div>
+  <div id="list"></div>
+  <div class="foot" id="store">Saved on this device</div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="../shared/sync.js?v=202610211416"></script>
+<script src="app.js?v=202610211416"></script>
+</body>
+</html>
