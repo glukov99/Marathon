@@ -23,9 +23,6 @@ body::before{background:var(--paper)!important}
 .sec{font-size:12px!important;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)!important}
 .btn{border-radius:14px!important;background:var(--sand)!important;color:#1E2522!important;font-weight:700!important}
 .btn.ghost{background:rgba(255,255,255,.05)!important;color:var(--ink)!important;border:1px solid var(--rule)!important}
-.hubnav{padding-top:12px!important;gap:6px!important}
-.hubnav a{border:0!important;background:rgba(255,255,255,.05);border-radius:16px!important;padding:6px 13px!important;font-family:'Manrope',sans-serif!important}
-.hubnav a[aria-current="page"]{background:var(--sand)!important;color:#1E2522!important}
 nav:not(.hubnav){background:rgba(24,32,30,.85)!important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--rule)!important}
 nav button[aria-selected="true"]{border-bottom-color:var(--acc2)!important}
 .mini a,.mini>div{border:0!important;border-radius:20px!important;box-shadow:var(--shadow)!important;background:var(--card)!important}

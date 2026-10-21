@@ -84,10 +84,6 @@ ul.steps li{margin:5px 0}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style><style>
-.hubnav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:10px 16px 0;max-width:820px;margin:0 auto;font-family:'IBM Plex Sans',system-ui,sans-serif}
-.hubnav::-webkit-scrollbar{display:none}
-.hubnav a{flex-shrink:0;font-size:13px;font-weight:600;text-decoration:none;color:var(--soft);padding:5px 11px;border-radius:14px;border:1px solid var(--rule)}
-.hubnav a[aria-current="page"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 </style>
 <style>
 .car{border-top:3px solid var(--cc)}
@@ -108,10 +104,10 @@ input.f{font:inherit;font-size:13.5px;padding:5px 7px;border:1px solid var(--rul
 .addf .btn{grid-column:1/-1;justify-self:start}
 .ed.addf{display:none}.ed.addf.open{display:grid}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610212252">
+<link rel="stylesheet" href="../shared/theme.css?v=202610212255">
 </head>
 <body>
-<nav class="hubnav" aria-label="Life hub"><a href="../">Life hub</a><a href="../training/">Training</a><a href="../meals/">Meals</a><a href="../holidays/">Holidays</a><a href="../car/" aria-current="page">Car</a><a href="../money/">Money</a><a href="../business/">Business</a><a href="../jar/">Ideas jar</a><a href="../heat/">Heating</a></nav>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610212255"></script>
 <div class="wrap">
   <header class="hero"><div class="k">Life hub</div><h1>Car</h1><div class="sub" id="sy"></div></header>
   <div class="panel"><h3>Next up</h3><div id="next"></div>
@@ -120,8 +116,8 @@ input.f{font:inherit;font-size:13.5px;padding:5px 7px;border:1px solid var(--rul
   <div class="foot">Dates come from the "Моят автомобил" app. When you renew something, change its date here. Red: 14 days or less. Amber: 45 days or less.</div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610212252"></script>
-<script src="car-data.js?v=202610212252"></script>
+<script src="../shared/sync.js?v=202610212255"></script>
+<script src="car-data.js?v=202610212255"></script>
 <script>
 let st=C_load();
 const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];

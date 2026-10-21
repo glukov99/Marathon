@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../shared/year.css?v=202610212252">
-<link rel="stylesheet" href="../shared/theme.css?v=202610212252">
+<link rel="stylesheet" href="../shared/year.css?v=202610212255">
+<link rel="stylesheet" href="../shared/theme.css?v=202610212255">
 <style>
 :root{
   --paper:#ECEAE4; --card:#FBFAF7; --card2:#F2F0EA; --ink:#1B1E1A; --soft:#5F665D; --faint:#8C9289; --rule:#D6D3CA;
@@ -86,10 +86,6 @@ ul.steps li{margin:5px 0}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style><style>
-.hubnav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:10px 16px 0;max-width:820px;margin:0 auto;font-family:'IBM Plex Sans',system-ui,sans-serif}
-.hubnav::-webkit-scrollbar{display:none}
-.hubnav a{flex-shrink:0;font-size:13px;font-weight:600;text-decoration:none;color:var(--soft);padding:5px 11px;border-radius:14px;border:1px solid var(--rule)}
-.hubnav a[aria-current="page"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 </style><style>
 .mbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .mbar b{font-size:19px;font-weight:800}
@@ -236,7 +232,7 @@ ul.steps li{margin:5px 0}
 </style>
 </head>
 <body>
-<nav class="hubnav" aria-label="Life hub"><a href="../">Life hub</a><a href="../training/">Training</a><a href="../meals/">Meals</a><a href="../holidays/">Holidays</a><a href="../car/">Car</a><a href="../money/">Money</a><a href="../business/" aria-current="page">Business</a><a href="../jar/">Ideas jar</a><a href="../heat/">Heating</a></nav>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610212255"></script>
 <div class="wrap">
   <header class="hero"><div class="k">GL Studio 99 EOOD</div><h1>Business</h1><div class="sub" id="status"></div></header>
   <div id="setup" class="panel hidden"><h3>Connect</h3><div class="pc">
@@ -250,11 +246,11 @@ ul.steps li{margin:5px 0}
     <div id="view"></div>
   </div>
 </div>
-<script src="../shared/catpick.js?v=202610212252"></script>
-<script src="../shared/charts.js?v=202610212252"></script>
-<script src="../shared/invoices.js?v=202610212252"></script>
-<script src="../shared/year.js?v=202610212252"></script>
-<script src="../shared/sync.js?v=202610212252"></script>
-<script src="app.js?v=202610212252"></script>
+<script src="../shared/catpick.js?v=202610212255"></script>
+<script src="../shared/charts.js?v=202610212255"></script>
+<script src="../shared/invoices.js?v=202610212255"></script>
+<script src="../shared/year.js?v=202610212255"></script>
+<script src="../shared/sync.js?v=202610212255"></script>
+<script src="app.js?v=202610212255"></script>
 </body>
 </html>

@@ -9,6 +9,7 @@ Full project context (private, outside this repo):
 
 ## Quick rules
 - Push: `python3 bump.py && git add -A && git commit -m "..." && git push`. Always run `bump.py` first (cache-busting).
+- **Menu:** `shared/nav.js`, one copy for every page (each page has `<div id="lhn"></div>` followed by its script tag). A new page = one line in `GROUPS`; `scripts-check.js` fails if a page is missing from the menu or does not load it.
 - Shared files: `shared/theme.css`, `shared/sync.js`, `shared/travel.js`, `shared/year.js` + `shared/year.css` (the year grid, the day list and the category picker styles, used by Money and Business), `shared/catpick.js`.
 - Checks (no network): `node money/classify-check.js`, `node money/year-check.js`, `node money/render-check.js`, `node business/match-check.js`, `node business/render-check.js`, `node home-check.js`, `node scripts-check.js`, `node boot-check.js`, `node jar/check.js`. Run them all after touching `money/app.js`, `business/app.js`, `index.html` or anything in `shared/`.
 - Backend changes go in `../lifehub-script` (clasp, personal user). See the private file.

@@ -33,3 +33,13 @@ PAGES.forEach(([page, scripts]) => {
   });
 });
 console.log('scripts ok: ' + checked + ' shared files are loaded where they are used');
+
+// Every page carries the shared menu, and the menu lists every page.
+const nav = fs.readFileSync(path.join(root, 'shared/nav.js'), 'utf8');
+fs.readdirSync(root).filter(d => fs.existsSync(path.join(root, d, 'index.html'))).forEach(d => {
+  assert.ok(/<div id="lhn"><\/div><script src="[^"]*shared\/nav\.js/.test(
+    fs.readFileSync(path.join(root, d, 'index.html'), 'utf8')), d + '/index.html does not load the menu');
+  assert.ok(nav.includes(`['${d}/'`), d + '/ is missing from GROUPS in shared/nav.js');
+});
+assert.ok(/<script src="shared\/nav\.js/.test(fs.readFileSync(path.join(root, 'index.html'), 'utf8')), 'home has no menu');
+console.log('menu ok: every page loads it and is listed in it');

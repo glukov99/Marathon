@@ -2,7 +2,6 @@
 :root:not(#lh):not(#tr){--paper:#0F1312;--card:#171D1B;--card2:#1E2624;--acc2:#FF8A3D;--sand:#FFB27A}
 body{background:radial-gradient(700px 500px at 50% 8%,rgba(160,210,120,.10),transparent 65%),
   radial-gradient(800px 600px at 100% 60%,rgba(255,138,61,.07),transparent 60%),var(--paper)!important}
-.hubnav a[aria-current="page"]{background:#FF8A3D!important;color:#1A0F07!important}
 .btn{background:#FF8A3D!important;color:#1A0F07!important}
 #bodyhub{padding:18px 0 4px}
 .bh-hello{font-size:13px;color:var(--soft)}
