@@ -80,7 +80,8 @@
     o.style.setProperty('--c', tempColor(st.outside));
     o.lastElementChild.textContent = st.outside == null ? 'Outside: –' : Math.round(st.outside) + '° in Plovdiv';
     $('upd').textContent = 'Updated ' + hm(st.lastRun || st.now) + (st.outside != null && st.outside >= 18 ? ' · warm outside, living room rests' : '');
-    setTog('b-away', st.away, st.away ? 'Away' : 'Home', st.away ? 'Tap when you are back' : 'Tap if you left');
+    $('b-home').setAttribute('aria-pressed', String(!st.away));
+    $('b-away').setAttribute('aria-pressed', String(!!st.away));
     setTog('b-sammy', st.sammy.on, null, st.sammy.on ? 'On until ' + hm(st.sammy.until) : 'Kids room 20° by day');
     setTog('b-keep', st.keepOn.on, null, st.keepOn.on ? 'On until ' + hm(st.keepOn.until) : 'Ignore me leaving');
     setTog('b-hol', st.holiday.on, null, st.holiday.on ? 'Back ' + fmt(st.holiday.until) : 'All off until return');
@@ -98,16 +99,17 @@
     if (!window.HubSync || !HubSync.on()) { $('nosync').classList.remove('hidden'); $('upd').textContent = ''; return null; }
     const c = HubSync.cfg();
     const url = c.url + (c.url.includes('?') ? '&' : '?') + 't=' + encodeURIComponent(c.tok) + '&action=heat' + (q || '');
-    busy = true; document.querySelectorAll('.tog').forEach(b => b.disabled = true);
+    busy = true; document.querySelectorAll('.tog,.seg button').forEach(b => b.disabled = true);
     try {
       const r = await (await fetch(url)).json();
       if (r.error) { say(r.error); return null; }
       st = r; render(); return r;
     } catch (e) { say('Offline. Try again.'); return null; }
-    finally { busy = false; document.querySelectorAll('.tog').forEach(b => b.disabled = false); }
+    finally { busy = false; document.querySelectorAll('.tog,.seg button').forEach(b => b.disabled = false); }
   }
 
-  $('b-away').onclick = async () => { const r = await call('&cmd=' + (st && st.away ? 'arrive' : 'leave')); if (r) say(r.msg); };
+  $('b-home').onclick = async () => { if (st && !st.away) return; const r = await call('&cmd=arrive'); if (r) say(r.msg); };
+  $('b-away').onclick = async () => { if (st && st.away) return; const r = await call('&cmd=leave'); if (r) say(r.msg); };
   $('b-sammy').onclick = async () => { const r = await call('&cmd=sammy'); if (r) say(r.msg); };
   $('b-keep').onclick = async () => { const r = await call('&cmd=keepon'); if (r) say(r.msg); };
   $('b-hol').onclick = async () => {
