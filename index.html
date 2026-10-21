@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="shared/auth.js?v=202610220037"></script>
 <title>Life hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -121,10 +122,10 @@ ul.steps li{margin:5px 0}
 :root{--rec:#6E9DC2;--easy:#2F7F60;--mp:#B98A22;--st:#C9702A;--hard:#8E2521;--vert:#6B4E8F;--gym:#4F5F69;--test:#1F6F8B;--swim:#3C8FA6;--race:#1B1E1A}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rec:#7FB0D6;--easy:#4FAE88;--mp:#D9AA45;--st:#E08A45;--hard:#D2584F;--vert:#A68BD0;--gym:#93A6B2;--test:#4FAACB;--swim:#5BB4CC;--race:#E8EBE5}}
 </style>
-<link rel="stylesheet" href="shared/theme.css?v=202610220021">
+<link rel="stylesheet" href="shared/theme.css?v=202610220037">
 </head>
 <body>
-<div id="lhn"></div><script src="shared/nav.js?v=202610220021"></script>
+<div id="lhn"></div><script src="shared/nav.js?v=202610220037"></script>
 <div class="wrap">
   <div class="panel hidden" id="ebCard"><div class="card-h"><h3>Bank approval</h3></div><div class="pc">
     <p class="sub" id="ebMsg"></p>
@@ -149,6 +150,10 @@ ul.steps li{margin:5px 0}
     <a href="car/" style="grid-column:1/-1"><b id="carN">Car</b><span id="carS"></span></a>
     <a href="jar/" style="grid-column:1/-1"><b>Ideas jar</b><span id="jarS">Put an idea here, then rest</span></a>
   </div>
+  <div class="panel" id="acct"><div class="card-h"><h3>Account</h3></div><div class="pc">
+    <p class="sub" id="acWho">Not signed in with Google.</p>
+    <ul id="acList" style="list-style:none;margin:8px 0 0;padding:0"></ul>
+    <p style="margin-top:10px"><button class="btn ghost" id="acOut">Sign out on this device</button></p></div></div>
   <div class="panel"><div class="card-h"><h3>Sync between devices</h3></div><div class="pc">
     <p class="sub" id="syState">Not set up: data stays in this browser.</p>
     <div class="ci" style="display:grid;gap:8px">
@@ -159,14 +164,14 @@ ul.steps li{margin:5px 0}
     <p class="sub">Same URL and token as the Intervals.icu sync. Enter them once on each device.</p></div></div>
   <div class="foot">Ticks here are the same as in Training.</div>
 </div>
-<script src="shared/invoices.js?v=202610220021"></script>
-<script src="training/plan.js?v=202610220021"></script>
-<script src="shared/sync.js?v=202610220021"></script>
-<script src="meals/meals-data.js?v=202610220021"></script>
-<script src="holidays/holidays-data.js?v=202610220021"></script>
-<script src="shared/travel.js?v=202610220021"></script>
-<script src="heat/icons.js?v=202610220021"></script>
-<script src="car/car-data.js?v=202610220021"></script>
+<script src="shared/invoices.js?v=202610220037"></script>
+<script src="training/plan.js?v=202610220037"></script>
+<script src="shared/sync.js?v=202610220037"></script>
+<script src="meals/meals-data.js?v=202610220037"></script>
+<script src="holidays/holidays-data.js?v=202610220037"></script>
+<script src="shared/travel.js?v=202610220037"></script>
+<script src="heat/icons.js?v=202610220037"></script>
+<script src="car/car-data.js?v=202610220037"></script>
 <script>
 const TKEY='season-2027-gl';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -430,6 +435,20 @@ carCard();
         (j.skipped ? ', ' + j.skipped + ' account not read' : '') + '.');
     })
     .catch(e => fallback('Could not finish it here: ' + e.message + '. The code is below, and it is good for a few minutes.'));
+})();
+</script>
+<script>
+(function(){
+  const A=window.LifeHubAuth; if(!A)return;
+  const s=A.session()||{}, who=document.getElementById('acWho'), ul=document.getElementById('acList');
+  const d=t=>new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Europe/Sofia'}).format(new Date(t));
+  document.getElementById('acOut').onclick=()=>{if(confirm('Sign out on this device?'))A.signOut()};
+  if(!s.s){who.textContent=s.legacy?'This device uses the sync token (no Google sign-in).':'Not signed in with Google.';return}
+  who.textContent='Signed in as '+(s.email||'you')+'. Signed-in devices:';
+  const load=()=>A.sessions().then(r=>{if(!r.ok){ul.innerHTML='';return}
+    ul.innerHTML=r.sessions.sort((a,b)=>b.used-a.used).map(x=>'<li style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--rule);font-size:13.5px"><span><b>'+(x.device||'Device').replace(/</g,'&lt;')+'</b>'+(x.id===r.me?' · this device':'')+'<br><span class="sub">last used '+d(x.used)+'</span></span>'+(x.id===r.me?'':'<button class="btn ghost sm" data-id="'+x.id+'">Sign out</button>')+'</li>').join('')}).catch(()=>{});
+  ul.addEventListener('click',e=>{const b=e.target.closest('button[data-id]');if(!b||!confirm('Sign out that device?'))return;A.revoke(b.dataset.id).then(load)});
+  load();
 })();
 </script>
 </body>
