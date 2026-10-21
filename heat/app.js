@@ -5,11 +5,11 @@
   const TZ = 'Europe/Sofia';
   let st = null, busy = false;
 
-  /* blue when cold, orange when warm: 16° → 205 (blue), via violet, 22° → 25 (orange) */
+  /* blue when cold (below 18.5°), orange when warm; deeper colour the further from 18.5° */
   function tempColor(t) {
     if (t == null || isNaN(t)) return 'hsl(200 10% 55%)';
-    const f = Math.max(0, Math.min(1, (t - 16) / 6));
-    return 'hsl(' + Math.round(205 + f * 180) % 360 + ' ' + Math.round(92 - f * 4) + '% ' + Math.round(62 - f * 4) + '%)';
+    if (t < 18.5) { const f = Math.min(1, (18.5 - t) / 3); return 'hsl(' + Math.round(200 + f * 15) + ' 95% ' + Math.round(66 - f * 8) + '%)'; }
+    const f = Math.min(1, (t - 18.5) / 3); return 'hsl(' + Math.round(36 - f * 16) + ' 100% ' + Math.round(62 - f * 6) + '%)';
   }
 
   function nowMin() {
