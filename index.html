@@ -99,6 +99,15 @@ ul.steps li{margin:5px 0}
 .tr.on .nm b{text-decoration:line-through;color:var(--soft)}
 .tr.on .box{background:var(--acc);border-color:var(--acc)}
 .tr.on .box svg{opacity:1}
+.hrm{display:flex;gap:10px;padding:4px 16px 2px}
+.hrm div{flex:1;min-width:0;padding:10px 12px;border-radius:16px;background:rgba(127,127,127,.08)}
+.hrm b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.hrm span{display:block;font-size:12.5px;color:var(--soft)}
+.hmd{display:flex;gap:8px;padding:10px 16px 14px;flex-wrap:wrap}
+.hmd button,.hmd a{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:16px;
+  border:1px solid var(--rule);background:rgba(127,127,127,.06);color:var(--ink);font:inherit;font-size:12.5px;font-weight:700;text-decoration:none;cursor:pointer}
+.hmd [aria-pressed="true"]{border-color:color-mix(in srgb,#FF8A3D 55%,transparent);background:color-mix(in srgb,#FF8A3D 14%,transparent)}
+.hmd button:disabled{opacity:.5}
 .tr a.yt{font-size:12.5px;color:var(--acc);font-weight:600}
 .race{font-size:13.5px;color:var(--soft);margin-top:8px}
 .race b{color:var(--ink);font-family:'Barlow Condensed',sans-serif;font-size:20px}
@@ -112,10 +121,10 @@ ul.steps li{margin:5px 0}
 :root{--rec:#6E9DC2;--easy:#2F7F60;--mp:#B98A22;--st:#C9702A;--hard:#8E2521;--vert:#6B4E8F;--gym:#4F5F69;--test:#1F6F8B;--swim:#3C8FA6;--race:#1B1E1A}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rec:#7FB0D6;--easy:#4FAE88;--mp:#D9AA45;--st:#E08A45;--hard:#D2584F;--vert:#A68BD0;--gym:#93A6B2;--test:#4FAACB;--swim:#5BB4CC;--race:#E8EBE5}}
 </style>
-<link rel="stylesheet" href="shared/theme.css?v=202610212255">
+<link rel="stylesheet" href="shared/theme.css?v=202610212300">
 </head>
 <body>
-<div id="lhn"></div><script src="shared/nav.js?v=202610212255"></script>
+<div id="lhn"></div><script src="shared/nav.js?v=202610212300"></script>
 <div class="wrap">
   <div class="panel hidden" id="ebCard"><div class="card-h"><h3>Bank approval</h3></div><div class="pc">
     <p class="sub" id="ebMsg"></p>
@@ -129,6 +138,7 @@ ul.steps li{margin:5px 0}
   <div id="alerts"></div>
   <div class="panel mtn" id="season"></div>
   <div class="panel" id="train"></div>
+  <div class="panel hidden" id="heat"></div>
   <div class="panel hidden" id="cash"></div>
   <div class="panel hidden" id="biz"></div>
   <div class="panel" id="meals"></div>
@@ -149,13 +159,14 @@ ul.steps li{margin:5px 0}
     <p class="sub">Same URL and token as the Intervals.icu sync. Enter them once on each device.</p></div></div>
   <div class="foot">Ticks here are the same as in Training.</div>
 </div>
-<script src="shared/invoices.js?v=202610212255"></script>
-<script src="training/plan.js?v=202610212255"></script>
-<script src="shared/sync.js?v=202610212255"></script>
-<script src="meals/meals-data.js?v=202610212255"></script>
-<script src="holidays/holidays-data.js?v=202610212255"></script>
-<script src="shared/travel.js?v=202610212255"></script>
-<script src="car/car-data.js?v=202610212255"></script>
+<script src="shared/invoices.js?v=202610212300"></script>
+<script src="training/plan.js?v=202610212300"></script>
+<script src="shared/sync.js?v=202610212300"></script>
+<script src="meals/meals-data.js?v=202610212300"></script>
+<script src="holidays/holidays-data.js?v=202610212300"></script>
+<script src="shared/travel.js?v=202610212300"></script>
+<script src="heat/icons.js?v=202610212300"></script>
+<script src="car/car-data.js?v=202610212300"></script>
 <script>
 const TKEY='season-2027-gl';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -344,6 +355,32 @@ function carCard(){const u=C_upcoming()[0];if(!u)return;const n=C_days(u.d);
   document.getElementById('carN').textContent=n<=0?'Car: due now':'Car: '+n+' days';
   document.getElementById('carS').textContent=(u.car?u.car.split(' ')[0]+' · ':'')+u.n;}
 carCard();
+/* Heating, from the same brain the Heating page talks to (action=heat). Rooms at a
+   glance, and the modes worth a tap from here. Holiday needs a return date, so it
+   links to the Heating page instead. Hidden until data arrives, like Money. */
+(function heat(){const el=document.getElementById('heat');if(!window.HubSync||!HubSync.on())return;
+  const c=HubSync.cfg(),TZ='Europe/Sofia';let busy=false;
+  const hm=ms=>new Intl.DateTimeFormat('en-GB',{timeZone:TZ,hour:'2-digit',minute:'2-digit'}).format(new Date(ms));
+  const dt=ms=>new Intl.DateTimeFormat('en-GB',{timeZone:TZ,weekday:'short',hour:'2-digit',minute:'2-digit'}).format(new Date(ms));
+  const ic=k=>window.HeatIcons?`<span class="hic sm">${HeatIcons.svg(k)}</span>`:'';
+  function draw(st){
+    const room=r=>{const on=r.on&&r.want&&r.want.on!==false;
+      return `<div><span>${r.name}</span><b>${r.temp!=null?r.temp.toFixed(1)+'°':'–'}</b><span>${on?'to '+r.target+'°':'off'}</span></div>`;};
+    const b=(cmd,k,label,on,sub)=>`<button data-cmd="${cmd}" aria-pressed="${!!on}">${ic(k)}${label}${sub?`<span style="font-weight:500;color:var(--faint);font-size:11px">${sub}</span>`:''}</button>`;
+    const h=st.holiday||{};
+    el.innerHTML='<div class="card-h"><h3>Heating</h3><a href="heat/">Open</a></div>'+
+      `<div class="hrm">${st.rooms.map(room).join('')}</div>`+
+      (st.outside!=null?`<div class="sub" style="padding:6px 16px 0">${Math.round(st.outside)}° outside in Plovdiv</div>`:'')+
+      `<div class="hmd">`+(st.away?b('arrive','away','Away',true,'tap: home'):b('leave','home','Home',true,'tap: away'))+
+      b('sammy','sammy','Sammy',st.sammy&&st.sammy.on,st.sammy&&st.sammy.on?'till '+hm(st.sammy.until):'')+
+      b('keepon','keep','Keep on',st.keepOn&&st.keepOn.on,st.keepOn&&st.keepOn.on?'till '+hm(st.keepOn.until):'')+
+      `<a href="heat/" aria-pressed="${!!h.on}">${ic('holiday')}Holiday${h.on?`<span style="font-weight:500;color:var(--faint);font-size:11px">back ${dt(h.until)}</span>`:''}</a></div>`;
+    el.classList.remove('hidden');}
+  async function go(q){busy=true;el.querySelectorAll('button').forEach(x=>x.disabled=true);
+    try{const r=await(await fetch(c.url+(c.url.includes('?')?'&':'?')+'t='+encodeURIComponent(c.tok)+'&action=heat'+(q||''))).json();
+      if(r&&r.ok&&r.rooms)draw(r);}catch(e){}finally{busy=false;el.querySelectorAll('button').forEach(x=>x.disabled=false);}}
+  el.addEventListener('click',e=>{const x=e.target.closest('button[data-cmd]');if(!x||busy)return;if(x.dataset.cmd==='leave'&&!confirm('Switch heating to away? The living room goes off.'))return;go('&cmd='+x.dataset.cmd);});
+  go();})();
 (function jar(){let l=[];try{l=(JSON.parse(localStorage.getItem('lifehub-jar')||'{}').ideas)||[]}catch(e){}
   const n=s=>l.filter(x=>x.s===s).length,a=n('new'),r=n('review');if(!a&&!r)return;
   document.getElementById('jarS').textContent=a+' in the jar'+(r?' · '+r+' in review':'');})();

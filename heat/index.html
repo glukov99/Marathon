@@ -60,12 +60,11 @@ button,input{font:inherit;color:inherit}
 .man .auto{color:var(--glow)}
 .man button:disabled{opacity:.5}
 .seg{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;padding:4px;gap:4px;border-radius:18px;background:rgba(0,0,0,.22);border:1px solid var(--rule)}
-.seg button{border:0;background:none;border-radius:14px;padding:10px 8px;font-weight:700;font-size:14.5px;cursor:pointer;color:var(--soft);transition:.25s}
+.seg button{display:flex;align-items:center;justify-content:center;gap:8px;border:0;background:none;border-radius:14px;padding:10px 8px;font-weight:700;font-size:14.5px;cursor:pointer;color:var(--soft);transition:.25s}
 .seg button[aria-pressed="true"]{color:var(--ink);background:color-mix(in srgb,var(--warm) 18%,transparent);box-shadow:0 0 18px color-mix(in srgb,var(--warm) 20%,transparent)}
 .seg #b-away[aria-pressed="true"]{background:color-mix(in srgb,var(--cold) 18%,transparent);box-shadow:0 0 18px color-mix(in srgb,var(--cold) 20%,transparent)}
 .ctrls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .tog{min-width:0;display:flex;align-items:center;gap:10px;padding:12px;border-radius:18px;border:1px solid var(--rule);background:rgba(255,255,255,.04);cursor:pointer;text-align:left;transition:.25s}
-.tog .ic{font-size:22px;line-height:1}
 .tog .tx{display:flex;flex-direction:column;min-width:0}
 .tog .tx b{font-size:14.5px}
 .tog .tx span{font-size:12px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -88,10 +87,10 @@ button,input{font:inherit;color:inherit}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610212255">
+<link rel="stylesheet" href="../shared/theme.css?v=202610212300">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610212255"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610212300"></script>
 <main class="wrap">
   <header class="hero">
     <div><div class="k">Home</div><h1>Heating</h1></div>
@@ -104,10 +103,10 @@ button,input{font:inherit;color:inherit}
   <div class="sec">Modes</div>
   <section class="panel">
     <div class="ctrls">
-      <div class="seg" role="group" aria-label="Where are you"><button id="b-home" aria-pressed="true">🏠 I'm home</button><button id="b-away" aria-pressed="false">🚶 I'm away</button></div>
-      <button class="tog" id="b-sammy" aria-pressed="false"><span class="ic">🧒</span><span class="tx"><b>Sammy home</b><span>Kids room 20° by day</span></span></button>
-      <button class="tog" id="b-keep" aria-pressed="false"><span class="ic">🔥</span><span class="tx"><b>Keep on</b><span>Ignore me leaving</span></span></button>
-      <button class="tog blue" id="b-hol" aria-pressed="false"><span class="ic">✈️</span><span class="tx"><b>Holiday</b><span>All off until return</span></span></button>
+      <div class="seg" role="group" aria-label="Where are you"><button id="b-home" aria-pressed="true"><span class="sm" data-ic="home"></span>I'm home</button><button id="b-away" aria-pressed="false"><span class="sm" data-ic="away"></span>I'm away</button></div>
+      <button class="tog" id="b-sammy" aria-pressed="false"><span data-ic="sammy"></span><span class="tx"><b>Sammy home</b><span>Kids room 20° by day</span></span></button>
+      <button class="tog" id="b-keep" aria-pressed="false"><span data-ic="keep"></span><span class="tx"><b>Keep on</b><span>Ignore me leaving</span></span></button>
+      <button class="tog blue" id="b-hol" aria-pressed="false"><span data-ic="holiday"></span><span class="tx"><b>Holiday</b><span>All off until return</span></span></button>
     </div>
     <div class="hol hidden" id="holbox">
       <label class="sub" for="holat">Back on</label>
@@ -122,7 +121,8 @@ button,input{font:inherit;color:inherit}
   <p class="foot">The brain runs every 10 minutes in Apps Script. It sets both heaters from the clock, the outside temperature in Plovdiv and these modes. Each heater gets a new command when its plan changes and once an hour, so a change made in the Adax app lasts up to an hour.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610212255"></script>
-<script src="app.js?v=202610212255"></script>
+<script src="../shared/sync.js?v=202610212300"></script>
+<script src="icons.js?v=202610212300"></script>
+<script src="app.js?v=202610212300"></script>
 </body>
 </html>
