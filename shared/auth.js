@@ -57,7 +57,8 @@
     '#lh-gate .k{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:#7C8A84;font-weight:700}' +
     '#lh-gate h1{margin:6px 0 4px;font-size:34px;font-weight:800;letter-spacing:-.03em}' +
     '#lh-gate p{margin:0 0 20px;color:#A7B4AD;font-size:14px}' +
-    '#lh-gate .gbtn{display:flex;justify-content:center;min-height:44px}' +
+    '#lh-gate .gbtn{display:flex;justify-content:center;min-height:44px;color-scheme:light}' +
+    '#lh-gate .gbtn iframe{color-scheme:light;border-radius:22px}' +
     '#lh-gate .msg{min-height:20px;margin-top:14px;font-size:13px;color:#E07A63}' +
     '#lh-gate .alt{margin-top:14px;background:none;border:0;color:#7C8A84;font:inherit;font-size:12.5px;text-decoration:underline;cursor:pointer}';
   document.head.appendChild(css);
