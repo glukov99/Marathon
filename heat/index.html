@@ -76,6 +76,7 @@ button,input{font:inherit;color:inherit}
 .tog[aria-pressed="true"]{background:color-mix(in srgb,var(--warm) 16%,transparent);border-color:color-mix(in srgb,var(--warm) 55%,transparent);box-shadow:0 0 22px color-mix(in srgb,var(--warm) 22%,transparent)}
 .tog.blue[aria-pressed="true"]{background:color-mix(in srgb,var(--cold) 16%,transparent);border-color:color-mix(in srgb,var(--cold) 55%,transparent);box-shadow:0 0 22px color-mix(in srgb,var(--cold) 22%,transparent)}
 .tog:disabled{opacity:.5}
+.ctrls .tog:last-child{grid-column:1/-1}
 .hol{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
 .hol input{flex:1;min-width:180px;padding:9px 12px;border-radius:14px;border:1px solid var(--rule);background:rgba(255,255,255,.05);color-scheme:dark}
 .btn{background:var(--ink);color:var(--paper);border:0;border-radius:3px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:14px}
@@ -91,7 +92,7 @@ button,input{font:inherit;color:inherit}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610212229">
+<link rel="stylesheet" href="../shared/theme.css?v=202610212231">
 </head>
 <body>
 <nav class="hubnav" aria-label="Life hub"><a href="../">Life hub</a><a href="../training/">Training</a><a href="../meals/">Meals</a><a href="../holidays/">Holidays</a><a href="../car/">Car</a><a href="../money/">Money</a><a href="../business/">Business</a><a href="../jar/">Cookie jar</a><a href="./" aria-current="page">Heating</a></nav>
@@ -125,7 +126,7 @@ button,input{font:inherit;color:inherit}
   <p class="foot">The brain runs every 10 minutes in Apps Script. It sets both heaters from the clock, the outside temperature in Plovdiv and these modes. A change made in the Adax app is put back within 10 minutes.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610212229"></script>
-<script src="app.js?v=202610212229"></script>
+<script src="../shared/sync.js?v=202610212231"></script>
+<script src="app.js?v=202610212231"></script>
 </body>
 </html>
