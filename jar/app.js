@@ -1,4 +1,4 @@
-/* Cookie jar. Ideas that come during rest go here, so they can wait.
+/* Ideas jar. Ideas that come during rest go here, so they can wait.
 
    Each idea is one sentence and an area. It is saved on this device first,
    then to Drive through HubSync, under its own key.

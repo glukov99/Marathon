@@ -1,4 +1,4 @@
-/* The Cookie jar must never lose an idea when two devices both added one.
+/* The Ideas jar must never lose an idea when two devices both added one.
    Run: node jar/check.js */
 const assert = require('assert');
 const { mergeIdeas, sig, shown } = require('./app.js');
