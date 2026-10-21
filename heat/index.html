@@ -63,6 +63,27 @@ button,input{font:inherit;color:inherit}
 .seg button{display:flex;align-items:center;justify-content:center;gap:8px;border:0;background:none;border-radius:14px;padding:10px 8px;font-weight:700;font-size:14.5px;cursor:pointer;color:var(--soft);transition:.25s}
 .seg button[aria-pressed="true"]{color:var(--ink);background:color-mix(in srgb,var(--warm) 18%,transparent);box-shadow:0 0 18px color-mix(in srgb,var(--warm) 20%,transparent)}
 .seg #b-away[aria-pressed="true"]{background:color-mix(in srgb,var(--cold) 18%,transparent);box-shadow:0 0 18px color-mix(in srgb,var(--cold) 20%,transparent)}
+.estats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.estat{border-radius:16px;padding:10px 12px;background:rgba(255,255,255,.04)}
+.estat .l{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.estat .v{font-size:22px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.estat .c{font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums}
+.bars{display:flex;align-items:flex-end;gap:5px;height:130px;margin-top:16px;padding-bottom:2px}
+.bar{flex:1;min-width:0;display:flex;flex-direction:column-reverse;height:100%;cursor:pointer;position:relative}
+.bar i{display:block;width:100%;border-radius:4px 4px 0 0}
+.bar i+i{border-radius:4px 4px 0 0;margin-bottom:1px}
+.bar .k{background:color-mix(in srgb,var(--cold) 80%,transparent);box-shadow:0 0 12px color-mix(in srgb,var(--cold) 30%,transparent)}
+.bar .lv{background:color-mix(in srgb,var(--warm) 85%,transparent);box-shadow:0 0 12px color-mix(in srgb,var(--warm) 30%,transparent)}
+.bar.gap{background:repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 4px,transparent 4px 8px);border-radius:4px;height:18px;align-self:flex-end}
+.bar.part i{opacity:.55}
+.bar[aria-pressed="true"]{outline:1px solid var(--rule);outline-offset:2px;border-radius:4px}
+.bl{display:flex;gap:5px;font-size:10.5px;color:var(--faint);margin-top:4px;font-variant-numeric:tabular-nums}
+.bl span{flex:1;text-align:center;min-width:0}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--soft);margin-top:10px;flex-wrap:wrap}
+.legend b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:0}
+.eday{font-size:13.5px;color:var(--soft);margin-top:8px;min-height:20px}
+.price{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.price input{width:96px;padding:7px 10px;border-radius:12px;border:1px solid var(--rule);background:rgba(255,255,255,.05);color-scheme:dark}
 .ctrls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .tog{min-width:0;display:flex;align-items:center;gap:10px;padding:12px;border-radius:18px;border:1px solid var(--rule);background:rgba(255,255,255,.04);cursor:pointer;text-align:left;transition:.25s}
 .tog .tx{display:flex;flex-direction:column;min-width:0}
@@ -87,10 +108,10 @@ button,input{font:inherit;color:inherit}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610212300">
+<link rel="stylesheet" href="../shared/theme.css?v=202610220015">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610212300"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610220015"></script>
 <main class="wrap">
   <header class="hero">
     <div><div class="k">Home</div><h1>Heating</h1></div>
@@ -115,14 +136,27 @@ button,input{font:inherit;color:inherit}
     </div>
   </section>
 
+  <div class="sec">Energy</div>
+  <section class="panel" id="energy">
+    <div class="estats">
+      <div class="estat"><div class="l">Last 7 days</div><div class="v" id="e7">–</div><div class="c" id="c7"></div></div>
+      <div class="estat"><div class="l" id="eml">This month</div><div class="v" id="em">–</div><div class="c" id="cm"></div></div>
+    </div>
+    <div class="bars" id="bars"></div>
+    <div class="bl" id="bl"></div>
+    <div class="legend"><span><b style="background:var(--warm)"></b>Living room</span><span><b style="background:var(--cold)"></b>Kids room</span><span>Faded bar = today, still counting</span></div>
+    <div class="eday" id="eday">Tap a bar for that day.</div>
+    <div class="price"><label class="sub" for="eprice">Price</label><input id="eprice" inputmode="decimal" placeholder="0.00"><span class="sub">€/kWh</span><button class="btn" id="psave">Save</button></div>
+  </section>
+
   <div class="sec">Recent changes</div>
   <section class="panel"><ul class="log" id="log"><li class="empty">Nothing yet</li></ul></section>
 
   <p class="foot">The brain runs every 10 minutes in Apps Script. It sets both heaters from the clock, the outside temperature in Plovdiv and these modes. Each heater gets a new command when its plan changes and once an hour, so a change made in the Adax app lasts up to an hour.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610212300"></script>
-<script src="icons.js?v=202610212300"></script>
-<script src="app.js?v=202610212300"></script>
+<script src="../shared/sync.js?v=202610220015"></script>
+<script src="icons.js?v=202610220015"></script>
+<script src="app.js?v=202610220015"></script>
 </body>
 </html>

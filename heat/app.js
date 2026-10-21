@@ -85,10 +85,56 @@
     setTog('b-sammy', st.sammy.on, null, st.sammy.on ? 'On until ' + hm(st.sammy.until) : 'Kids room 20° by day');
     setTog('b-keep', st.keepOn.on, null, st.keepOn.on ? 'On until ' + hm(st.keepOn.until) : 'Ignore me leaving');
     setTog('b-hol', st.holiday.on, null, st.holiday.on ? 'Back ' + fmt(st.holiday.until) : 'All off until return');
+    renderEnergy();
     $('log').innerHTML = (st.log || []).length ? st.log.map(l =>
       '<li><time>' + fmt(l.at).replace(/^\w+ /, '') + '</time><span>' + l.msg.replace(/</g, '&lt;') + '</span></li>').join('')
       : '<li class="empty">Nothing yet</li>';
   }
+
+  /* ---------- energy ---------- */
+  const kwh = wh => (wh / 1000).toFixed(wh >= 10000 ? 0 : 1) + ' kWh';
+  const eur = (wh, p) => p ? '€' + (wh / 1000 * p).toFixed(2) : 'set a price below';
+  let pickDay = null;
+  function renderEnergy() {
+    const E = st.energy; if (!E) return;
+    const price = E.price;
+    if (document.activeElement !== $('eprice')) $('eprice').value = price || '';
+    const tot = d => (d.living || 0) + (d.bed || 0);
+    const by = {}; E.days.forEach(d => by[d.d] = d);
+    // last 14 calendar days, gaps shown where Adax sent nothing
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(Date.now() - 6 * 3600e3)); // days run 06:00–06:00
+    const list = [];
+    for (let i = 13; i >= 0; i--) {
+      const dt = new Date(today + 'T12:00:00Z'); dt.setUTCDate(dt.getUTCDate() - i);
+      const k = dt.toISOString().slice(0, 10); list.push(by[k] || { d: k, gap: true });
+    }
+    const last7 = list.slice(-7).reduce((a, d) => a + (d.gap ? 0 : tot(d)), 0);
+    const mon = today.slice(0, 7);
+    const monWh = E.days.filter(d => d.d.slice(0, 7) === mon).reduce((a, d) => a + tot(d), 0);
+    $('e7').textContent = kwh(last7); $('c7').textContent = eur(last7, price);
+    $('eml').textContent = new Intl.DateTimeFormat('en-GB', { month: 'long' }).format(new Date(today + 'T12:00:00Z'));
+    $('em').textContent = kwh(monWh); $('cm').textContent = eur(monWh, price);
+    const max = Math.max(1000, ...list.map(d => d.gap ? 0 : tot(d)));
+    $('bars').innerHTML = list.map(d => {
+      if (d.gap) return '<div class="bar gap" title="' + d.d + ': no data from Adax"></div>';
+      const h = v => (100 * (v || 0) / max) + '%';
+      return '<div class="bar' + (d.d === today ? ' part' : '') + '" data-d="' + d.d + '" aria-pressed="' + (pickDay === d.d) + '">' +
+        '<i class="k" style="height:' + h(d.bed) + '"></i><i class="lv" style="height:' + h(d.living) + '"></i></div>';
+    }).join('');
+    $('bl').innerHTML = list.map((d, i) => '<span>' + (i % 2 === 1 || i === 13 ? Number(d.d.slice(8)) : '') + '</span>').join('');
+    if (pickDay && by[pickDay]) {
+      const d = by[pickDay];
+      $('eday').textContent = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(d.d + 'T12:00:00Z')) +
+        ': living ' + kwh(d.living || 0) + ', kids ' + kwh(d.bed || 0) + ' · ' + eur(tot(d), price) + (d.d === today ? ' (so far)' : '');
+    }
+  }
+  $('bars').addEventListener('click', ev => {
+    const b = ev.target.closest('.bar[data-d]'); if (!b) return;
+    pickDay = b.dataset.d; renderEnergy();
+  });
+  $('psave').onclick = async () => {
+    const r = await call('&cmd=price&eur=' + encodeURIComponent($('eprice').value.trim())); if (r) say(r.msg.split(' Now:')[0]);
+  };
 
   function say(msg) {
     const t = $('toast'); t.textContent = msg; t.classList.add('show');
