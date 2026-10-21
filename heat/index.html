@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="../shared/auth.js?v=202610220038"></script>
+<script src="../shared/auth.js?v=202610220045"></script>
 <title>Heating — Life hub</title>
 <style>
 :root{
@@ -82,6 +82,17 @@ button,input{font:inherit;color:inherit}
 .bl span{flex:1;text-align:center;min-width:0}
 .legend{display:flex;gap:14px;font-size:12.5px;color:var(--soft);margin-top:10px;flex-wrap:wrap}
 .legend b{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:0}
+.etop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.seg2{display:flex;padding:3px;gap:3px;border-radius:14px;background:rgba(0,0,0,.22);border:1px solid var(--rule)}
+.seg2 button{border:0;background:none;border-radius:11px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer;color:var(--soft)}
+.seg2 button[aria-selected="true"]{background:var(--sand);color:#1E2522}
+.enav{display:flex;align-items:center;gap:8px}
+.enav b{min-width:96px;text-align:center;font-size:14.5px}
+.enav button{width:32px;height:32px;border-radius:50%;border:1px solid var(--rule);background:rgba(255,255,255,.05);cursor:pointer;font-size:17px;line-height:1}
+.enav button:disabled{opacity:.3;cursor:default}
+.ecmp{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--soft);margin:-2px 0 12px;cursor:pointer}
+.ecmp input{accent-color:var(--warm)}
+.bar .ghost{position:absolute;left:0;right:0;bottom:0;border:1.5px dashed color-mix(in srgb,var(--ink) 45%,transparent);border-radius:4px 4px 0 0;pointer-events:none}
 .eday{font-size:13.5px;color:var(--soft);margin-top:8px;min-height:20px}
 .price{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap}
 .price input{width:96px;padding:7px 10px;border-radius:12px;border:1px solid var(--rule);background:rgba(255,255,255,.05);color-scheme:dark}
@@ -109,10 +120,10 @@ button,input{font:inherit;color:inherit}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610220038">
+<link rel="stylesheet" href="../shared/theme.css?v=202610220045">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610220038"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610220045"></script>
 <main class="wrap">
   <header class="hero">
     <div><div class="k">Home</div><h1>Heating</h1></div>
@@ -139,13 +150,18 @@ button,input{font:inherit;color:inherit}
 
   <div class="sec">Energy</div>
   <section class="panel" id="energy">
+    <div class="etop">
+      <div class="seg2" id="eview" role="tablist"><button data-v="days">14 days</button><button data-v="month">Month</button><button data-v="year">Year</button></div>
+      <div class="enav" id="enav"><button id="eprev" aria-label="Earlier">‹</button><b id="eper"></b><button id="enext" aria-label="Later">›</button></div>
+    </div>
+    <label class="ecmp" id="ecmpw"><input type="checkbox" id="ecmp"> Compare with the year before</label>
     <div class="estats">
-      <div class="estat"><div class="l">Last 7 days</div><div class="v" id="e7">–</div><div class="c" id="c7"></div></div>
+      <div class="estat"><div class="l" id="el1">Last 7 days</div><div class="v" id="e7">–</div><div class="c" id="c7"></div></div>
       <div class="estat"><div class="l" id="eml">This month</div><div class="v" id="em">–</div><div class="c" id="cm"></div></div>
     </div>
     <div class="bars" id="bars"></div>
     <div class="bl" id="bl"></div>
-    <div class="legend"><span><b style="background:var(--warm)"></b>Living room</span><span><b style="background:var(--cold)"></b>Kids room</span><span>Faded bar = today, still counting</span></div>
+    <div class="legend"><span><b style="background:var(--warm)"></b>Living room</span><span><b style="background:var(--cold)"></b>Kids room</span><span id="eleg3">Faded bar = today, still counting</span></div>
     <div class="eday" id="eday">Tap a bar for that day.</div>
     <div class="price"><label class="sub" for="pday">Day</label><input id="pday" inputmode="decimal" placeholder="0.000"><label class="sub" for="pnight">Night</label><input id="pnight" inputmode="decimal" placeholder="0.000"><span class="sub">€/kWh</span><button class="btn" id="psave">Save</button></div>
     <div class="sub" id="enote" style="margin-top:8px"></div>
@@ -157,8 +173,8 @@ button,input{font:inherit;color:inherit}
   <p class="foot">The brain runs every 10 minutes in Apps Script. It sets both heaters from the clock, the outside temperature in Plovdiv and these modes. Each heater gets a new command when its plan changes and once an hour, so a change made in the Adax app lasts up to an hour.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610220038"></script>
-<script src="icons.js?v=202610220038"></script>
-<script src="app.js?v=202610220038"></script>
+<script src="../shared/sync.js?v=202610220045"></script>
+<script src="icons.js?v=202610220045"></script>
+<script src="app.js?v=202610220045"></script>
 </body>
 </html>

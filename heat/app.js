@@ -92,61 +92,140 @@
   }
 
   /* ---------- energy ----------
-     Each room/day: w = Wh, n = night-tariff Wh (null before 22 Oct 2026: then estimated). */
+     Each room/day: w = Wh, n = night-tariff Wh (null before 22 Oct 2026: then estimated).
+     Views: last 14 days, a month (its days), a year (its months). Compare = the same
+     period one year earlier, drawn as dashed outlines. Days are Adax buckets 06:00–06:00. */
   const kwh = wh => (wh / 1000).toFixed(wh >= 10000 ? 0 : 1) + ' kWh';
-  let pickDay = null;
-  function renderEnergy() {
-    const E = st.energy; if (!E) return;
-    const pd = E.priceDay, pn = E.priceNight;
-    if (document.activeElement !== $('pday')) $('pday').value = pd || '';
-    if (document.activeElement !== $('pnight')) $('pnight').value = pn || '';
-    // night share for days without a split: average of split days, else a guess from the schedule
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  let pickKey = null, eView = 'days', eYear = null, eMonth = null, eCmp = false;
+  try { const v = JSON.parse(localStorage.getItem('lifehub-heat-eview') || '{}'); eView = v.view || 'days'; eCmp = !!v.cmp; } catch (e) {}
+  const keepView = () => { try { localStorage.setItem('lifehub-heat-eview', JSON.stringify({ view: eView, cmp: eCmp })); } catch (e) {} };
+
+  function energyModel() {
+    const E = st.energy, pd = E.priceDay, pn = E.priceNight;
     const share = {};
     ['living', 'bed'].forEach(k => {
       const sp = E.days.map(d => d[k]).filter(x => x && x.n != null && x.w > 300);
       share[k] = sp.length >= 3 ? sp.reduce((a, x) => a + x.n, 0) / sp.reduce((a, x) => a + x.w, 0) : (k === 'living' ? 0.05 : 0.35);
     });
-    const W = (d, k) => d[k] ? d[k].w : 0;
-    const N = (d, k) => !d[k] ? 0 : d[k].n != null ? d[k].n : d[k].w * share[k];
+    const W = (d, k) => d && d[k] ? d[k].w : 0;
+    const N = (d, k) => !d || !d[k] ? 0 : d[k].n != null ? d[k].n : d[k].w * share[k];
     const est = d => ['living', 'bed'].some(k => d[k] && d[k].n == null && d[k].w > 0);
-    const tot = d => W(d, 'living') + W(d, 'bed');
     const cost = d => !pd || !pn ? null : ['living', 'bed'].reduce((a, k) => a + ((W(d, k) - N(d, k)) * pd + N(d, k) * pn) / 1000, 0);
     const sum = arr => {
       const c = arr.map(cost);
-      return { wh: arr.reduce((a, d) => a + tot(d), 0), eur: c.includes(null) ? null : c.reduce((a, x) => a + x, 0), est: arr.some(est) };
+      return { n: arr.length, liv: arr.reduce((a, d) => a + W(d, 'living'), 0), bed: arr.reduce((a, d) => a + W(d, 'bed'), 0),
+        night: arr.reduce((a, d) => a + N(d, 'living') + N(d, 'bed'), 0),
+        eur: c.includes(null) ? null : c.reduce((a, x) => a + x, 0), est: arr.some(est) };
     };
-    const money = x => x.eur == null ? 'set prices below' : (x.est ? '≈ ' : '') + '€' + x.eur.toFixed(2);
     const by = {}; E.days.forEach(d => by[d.d] = d);
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(Date.now() - 6 * 3600e3)); // days run 06:00–06:00
-    const list = [];
-    for (let i = 13; i >= 0; i--) {
-      const dt = new Date(today + 'T12:00:00Z'); dt.setUTCDate(dt.getUTCDate() - i);
-      const k = dt.toISOString().slice(0, 10); list.push(by[k] || { d: k, gap: true });
-    }
-    const s7 = sum(list.slice(-7).filter(d => !d.gap));
-    const sm = sum(E.days.filter(d => d.d.slice(0, 7) === today.slice(0, 7)));
-    $('e7').textContent = kwh(s7.wh); $('c7').textContent = money(s7);
-    $('eml').textContent = new Intl.DateTimeFormat('en-GB', { month: 'long' }).format(new Date(today + 'T12:00:00Z'));
-    $('em').textContent = kwh(sm.wh); $('cm').textContent = money(sm);
-    const max = Math.max(1000, ...list.map(d => d.gap ? 0 : tot(d)));
-    $('bars').innerHTML = list.map(d => {
-      if (d.gap) return '<div class="bar gap" title="' + d.d + ': no data from Adax"></div>';
-      const h = v => (100 * v / max) + '%';
-      return '<div class="bar' + (d.d === today ? ' part' : '') + '" data-d="' + d.d + '" aria-pressed="' + (pickDay === d.d) + '">' +
-        '<i class="k" style="height:' + h(W(d, 'bed')) + '"></i><i class="lv" style="height:' + h(W(d, 'living')) + '"></i></div>';
-    }).join('');
-    $('bl').innerHTML = list.map((d, i) => '<span>' + (i % 2 === 1 || i === 13 ? Number(d.d.slice(8)) : '') + '</span>').join('');
-    if (pickDay && by[pickDay]) {
-      const d = by[pickDay], x = sum([d]), nn = N(d, 'living') + N(d, 'bed');
-      $('eday').textContent = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(d.d + 'T12:00:00Z')) +
-        ': living ' + kwh(W(d, 'living')) + ', kids ' + kwh(W(d, 'bed')) + ' (' + (est(d) ? '≈' : '') + Math.round(100 * nn / Math.max(1, tot(d))) + '% night) · ' +
-        money(x) + (d.d === today ? ' so far' : '');
-    }
-    $('enote').textContent = 'Night tariff: 22:00–06:00 Nov–Mar, 23:00–07:00 Apr–Oct. Days before 22 Oct have no day/night split, so their cost is estimated (≈).';
+    const inP = pre => E.days.filter(d => d.d.startsWith(pre));
+    return { by, sum, inP, first: E.days.length ? E.days[0].d : null };
   }
+  const tot = x => x.liv + x.bed;
+  const money = x => !x || x.eur == null ? (st.energy.priceDay ? '' : 'set prices below') : (x.est ? '≈ ' : '') + '€' + x.eur.toFixed(2);
+  function delta(cur, prev) {
+    if (!prev || !prev.n) return 'no data a year earlier';
+    const a = tot(cur), b = tot(prev); if (!b) return 'no use a year earlier';
+    const p = Math.round(100 * (a - b) / b);
+    return (p > 0 ? '+' : '') + p + '% vs ' + kwh(b);
+  }
+
+  function renderEnergy() {
+    const E = st.energy; if (!E) return;
+    if (document.activeElement !== $('pday')) $('pday').value = E.priceDay || '';
+    if (document.activeElement !== $('pnight')) $('pnight').value = E.priceNight || '';
+    const M = energyModel();
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(Date.now() - 6 * 3600e3)); // days run 06:00–06:00
+    if (eYear == null) { eYear = +today.slice(0, 4); eMonth = +today.slice(5, 7); }
+    document.querySelectorAll('#eview button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.v === eView)));
+    $('enav').classList.toggle('hidden', eView === 'days');
+    $('ecmpw').classList.toggle('hidden', eView === 'days');
+    $('ecmp').checked = eCmp;
+    const firstY = M.first ? +M.first.slice(0, 4) : eYear, firstM = M.first ? +M.first.slice(5, 7) : eMonth;
+    const ty = +today.slice(0, 4), tm = +today.slice(5, 7);
+    let items = [], s1, s2, l1, l2, c1 = '', c2 = '';
+
+    if (eView === 'days') {
+      for (let i = 13; i >= 0; i--) {
+        const dt = new Date(today + 'T12:00:00Z'); dt.setUTCDate(dt.getUTCDate() - i);
+        const k = dt.toISOString().slice(0, 10), d = M.by[k];
+        items.push({ key: k, lab: (i % 2 === 1 || i === 0) ? String(+k.slice(8)) : '', cur: d ? M.sum([d]) : null, part: k === today, kind: 'day' });
+      }
+      const w7 = items.slice(-7).filter(x => x.cur);
+      s1 = M.sum(w7.map(x => M.by[x.key])); l1 = 'Last 7 days';
+      s2 = M.sum(M.inP(today.slice(0, 7))); l2 = new Intl.DateTimeFormat('en-GB', { month: 'long' }).format(new Date(today + 'T12:00:00Z'));
+      c1 = money(s1); c2 = money(s2);
+      $('eper').textContent = '';
+    } else if (eView === 'month') {
+      const pre = eYear + '-' + String(eMonth).padStart(2, '0'), prePrev = (eYear - 1) + '-' + String(eMonth).padStart(2, '0');
+      const nDays = new Date(Date.UTC(eYear, eMonth, 0)).getUTCDate();
+      for (let d = 1; d <= nDays; d++) {
+        const k = pre + '-' + String(d).padStart(2, '0'), kp = prePrev + '-' + String(d).padStart(2, '0');
+        const cur = M.by[k], prev = M.by[kp];
+        items.push({ key: k, lab: (d === 1 || d % 5 === 0) ? String(d) : '', cur: cur ? M.sum([cur]) : null,
+          prev: eCmp && prev ? tot(M.sum([prev])) : null, part: k === today, future: k > today, kind: 'day' });
+      }
+      s1 = M.sum(M.inP(pre)); l1 = MON[eMonth - 1] + ' ' + eYear; c1 = money(s1);
+      const sp = M.sum(M.inP(prePrev));
+      s2 = sp; l2 = MON[eMonth - 1] + ' ' + (eYear - 1); c2 = sp.n ? money(sp) : 'no data yet';
+      $('eper').textContent = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(new Date(Date.UTC(eYear, eMonth - 1, 15)));
+      $('eprev').disabled = eYear < firstY || (eYear === firstY && eMonth <= firstM);
+      $('enext').disabled = eYear > ty || (eYear === ty && eMonth >= tm);
+      c1 += (c1 ? ' · ' : '') + delta(s1, sp);
+    } else {
+      for (let m = 1; m <= 12; m++) {
+        const pre = eYear + '-' + String(m).padStart(2, '0'), prePrev = (eYear - 1) + '-' + String(m).padStart(2, '0');
+        const cur = M.inP(pre), prev = M.inP(prePrev);
+        items.push({ key: pre, lab: MON[m - 1].slice(0, 1), cur: cur.length ? M.sum(cur) : null,
+          prev: eCmp && prev.length ? tot(M.sum(prev)) : null, part: pre === today.slice(0, 7), future: pre > today.slice(0, 7), kind: 'month' });
+      }
+      s1 = M.sum(M.inP(String(eYear))); l1 = String(eYear); c1 = money(s1);
+      const sp = M.sum(M.inP(String(eYear - 1)));
+      s2 = sp; l2 = String(eYear - 1); c2 = sp.n ? money(sp) : 'no data yet';
+      $('eper').textContent = String(eYear);
+      $('eprev').disabled = eYear <= firstY; $('enext').disabled = eYear >= ty;
+      c1 += (c1 ? ' · ' : '') + delta(s1, sp);
+    }
+    $('el1').textContent = l1; $('e7').textContent = kwh(tot(s1)); $('c7').textContent = c1;
+    $('eml').textContent = l2; $('em').textContent = s2.n ? kwh(tot(s2)) : '–'; $('cm').textContent = c2;
+
+    const max = Math.max(1000, ...items.map(x => Math.max(x.cur ? tot(x.cur) : 0, x.prev || 0)));
+    const h = v => (100 * v / max) + '%';
+    $('bars').innerHTML = items.map(x => {
+      const ghost = x.prev != null ? '<span class="ghost" style="height:' + h(x.prev) + '"></span>' : '';
+      if (!x.cur) return ghost || x.future ? '<div class="bar" style="cursor:default">' + ghost + '</div>' : '<div class="bar gap"></div>';
+      return '<div class="bar' + (x.part ? ' part' : '') + '" data-k="' + x.key + '" data-kind="' + x.kind + '" aria-pressed="' + (pickKey === x.key) + '">' + ghost +
+        '<i class="k" style="height:' + h(x.cur.bed) + '"></i><i class="lv" style="height:' + h(x.cur.liv) + '"></i></div>';
+    }).join('');
+    $('bl').innerHTML = items.map(x => '<span>' + x.lab + '</span>').join('');
+    $('eleg3').textContent = eCmp && eView !== 'days' ? 'Dashed outline = a year earlier' : 'Faded bar = still counting';
+
+    const pick = items.find(x => x.key === pickKey && x.cur);
+    if (pick) {
+      const x = pick.cur, nightPct = Math.round(100 * x.night / Math.max(1, tot(x)));
+      const name = pick.kind === 'day'
+        ? new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(pick.key + 'T12:00:00Z'))
+        : MON[+pick.key.slice(5) - 1] + ' ' + pick.key.slice(0, 4);
+      $('eday').textContent = name + ': living ' + kwh(x.liv) + ', kids ' + kwh(x.bed) + ' (' + (x.est ? '≈' : '') + nightPct + '% night)' +
+        (money(x) ? ' · ' + money(x) : '') + (pick.part ? ' so far' : '') +
+        (pick.prev != null ? ' · a year earlier ' + kwh(pick.prev) : '');
+    } else $('eday').textContent = 'Tap a bar for details.';
+    $('enote').textContent = 'Data starts 14 Oct 2026 (Adax keeps only 7 days; the hub keeps everything since). Night tariff: 22:00–06:00 Nov–Mar, 23:00–07:00 Apr–Oct. Days before 22 Oct have no day/night split, so their cost is estimated (≈).';
+  }
+
+  $('eview').addEventListener('click', e => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    eView = b.dataset.v; pickKey = null; keepView(); renderEnergy();
+  });
+  $('eprev').onclick = () => { if (eView === 'month') { if (--eMonth < 1) { eMonth = 12; eYear--; } } else eYear--; pickKey = null; renderEnergy(); };
+  $('enext').onclick = () => { if (eView === 'month') { if (++eMonth > 12) { eMonth = 1; eYear++; } } else eYear++; pickKey = null; renderEnergy(); };
+  $('ecmp').onchange = () => { eCmp = $('ecmp').checked; keepView(); renderEnergy(); };
   $('bars').addEventListener('click', ev => {
-    const b = ev.target.closest('.bar[data-d]'); if (!b) return;
-    pickDay = b.dataset.d; renderEnergy();
+    const b = ev.target.closest('.bar[data-k]'); if (!b) return;
+    if (b.dataset.kind === 'month' && pickKey === b.dataset.k) { eView = 'month'; eYear = +b.dataset.k.slice(0, 4); eMonth = +b.dataset.k.slice(5); pickKey = null; keepView(); }
+    else pickKey = b.dataset.k;
+    renderEnergy();
   });
   $('psave').onclick = async () => {
     const r = await call('&cmd=price&day=' + encodeURIComponent($('pday').value.trim()) + '&night=' + encodeURIComponent($('pnight').value.trim()));
