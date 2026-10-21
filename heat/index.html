@@ -108,10 +108,10 @@ button,input{font:inherit;color:inherit}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610220015">
+<link rel="stylesheet" href="../shared/theme.css?v=202610220021">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610220015"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610220021"></script>
 <main class="wrap">
   <header class="hero">
     <div><div class="k">Home</div><h1>Heating</h1></div>
@@ -146,7 +146,8 @@ button,input{font:inherit;color:inherit}
     <div class="bl" id="bl"></div>
     <div class="legend"><span><b style="background:var(--warm)"></b>Living room</span><span><b style="background:var(--cold)"></b>Kids room</span><span>Faded bar = today, still counting</span></div>
     <div class="eday" id="eday">Tap a bar for that day.</div>
-    <div class="price"><label class="sub" for="eprice">Price</label><input id="eprice" inputmode="decimal" placeholder="0.00"><span class="sub">€/kWh</span><button class="btn" id="psave">Save</button></div>
+    <div class="price"><label class="sub" for="pday">Day</label><input id="pday" inputmode="decimal" placeholder="0.000"><label class="sub" for="pnight">Night</label><input id="pnight" inputmode="decimal" placeholder="0.000"><span class="sub">€/kWh</span><button class="btn" id="psave">Save</button></div>
+    <div class="sub" id="enote" style="margin-top:8px"></div>
   </section>
 
   <div class="sec">Recent changes</div>
@@ -155,8 +156,8 @@ button,input{font:inherit;color:inherit}
   <p class="foot">The brain runs every 10 minutes in Apps Script. It sets both heaters from the clock, the outside temperature in Plovdiv and these modes. Each heater gets a new command when its plan changes and once an hour, so a change made in the Adax app lasts up to an hour.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610220015"></script>
-<script src="icons.js?v=202610220015"></script>
-<script src="app.js?v=202610220015"></script>
+<script src="../shared/sync.js?v=202610220021"></script>
+<script src="icons.js?v=202610220021"></script>
+<script src="app.js?v=202610220021"></script>
 </body>
 </html>

@@ -91,49 +91,66 @@
       : '<li class="empty">Nothing yet</li>';
   }
 
-  /* ---------- energy ---------- */
+  /* ---------- energy ----------
+     Each room/day: w = Wh, n = night-tariff Wh (null before 22 Oct 2026: then estimated). */
   const kwh = wh => (wh / 1000).toFixed(wh >= 10000 ? 0 : 1) + ' kWh';
-  const eur = (wh, p) => p ? '€' + (wh / 1000 * p).toFixed(2) : 'set a price below';
   let pickDay = null;
   function renderEnergy() {
     const E = st.energy; if (!E) return;
-    const price = E.price;
-    if (document.activeElement !== $('eprice')) $('eprice').value = price || '';
-    const tot = d => (d.living || 0) + (d.bed || 0);
+    const pd = E.priceDay, pn = E.priceNight;
+    if (document.activeElement !== $('pday')) $('pday').value = pd || '';
+    if (document.activeElement !== $('pnight')) $('pnight').value = pn || '';
+    // night share for days without a split: average of split days, else a guess from the schedule
+    const share = {};
+    ['living', 'bed'].forEach(k => {
+      const sp = E.days.map(d => d[k]).filter(x => x && x.n != null && x.w > 300);
+      share[k] = sp.length >= 3 ? sp.reduce((a, x) => a + x.n, 0) / sp.reduce((a, x) => a + x.w, 0) : (k === 'living' ? 0.05 : 0.35);
+    });
+    const W = (d, k) => d[k] ? d[k].w : 0;
+    const N = (d, k) => !d[k] ? 0 : d[k].n != null ? d[k].n : d[k].w * share[k];
+    const est = d => ['living', 'bed'].some(k => d[k] && d[k].n == null && d[k].w > 0);
+    const tot = d => W(d, 'living') + W(d, 'bed');
+    const cost = d => !pd || !pn ? null : ['living', 'bed'].reduce((a, k) => a + ((W(d, k) - N(d, k)) * pd + N(d, k) * pn) / 1000, 0);
+    const sum = arr => {
+      const c = arr.map(cost);
+      return { wh: arr.reduce((a, d) => a + tot(d), 0), eur: c.includes(null) ? null : c.reduce((a, x) => a + x, 0), est: arr.some(est) };
+    };
+    const money = x => x.eur == null ? 'set prices below' : (x.est ? '≈ ' : '') + '€' + x.eur.toFixed(2);
     const by = {}; E.days.forEach(d => by[d.d] = d);
-    // last 14 calendar days, gaps shown where Adax sent nothing
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(Date.now() - 6 * 3600e3)); // days run 06:00–06:00
     const list = [];
     for (let i = 13; i >= 0; i--) {
       const dt = new Date(today + 'T12:00:00Z'); dt.setUTCDate(dt.getUTCDate() - i);
       const k = dt.toISOString().slice(0, 10); list.push(by[k] || { d: k, gap: true });
     }
-    const last7 = list.slice(-7).reduce((a, d) => a + (d.gap ? 0 : tot(d)), 0);
-    const mon = today.slice(0, 7);
-    const monWh = E.days.filter(d => d.d.slice(0, 7) === mon).reduce((a, d) => a + tot(d), 0);
-    $('e7').textContent = kwh(last7); $('c7').textContent = eur(last7, price);
+    const s7 = sum(list.slice(-7).filter(d => !d.gap));
+    const sm = sum(E.days.filter(d => d.d.slice(0, 7) === today.slice(0, 7)));
+    $('e7').textContent = kwh(s7.wh); $('c7').textContent = money(s7);
     $('eml').textContent = new Intl.DateTimeFormat('en-GB', { month: 'long' }).format(new Date(today + 'T12:00:00Z'));
-    $('em').textContent = kwh(monWh); $('cm').textContent = eur(monWh, price);
+    $('em').textContent = kwh(sm.wh); $('cm').textContent = money(sm);
     const max = Math.max(1000, ...list.map(d => d.gap ? 0 : tot(d)));
     $('bars').innerHTML = list.map(d => {
       if (d.gap) return '<div class="bar gap" title="' + d.d + ': no data from Adax"></div>';
-      const h = v => (100 * (v || 0) / max) + '%';
+      const h = v => (100 * v / max) + '%';
       return '<div class="bar' + (d.d === today ? ' part' : '') + '" data-d="' + d.d + '" aria-pressed="' + (pickDay === d.d) + '">' +
-        '<i class="k" style="height:' + h(d.bed) + '"></i><i class="lv" style="height:' + h(d.living) + '"></i></div>';
+        '<i class="k" style="height:' + h(W(d, 'bed')) + '"></i><i class="lv" style="height:' + h(W(d, 'living')) + '"></i></div>';
     }).join('');
     $('bl').innerHTML = list.map((d, i) => '<span>' + (i % 2 === 1 || i === 13 ? Number(d.d.slice(8)) : '') + '</span>').join('');
     if (pickDay && by[pickDay]) {
-      const d = by[pickDay];
+      const d = by[pickDay], x = sum([d]), nn = N(d, 'living') + N(d, 'bed');
       $('eday').textContent = new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(d.d + 'T12:00:00Z')) +
-        ': living ' + kwh(d.living || 0) + ', kids ' + kwh(d.bed || 0) + ' · ' + eur(tot(d), price) + (d.d === today ? ' (so far)' : '');
+        ': living ' + kwh(W(d, 'living')) + ', kids ' + kwh(W(d, 'bed')) + ' (' + (est(d) ? '≈' : '') + Math.round(100 * nn / Math.max(1, tot(d))) + '% night) · ' +
+        money(x) + (d.d === today ? ' so far' : '');
     }
+    $('enote').textContent = 'Night tariff: 22:00–06:00 Nov–Mar, 23:00–07:00 Apr–Oct. Days before 22 Oct have no day/night split, so their cost is estimated (≈).';
   }
   $('bars').addEventListener('click', ev => {
     const b = ev.target.closest('.bar[data-d]'); if (!b) return;
     pickDay = b.dataset.d; renderEnergy();
   });
   $('psave').onclick = async () => {
-    const r = await call('&cmd=price&eur=' + encodeURIComponent($('eprice').value.trim())); if (r) say(r.msg.split(' Now:')[0]);
+    const r = await call('&cmd=price&day=' + encodeURIComponent($('pday').value.trim()) + '&night=' + encodeURIComponent($('pnight').value.trim()));
+    if (r) say(r.msg.split(' Now:')[0]);
   };
 
   function say(msg) {
