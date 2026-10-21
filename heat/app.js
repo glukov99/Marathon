@@ -194,7 +194,8 @@
     const h = v => (100 * v / max) + '%';
     $('bars').innerHTML = items.map(x => {
       const ghost = x.prev != null ? '<span class="ghost" style="height:' + h(x.prev) + '"></span>' : '';
-      if (!x.cur) return ghost || x.future ? '<div class="bar" style="cursor:default">' + ghost + '</div>' : '<div class="bar gap"></div>';
+      const before = M.first && x.key < M.first.slice(0, x.key.length);
+      if (!x.cur) return ghost || x.future || before ? '<div class="bar" style="cursor:default">' + ghost + '</div>' : '<div class="bar gap"></div>';
       return '<div class="bar' + (x.part ? ' part' : '') + '" data-k="' + x.key + '" data-kind="' + x.kind + '" aria-pressed="' + (pickKey === x.key) + '">' + ghost +
         '<i class="k" style="height:' + h(x.cur.bed) + '"></i><i class="lv" style="height:' + h(x.cur.liv) + '"></i></div>';
     }).join('');
