@@ -4,6 +4,7 @@
   const $ = id => document.getElementById(id);
   const TZ = 'Europe/Sofia';
   let st = null, busy = false;
+  const pend = {}; // value picked on the card, per room ('off' or a number)
 
   /* blue when cold (below 18.5°), orange when warm; deeper colour the further from 18.5° */
   function tempColor(t) {
@@ -36,17 +37,34 @@
       '<div class="ticks"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>';
   }
 
+  const EDGES = { living: [420, 1320, 1380], bed: [360, 480, 1035, 1185] };
+  function nextEdge(key) {
+    const m = nowMin(), e = EDGES[key].find(x => x > m);
+    const v = e != null ? e : EDGES[key][0];
+    return String(Math.floor(v / 60)).padStart(2, '0') + ':' + String(v % 60).padStart(2, '0');
+  }
+
   function roomHtml(r) {
     const glow = tempColor(r.temp != null ? r.temp : r.target);
     const on = r.on && r.want && r.want.on !== false;
     const heating = on && r.temp != null && r.target != null && r.temp < r.target - 0.2;
     const t = r.temp != null ? r.temp.toFixed(1).split('.') : ['–', ''];
-    const badge = !on ? 'Off' : heating ? 'Heating' : 'Holding';
+    const man = st.override && st.override[r.key] && st.override[r.key].until > Date.now();
+    const badge = man ? 'Manual' : !on ? 'Off' : heating ? 'Heating' : 'Holding';
+    if (pend[r.key] === undefined) pend[r.key] = r.target != null ? r.target : 20;
+    const pv = pend[r.key];
     return '<article class="room ' + (on ? '' : 'off ') + (heating ? 'heating' : '') + '" style="--glow:' + glow + ';--gi:' + (on ? (heating ? .6 : .42) : .16) + '">' +
       '<div class="top"><h2>' + r.name + '</h2><span class="badge">' + badge + '</span></div>' +
       '<div class="orbwrap"><div class="orb"><div class="t">' + t[0] + (t[1] ? '<small>.' + t[1] + '°</small>' : '') + '</div>' +
       '<div class="tg">' + (on ? 'Target ' + r.target + '°' : 'Heating off') + '</div></div></div>' +
-      '<div class="why">' + ((r.want && r.want.why) || '') + '</div>' + stripHtml(r.key) + '</article>';
+      '<div class="why">' + ((r.want && r.want.why) || '') + '</div>' +
+      '<div class="man" data-room="' + r.key + '">' +
+        '<button class="step" data-a="down" aria-label="Lower">−</button>' +
+        '<span class="val">' + (pv === 'off' ? 'Off' : pv + '°') + '</span>' +
+        '<button class="step" data-a="up" aria-label="Higher">+</button>' +
+        '<button class="set" data-a="set">Set till ' + nextEdge(r.key) + '</button>' +
+        (man ? '<button class="auto" data-a="auto">Schedule</button>' : '') +
+      '</div>' + stripHtml(r.key) + '</article>';
   }
 
   function setTog(id, pressed, title, sub) {
@@ -108,6 +126,16 @@
     const r = await call('&cmd=holiday&until=' + encodeURIComponent(v));
     if (r) { $('holbox').classList.add('hidden'); say(r.msg); }
   };
+
+  $('rooms').addEventListener('click', async ev => {
+    const b = ev.target.closest('button[data-a]'); if (!b || busy) return;
+    const k = b.closest('.man').dataset.room, a = b.dataset.a;
+    let v = pend[k];
+    if (a === 'up') { pend[k] = v === 'off' ? 5 : Math.min(30, v + 0.5); render(); return; }
+    if (a === 'down') { pend[k] = v === 'off' || v <= 5 ? 'off' : v - 0.5; render(); return; }
+    const r = await call('&cmd=set&room=' + k + '&temp=' + (a === 'auto' ? 'auto' : v));
+    if (r) { if (a === 'auto') delete pend[k]; say(r.msg); }
+  });
 
   call();
   setInterval(() => { if (!document.hidden && !busy) call(); }, 60e3);

@@ -56,6 +56,13 @@ button,input{font:inherit;color:inherit}
 .strip i{display:block;height:100%}
 .strip .now{position:absolute;top:0;bottom:0;width:3px;margin-left:-1px;background:#fff;box-shadow:0 0 8px #fff;border-radius:2px}
 .ticks{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin-top:4px;font-variant-numeric:tabular-nums}
+.man{display:flex;gap:6px;align-items:center;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.man button{border:1px solid var(--rule);background:rgba(255,255,255,.05);border-radius:14px;padding:6px 12px;cursor:pointer;font-weight:700;font-size:13.5px}
+.man .step{width:36px;height:34px;padding:0;font-size:18px;line-height:1}
+.man .val{min-width:64px;text-align:center;font-weight:800;font-size:17px;font-variant-numeric:tabular-nums}
+.man .set{background:color-mix(in srgb,var(--glow) 22%,transparent);border-color:color-mix(in srgb,var(--glow) 55%,transparent)}
+.man .auto{color:var(--glow)}
+.man button:disabled{opacity:.5}
 .ctrls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .tog{min-width:0;display:flex;align-items:center;gap:10px;padding:12px;border-radius:18px;border:1px solid var(--rule);background:rgba(255,255,255,.04);cursor:pointer;text-align:left;transition:.25s}
 .tog .ic{font-size:22px;line-height:1}
@@ -80,7 +87,7 @@ button,input{font:inherit;color:inherit}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610212214">
+<link rel="stylesheet" href="../shared/theme.css?v=202610212226">
 </head>
 <body>
 <nav class="hubnav" aria-label="Life hub"><a href="../">Life hub</a><a href="../training/">Training</a><a href="../meals/">Meals</a><a href="../holidays/">Holidays</a><a href="../car/">Car</a><a href="../money/">Money</a><a href="../business/">Business</a><a href="../jar/">Cookie jar</a><a href="./" aria-current="page">Heating</a></nav>
@@ -114,7 +121,7 @@ button,input{font:inherit;color:inherit}
   <p class="foot">The brain runs every 10 minutes in Apps Script. It sets both heaters from the clock, the outside temperature in Plovdiv and these modes. A change made in the Adax app is put back within 10 minutes.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610212214"></script>
-<script src="app.js?v=202610212214"></script>
+<script src="../shared/sync.js?v=202610212226"></script>
+<script src="app.js?v=202610212226"></script>
 </body>
 </html>
