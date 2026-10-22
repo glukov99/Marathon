@@ -14,11 +14,15 @@
     ['Home', [['heat/', 'Heating'], ['car/', 'Car'], ['holidays/', 'Holidays']]],
     ['Mind', [['jar/', 'Ideas jar']]],
   ];
+  // A family sign-in sees only her pages, and her "home" is the first of them.
+  const fam = window.LifeHubAuth && LifeHubAuth.role() === 'family';
+  const groups = fam ? GROUPS.map(([g, l]) => [g, l.filter(p => LifeHubAuth.FAMILY_PAGES.includes(p[0]))]).filter(g => g[1].length) : GROUPS;
   const me = document.currentScript;
   const root = me ? me.src.replace(/shared\/nav\.js.*$/, '') : '/';
   const here = location.href.split(/[?#]/)[0].replace(/index\.html$/, '');
   const path = here.startsWith(root) ? here.slice(root.length) : '';
-  const page = GROUPS.flatMap(g => g[1]).find(p => p[0] === path);
+  const page = groups.flatMap(g => g[1]).find(p => p[0] === path);
+  const home = fam ? root + LifeHubAuth.FAMILY_PAGES[0] : root;
   const el = document.getElementById('lhn');
   if (!el) return;
 
@@ -49,15 +53,15 @@ body.lhn-open{overflow:hidden}`;
   el.setAttribute('role', 'navigation');
   el.setAttribute('aria-label', 'Life hub');
   el.innerHTML = (page
-    ? `<a href="${root}">Life hub</a><span class="lhn-cur">${page[1]}</span>`
-    : `<a href="${root}" aria-current="page" class="lhn-cur" style="background:none;padding-left:0">Life hub</a>`) +
+    ? (fam ? '' : `<a href="${home}">Life hub</a>`) + `<span class="lhn-cur">${page[1]}</span>`
+    : `<a href="${home}" aria-current="page" class="lhn-cur" style="background:none;padding-left:0">Life hub</a>`) +
     `<button class="lhn-menu" aria-expanded="false" aria-controls="lhnOv">Menu</button>`;
 
   const ov = document.createElement('div');
   ov.className = 'lhn-ov'; ov.id = 'lhnOv'; ov.hidden = true;
   ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'All pages');
-  ov.innerHTML = `<div class="lhn-in"><div class="lhn-top"><a href="${root}">Life hub</a>
-    <button data-x>Close</button></div>` + GROUPS.map(([g, list]) =>
+  ov.innerHTML = `<div class="lhn-in"><div class="lhn-top"><a href="${home}">Life hub</a>
+    <button data-x>Close</button></div>` + groups.map(([g, list]) =>
       `<div class="lhn-g"><h4>${g}</h4><div class="lhn-l">${list.map(([p, n]) =>
         `<a href="${root}${p}"${page && page[0] === p ? ' aria-current="page"' : ''}>${n}</a>`).join('')}</div></div>`).join('') +
     `</div>`;

@@ -10,6 +10,12 @@
   const CLIENT_ID = '438111775472-28ne7ha7ti9fci747q7c6qi7jsi3rqj4.apps.googleusercontent.com';
   const EXEC = 'https://script.google.com/macros/s/AKfycbw1gz9r2XR6JdtRvGySrBb4BfVKQ8wvruuey-dezUL65oNtJyjxkhjYQDCw6yEoDWd4/exec';
   const SKEY = 'lifehub-session', CFG = 'season-2027-sync', MKEY = 'lifehub-money-token';
+  /* A family sign-in (Georgi's wife) reaches these pages only. The backend is what
+     enforces it (Auth.js, authAllowed_); this only keeps her off pages that would
+     show nothing but refusals. Sessions from before roles existed are Georgi's. */
+  const FAMILY_PAGES = ['heat/', 'car/', 'meals/', 'holidays/'];
+  const ROOT = ((document.currentScript && document.currentScript.src) || '').replace(/shared\/auth\.js.*$/, '');
+  const role = () => (ses() || {}).role || 'owner';
   const ls = {
     get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
@@ -43,7 +49,7 @@
   function placeholders() {
     const c = cfg();
     if (!c.url || !c.tok) { c.url = c.url || EXEC; c.tok = c.tok || 'session'; ls.set(CFG, JSON.stringify(c)); }
-    if (!ls.get(MKEY)) ls.set(MKEY, 'session');
+    if (!ls.get(MKEY) && role() === 'owner') ls.set(MKEY, 'session');
   }
 
   /* 2. the gate */
@@ -108,7 +114,7 @@
       const r = await (await nativeFetch(cfg().url || EXEC, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'auth', credential: resp.credential, device: device() }) })).json();
       if (!r.ok) { m.textContent = r.error || 'Sign-in failed.'; return; }
-      setSes({ s: r.s, email: r.email, name: r.name, at: Date.now() });
+      setSes({ s: r.s, email: r.email, name: r.name, role: r.role || 'owner', at: Date.now() });
       placeholders();
       location.reload();
     } catch (e) { m.textContent = 'Offline. Try again.'; }
@@ -119,6 +125,8 @@
     body: JSON.stringify(Object.assign({ s: (ses() || {}).s }, body)) }).then(r => r.json());
   window.LifeHubAuth = {
     session: ses,
+    role: role,
+    FAMILY_PAGES: FAMILY_PAGES,
     sessions: () => post({ action: 'sessions' }),
     revoke: id => post({ action: 'revoke', id: id }),
     signOut: async () => { try { await post({ action: 'signout' }); } catch (e) {} setSes(null); location.reload(); }
@@ -126,5 +134,12 @@
 
   const s = ses();
   if (!s || (!s.s && !s.legacy)) lock();
-  else if (s.s) placeholders();
+  else if (s.s) {
+    placeholders();
+    if (role() === 'family' && ROOT) {
+      const here = location.href.split(/[?#]/)[0].replace(/index\.html$/, '');
+      const path = here.startsWith(ROOT) ? here.slice(ROOT.length) : '';
+      if (FAMILY_PAGES.indexOf(path) < 0) location.replace(ROOT + FAMILY_PAGES[0]);
+    }
+  }
 })();
