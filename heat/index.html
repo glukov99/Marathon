@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="../shared/auth.js?v=202610220046"></script>
+<script src="../shared/auth.js?v=202610221545"></script>
 <title>Heating — Life hub</title>
 <style>
 :root{
@@ -78,6 +78,11 @@ button,input{font:inherit;color:inherit}
 .bar.gap{background:repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 4px,transparent 4px 8px);border-radius:4px;height:18px;align-self:flex-end}
 .bar.part i{opacity:.55}
 .bar[aria-pressed="true"]{outline:1px solid var(--rule);outline-offset:2px;border-radius:4px}
+.bars{position:relative}
+.tline{position:absolute;left:0;top:0;pointer-events:none;overflow:visible}
+.tline polyline{fill:none;stroke:color-mix(in srgb,var(--ink) 75%,transparent);stroke-width:1.5;stroke-linejoin:round}
+.tline circle{stroke:#11171A;stroke-width:1}
+.tline text{font-size:10px;fill:var(--faint);font-weight:700}
 .bl{display:flex;gap:5px;font-size:10.5px;color:var(--faint);margin-top:4px;font-variant-numeric:tabular-nums}
 .bl span{flex:1;text-align:center;min-width:0}
 .legend{display:flex;gap:14px;font-size:12.5px;color:var(--soft);margin-top:10px;flex-wrap:wrap}
@@ -120,10 +125,10 @@ button,input{font:inherit;color:inherit}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610220046">
+<link rel="stylesheet" href="../shared/theme.css?v=202610221545">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610220046"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610221545"></script>
 <main class="wrap">
   <header class="hero">
     <div><div class="k">Home</div><h1>Heating</h1></div>
@@ -161,8 +166,9 @@ button,input{font:inherit;color:inherit}
     </div>
     <div class="bars" id="bars"></div>
     <div class="bl" id="bl"></div>
-    <div class="legend"><span><b style="background:var(--warm)"></b>Living room</span><span><b style="background:var(--cold)"></b>Kids room</span><span id="eleg3">Faded bar = today, still counting</span></div>
+    <div class="legend"><span><b style="background:var(--warm)"></b>Living room</span><span><b style="background:var(--cold)"></b>Kids room</span><span><b style="background:var(--ink);height:2px;width:12px;vertical-align:3px"></b>Outside, daily mean</span><span id="eleg3">Faded bar = today, still counting</span></div>
     <div class="eday" id="eday">Tap a bar for that day.</div>
+    <div class="eday" id="ewx" style="color:var(--ink)"></div>
     <div class="price"><label class="sub" for="pday">Day</label><input id="pday" inputmode="decimal" placeholder="0.000"><label class="sub" for="pnight">Night</label><input id="pnight" inputmode="decimal" placeholder="0.000"><span class="sub">€/kWh</span><button class="btn" id="psave">Save</button></div>
     <div class="sub" id="enote" style="margin-top:8px"></div>
   </section>
@@ -173,8 +179,8 @@ button,input{font:inherit;color:inherit}
   <p class="foot">The brain runs every 10 minutes in Apps Script. It sets both heaters from the clock, the outside temperature in Plovdiv and these modes. Each heater gets a new command when its plan changes and once an hour, so a change made in the Adax app lasts up to an hour.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610220046"></script>
-<script src="icons.js?v=202610220046"></script>
-<script src="app.js?v=202610220046"></script>
+<script src="../shared/sync.js?v=202610221545"></script>
+<script src="icons.js?v=202610221545"></script>
+<script src="app.js?v=202610221545"></script>
 </body>
 </html>

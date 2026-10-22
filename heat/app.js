@@ -86,6 +86,7 @@
     setTog('b-keep', st.keepOn.on, null, st.keepOn.on ? 'On until ' + hm(st.keepOn.until) : 'Ignore me leaving');
     setTog('b-hol', st.holiday.on, null, st.holiday.on ? 'Back ' + fmt(st.holiday.until) : 'All off until return');
     renderEnergy();
+    if (!wxAsked && st.energy) { wxAsked = true; loadWx(); }
     $('log').innerHTML = (st.log || []).length ? st.log.map(l =>
       '<li><time>' + fmt(l.at).replace(/^\w+ /, '') + '</time><span>' + l.msg.replace(/</g, '&lt;') + '</span></li>').join('')
       : '<li class="empty">Nothing yet</li>';
@@ -131,6 +132,52 @@
     return (p > 0 ? '+' : '') + p + '% vs ' + kwh(b);
   }
 
+  /* ---------- outside temperature per day (22 Oct 2026) ----------
+     Daily mean for Plovdiv from Open-Meteo, fetched by the page (free, no key): the
+     archive for older days (it lags about 5 days) and the forecast API's past days for
+     the recent ones. From the year before the energy data starts, for the comparison.
+     A calendar day, while Adax days run 06:00–06:00: close enough to compare, not exact. */
+  let wx = {}, wxAsked = false;
+  const WX = 'latitude=42.1354&longitude=24.7453&daily=temperature_2m_mean&timezone=Europe%2FSofia';
+  async function loadWx() {
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
+    try { const c = JSON.parse(localStorage.getItem('lifehub-heat-wx') || 'null'); if (c && c.day === today) { wx = c.t; renderEnergy(); return; } } catch (e) {}
+    const first = st.energy && st.energy.days.length ? st.energy.days[0].d : today;
+    const from = (+first.slice(0, 4) - 1) + '-01-01';
+    const upto = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10);
+    const get = async u => { try { const d = (await (await fetch(u)).json()).daily; return d.time.map((t, i) => [t, d.temperature_2m_mean[i]]); } catch (e) { return []; } };
+    const [old, recent] = await Promise.all([
+      get('https://archive-api.open-meteo.com/v1/archive?' + WX + '&start_date=' + from + '&end_date=' + upto),
+      get('https://api.open-meteo.com/v1/forecast?' + WX + '&past_days=10&forecast_days=1')]);
+    const t = {};
+    old.concat(recent).forEach(([d, v]) => { if (v != null) t[d] = Math.round(v * 10) / 10; });
+    if (!Object.keys(t).length) return;
+    wx = t;
+    try { localStorage.setItem('lifehub-heat-wx', JSON.stringify({ day: today, t })); } catch (e) {}
+    renderEnergy();
+  }
+  const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+  const wxOf = pre => avg(Object.keys(wx).filter(d => d.startsWith(pre)).map(d => wx[d]));
+  const deg = v => v == null ? '–' : Math.round(v) + '°';
+  /* How usage moves with the weather: a straight line through every finished day,
+     total kWh against that day's mean outside temperature. Rough on purpose: the
+     schedule, the modes and Sammy's days move usage too. */
+  function wxLink(M, today) {
+    const pts = Object.keys(M.by).filter(d => d < today && wx[d] != null).map(d => [wx[d], tot(M.sum([M.by[d]])) / 1000]);
+    if (pts.length < 7) return 'Outside temperature is the line. After a week of data this says how much a colder day costs (' + pts.length + ' of 7 days so far).';
+    const mx = avg(pts.map(p => p[0])), my = avg(pts.map(p => p[1]));
+    const sxx = pts.reduce((a, p) => a + (p[0] - mx) ** 2, 0), sxy = pts.reduce((a, p) => a + (p[0] - mx) * (p[1] - my), 0);
+    const lo = Math.min(...pts.map(p => p[0])), hi = Math.max(...pts.map(p => p[0]));
+    if (hi - lo < 3 || !sxx) return 'The days so far were all about ' + deg(mx) + ' outside, so the effect of the weather cannot be seen yet.';
+    const b = sxy / sxx;
+    if (b > -0.05) return 'Over ' + pts.length + ' days, the outside temperature made no clear difference to usage yet.';
+    const pd = st.energy.priceDay;
+    return 'Each degree colder outside adds about ' + (-b).toFixed(1) + ' kWh a day' + (pd ? ' (≈ €' + (-b * pd).toFixed(2) + ')' : '') +
+      ', from ' + pts.length + ' days between ' + deg(lo) + ' and ' + deg(hi) + '.';
+  }
+
+  const outVs = (pre, prePrev) => { const a = wxOf(pre), b = wxOf(prePrev);
+    return a == null ? '' : ' · ' + deg(a) + ' outside' + (b != null ? ' (' + deg(b) + ' the year before)' : ''); };
   function renderEnergy() {
     const E = st.energy; if (!E) return;
     if (document.activeElement !== $('pday')) $('pday').value = E.priceDay || '';
@@ -156,6 +203,9 @@
       s1 = M.sum(w7.map(x => M.by[x.key])); l1 = 'Last 7 days';
       s2 = M.sum(M.inP(today.slice(0, 7))); l2 = new Intl.DateTimeFormat('en-GB', { month: 'long' }).format(new Date(today + 'T12:00:00Z'));
       c1 = money(s1); c2 = money(s2);
+      const w7t = avg(w7.map(x => wx[x.key]).filter(v => v != null)), mt = wxOf(today.slice(0, 7));
+      if (w7t != null) c1 += (c1 ? ' · ' : '') + deg(w7t) + ' outside';
+      if (mt != null) c2 += (c2 ? ' · ' : '') + deg(mt) + ' outside';
       $('eper').textContent = '';
     } else if (eView === 'month') {
       const pre = eYear + '-' + String(eMonth).padStart(2, '0'), prePrev = (eYear - 1) + '-' + String(eMonth).padStart(2, '0');
@@ -173,6 +223,7 @@
       $('eprev').disabled = eYear < firstY || (eYear === firstY && eMonth <= firstM);
       $('enext').disabled = eYear > ty || (eYear === ty && eMonth >= tm);
       c1 += (c1 ? ' · ' : '') + delta(s1, sp);
+      c1 += outVs(pre, prePrev);
     } else {
       for (let m = 1; m <= 12; m++) {
         const pre = eYear + '-' + String(m).padStart(2, '0'), prePrev = (eYear - 1) + '-' + String(m).padStart(2, '0');
@@ -186,6 +237,7 @@
       $('eper').textContent = String(eYear);
       $('eprev').disabled = eYear <= firstY; $('enext').disabled = eYear >= ty;
       c1 += (c1 ? ' · ' : '') + delta(s1, sp);
+      c1 += outVs(String(eYear), String(eYear - 1));
     }
     $('el1').textContent = l1; $('e7').textContent = kwh(tot(s1)); $('c7').textContent = c1;
     $('eml').textContent = l2; $('em').textContent = s2.n ? kwh(tot(s2)) : '–'; $('cm').textContent = c2;
@@ -199,6 +251,8 @@
       return '<div class="bar' + (x.part ? ' part' : '') + '" data-k="' + x.key + '" data-kind="' + x.kind + '" aria-pressed="' + (pickKey === x.key) + '">' + ghost +
         '<i class="k" style="height:' + h(x.cur.bed) + '"></i><i class="lv" style="height:' + h(x.cur.liv) + '"></i></div>';
     }).join('');
+    items.forEach(x => { x.t = x.kind === 'day' ? (wx[x.key] != null ? wx[x.key] : null) : wxOf(x.key); });
+    drawWx(items);
     $('bl').innerHTML = items.map(x => '<span>' + x.lab + '</span>').join('');
     $('eleg3').textContent = eCmp && eView !== 'days' ? 'Dashed outline = a year earlier' : 'Faded bar = still counting';
 
@@ -210,11 +264,30 @@
         : MON[+pick.key.slice(5) - 1] + ' ' + pick.key.slice(0, 4);
       $('eday').textContent = name + ': living ' + kwh(x.liv) + ', kids ' + kwh(x.bed) + ' (' + (x.est ? '≈' : '') + nightPct + '% night)' +
         (money(x) ? ' · ' + money(x) : '') + (pick.part ? ' so far' : '') +
-        (pick.prev != null ? ' · a year earlier ' + kwh(pick.prev) : '');
+        (pick.prev != null ? ' · a year earlier ' + kwh(pick.prev) : '') +
+        (pick.t != null ? ' · ' + deg(pick.t) + ' outside' : '');
     } else $('eday').textContent = 'Tap a bar for details.';
+    $('ewx').textContent = wxLink(M, today);
     $('enote').textContent = 'Data starts 14 Oct 2026 (Adax keeps only 7 days; the hub keeps everything since). Night tariff: 22:00–06:00 Nov–Mar, 23:00–07:00 Apr–Oct. Days before 22 Oct have no day/night split, so their cost is estimated (≈).';
   }
 
+  /* The temperature line over the bars, in pixels measured from the bars themselves,
+     so each point sits on its bar. Its own scale: coldest at the bottom, warmest at the top. */
+  function drawWx(items) {
+    const box = $('bars'), old = box.querySelector('.tline'); if (old) old.remove();
+    const pts = items.map((x, i) => [x.t, box.children[i], x.future]).filter(p => p[0] != null && !p[2]);
+    if (pts.length < 2) return;
+    const W = box.clientWidth, H = box.clientHeight, x0 = box.getBoundingClientRect().left;
+    const ts = pts.map(p => p[0]), lo = Math.min(...ts) - 2, hi = Math.max(...ts) + 2;
+    const xy = pts.map(([t, el]) => { const r = el.getBoundingClientRect(); return [r.left - x0 + r.width / 2, 6 + (H - 12) * (1 - (t - lo) / (hi - lo)), t]; });
+    box.insertAdjacentHTML('beforeend', '<svg class="tline" width="' + W + '" height="' + H + '" aria-hidden="true">' +
+      '<polyline points="' + xy.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ') + '"/>' +
+      xy.map(p => '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3" fill="' + tempColor(p[2]) + '"/>').join('') +
+      '<text x="' + (W - 2) + '" y="11" text-anchor="end">' + deg(hi - 2) + '</text><text x="' + (W - 2) + '" y="' + (H - 3) + '" text-anchor="end">' + deg(lo + 2) + '</text></svg>');
+  }
+  // Redraw when the chart changes size: a turned phone, or the page shown after the
+  // sign-in screen, which hid it while the first drawing measured zero width.
+  if (window.ResizeObserver) { let lw = 0; new ResizeObserver(() => { const w = $('bars').clientWidth; if (w && w !== lw && st && st.energy) { lw = w; renderEnergy(); } }).observe($('bars')); }
   $('eview').addEventListener('click', e => {
     const b = e.target.closest('button[data-v]'); if (!b) return;
     eView = b.dataset.v; pickKey = null; keepView(); renderEnergy();
