@@ -115,40 +115,19 @@
   }
   const dur = ms => { const m = Math.round(ms / 6e4); return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
   function renderSun() {
-    const now = Date.now(), today = sunDay(now);
-    const yest = sunDay(now - 864e5), tom = sunDay(now + 864e5);
-    let mode, f, from, to;
-    if (now < today.rise) { mode = 'night'; from = yest.set; to = today.rise; }
-    else if (now < today.set) { mode = 'day'; from = today.rise; to = today.set; }
-    else { mode = 'night'; from = today.set; to = tom.rise; }
-    f = Math.max(0, Math.min(1, (now - from) / (to - from)));
-    const X = q => 22 + 276 * q, HZ = 96;
-    const dayY = q => HZ - 78 * Math.sin(Math.PI * q), nightY = q => HZ + 22 * Math.sin(Math.PI * q);
-    const path = (fy, a, b) => { let d = ''; for (let i = 0; i <= 40; i++) { const q = a + (b - a) * i / 40; d += (i ? 'L' : 'M') + X(q).toFixed(1) + ' ' + fy(q).toFixed(1); } return d; };
-    const sx = X(f), sy = mode === 'day' ? dayY(f) : nightY(f);
-    const col = mode === 'day' ? 'var(--warm)' : 'var(--cold)';
-    const travelled = mode === 'day'
-      ? '<path d="' + path(dayY, 0, f) + ' L' + sx.toFixed(1) + ' ' + HZ + ' L' + X(0) + ' ' + HZ + 'Z" fill="url(#sunfill)"/>' +
-        '<path d="' + path(dayY, 0, f) + '" stroke="var(--warm)" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
-      : '<path d="' + path(nightY, 0, f) + '" stroke="var(--cold)" stroke-width="2" fill="none" stroke-linecap="round" opacity=".8"/>';
-    $('sunsvg').innerHTML =
-      '<defs><linearGradient id="sunfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF8A3D" stop-opacity=".35"/><stop offset="1" stop-color="#FF8A3D" stop-opacity="0"/></linearGradient>' +
-      '<radialGradient id="sunglow"><stop offset="0" stop-color="' + (mode === 'day' ? '#FFB36B' : '#8FD0FF') + '" stop-opacity=".9"/><stop offset="1" stop-color="' + (mode === 'day' ? '#FF8A3D' : '#5BB4FF') + '" stop-opacity="0"/></radialGradient></defs>' +
-      '<path d="' + path(dayY, 0, 1) + '" stroke="rgba(255,255,255,.14)" stroke-width="1.5" stroke-dasharray="3 5" fill="none"/>' +
-      '<path d="' + path(nightY, 0, 1) + '" stroke="rgba(255,255,255,.08)" stroke-width="1.5" stroke-dasharray="2 5" fill="none"/>' +
-      '<line x1="8" y1="' + HZ + '" x2="312" y2="' + HZ + '" stroke="rgba(255,255,255,.18)" stroke-width="1"/>' +
-      travelled +
-      '<circle class="halo" cx="' + sx.toFixed(1) + '" cy="' + sy.toFixed(1) + '" r="22" fill="url(#sunglow)"/>' +
-      '<circle cx="' + sx.toFixed(1) + '" cy="' + sy.toFixed(1) + '" r="' + (mode === 'day' ? 8 : 6) + '" fill="' + col + '" style="filter:drop-shadow(0 0 6px ' + (mode === 'day' ? '#FF8A3D' : '#5BB4FF') + ')"/>' +
-      (mode === 'night' ? '<circle cx="' + (sx + 2.6).toFixed(1) + '" cy="' + (sy - 1.8).toFixed(1) + '" r="5" fill="var(--card)"/>' : '');
-    $('srise').textContent = hm(today.rise);
-    $('sset').textContent = hm(today.set);
-    if (mode === 'day') { $('snowl').textContent = 'Daylight left'; $('snow').textContent = dur(today.set - now); }
-    else { $('snowl').textContent = 'Sunrise in'; $('snow').textContent = dur(to - now); }
-    const lim = st && st.warmLimit != null;
-    $('snote').textContent = 'Day length ' + dur(today.set - today.rise) +
-      (mode === 'day' ? ' · living room limit 19° until ' + hm(today.set) + ', then 21°' : ' · living room limit 21° until ' + hm(to) + ', then 19°') +
-      (lim && st.outside != null ? ' · now ' + (Math.round(st.outside * 10) / 10) + '° outside' : '');
+    const now = Date.now(), today = sunDay(now), yest = sunDay(now - 864e5), tom = sunDay(now + 864e5);
+    let day, from, to;
+    if (now < today.rise) { day = false; from = yest.set; to = today.rise; }
+    else if (now < today.set) { day = true; from = today.rise; to = today.set; }
+    else { day = false; from = today.set; to = tom.rise; }
+    const f = Math.max(0, Math.min(1, (now - from) / (to - from)));
+    $('sun').style.setProperty('--sc', day ? 'var(--warm)' : 'var(--cold)');
+    $('sa').textContent = (day ? '☀︎ ' : '☾ ') + hm(from);
+    $('sb').textContent = hm(to);
+    $('sfill').style.width = (f * 100) + '%';
+    $('sdot').style.left = (f * 100) + '%';
+    $('snote').textContent = (day ? 'Sunset in ' + dur(to - now) + ' · living room limit 19°, then 21°'
+                                  : 'Sunrise in ' + dur(to - now) + ' · living room limit 21°, then 19°');
   }
   try { renderSun(); } catch (e) {}
   setInterval(() => { try { renderSun(); } catch (e) {} }, 60e3);
