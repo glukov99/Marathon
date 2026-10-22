@@ -66,14 +66,62 @@
       `<div class="sub">days of leave left of ${+c.allow || 0}. ${used} booked in trips.</div>` +
       (inYear.length ? `<div style="margin-top:12px">${inYear.map(t => `<div class="li">${esc(t.name)}<span>${Hol.used([t], yr, b)} days</span></div>`).join('')}</div>` : '') +
       `<p class="sub">Counts Monday to Friday inside each trip and skips bank holidays.</p></div>` +
+      bestCard(c, b) + calCard(c, b) +
       `<div class="card"><h2>Bank holidays</h2><div style="margin-top:8px">${nextBank.length ? nextBank.map(e =>
         `<div class="li">${esc(e.title)}<span>${fd(e.date)}</span></div>`).join('') : '<div class="sub">Loading from gov.uk…</div>'}</div></div>` +
       `<div class="card"><h2>Your settings</h2>` +
       `<div class="two"><div class="fld"><label for="sa">Leave a year (days)</label><input id="sa" inputmode="numeric" value="${+c.allow || ''}"></div>` +
       `<div class="fld"><label for="ss">Leave year starts</label><select id="ss">${Array.from({ length: 12 }, (_, i) =>
         `<option value="${i + 1}"${+c.start === i + 1 ? ' selected' : ''}>1 ${new Date(2026, i, 1).toLocaleDateString('en-GB', { month: 'long' })}</option>`).join('')}</select></div></div>` +
+      `<div class="fld"><label for="sk">School holidays</label><select id="sk"><option value="">I avoid them: cheaper flights</option>` +
+      `<option value="1"${c.kids ? ' selected' : ''}>I travel in them (children at school)</option></select></div>` +
       `<div class="fld"><label for="sr">Bank holidays for</label><select id="sr">${REG.map(([k, n]) => `<option value="${k}"${c.region === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>` +
       `<p><button class="btn" data-act="saveset">Save</button></p></div>`;
+  }
+
+  /* ---------- Best times off ----------
+     Bank holiday bridges (most days off per leave day) and, for people who avoid school
+     holidays, the quieter weeks right after schools go back. Next 12 months. */
+  function best(c, b) {
+    const d = today(), end = Hol.add(d, 365), sl = Hol.school(c.region);
+    const br = Hol.bridges(Hol.add(d, 1), end, b, 5).map(w => Object.assign(w, { sc: Hol.inSchool(w.from, w.to, sl), kind: 'bridge' }));
+    const qw = c.kids ? [] : Hol.quietWeeks(Hol.add(d, 1), end, sl, b).map(w => Object.assign(w, { kind: 'quiet' }));
+    const keep = c.kids ? br.filter(w => w.sc) : br;
+    return keep.concat(qw).sort((x, y) => x.from.localeCompare(y.from));
+  }
+  function bestCard(c, b) {
+    const list = best(c, b), booked = w => trips().some(x => x.from <= w.to && x.to >= w.from);
+    const why = w => w.kind === 'quiet' ? 'term time, after the ' + esc(w.after.toLowerCase()) + ': cheaper to fly'
+      : w.sc ? esc(w.sc[2]) + (c.kids ? '' : ': busier, dearer flights') : 'term time: cheaper to fly';
+    const row = w => `<div class="li" style="align-items:center"><div><b style="font-weight:700">${fd(w.from)} – ${fd(w.to)}</b>` +
+      `<div class="sub">${w.days} days off for ${w.leave} leave day${w.leave === 1 ? '' : 's'} · ${why(w)}</div></div>` +
+      (booked(w) ? '<span>booked</span>' : `<button class="btn sm ghost" data-act="plan" data-f="${w.from}" data-t="${w.to}">Plan it</button>`) + '</div>';
+    return `<div class="card"><h2>Best times off</h2><div class="sub" style="margin:4px 0 8px">` +
+      (c.kids ? 'Bank holidays that stretch your leave furthest, inside the school holidays.'
+        : 'Where bank holidays stretch your leave furthest, and the quieter weeks just after schools go back, when flights cost less.') +
+      `</div>${list.length ? list.map(row).join('') : '<div class="sub">Nothing in the next 12 months.</div>'}` +
+      `<p class="sub">School dates are the usual ones for your part of the UK; your council's can differ by a few days.</p></div>`;
+  }
+  function calCard(c, b) {
+    const d = today(), sl = Hol.school(c.region), sug = {}, tr = {};
+    best(c, b).forEach(w => { for (let x = w.from; x <= w.to; x = Hol.add(x, 1)) if (!Hol.isOff(x, b)) sug[x] = 1; });
+    trips().forEach(t => { for (let x = t.from; x <= t.to; x = Hol.add(x, 1)) tr[x] = 1; });
+    const months = [];
+    for (let i = 0; i < 12; i++) {
+      const m = new Date(+d.slice(0, 4), +d.slice(5, 7) - 1 + i, 1), y = m.getFullYear(), mo = m.getMonth();
+      const n = new Date(y, mo + 1, 0).getDate(), lead = (m.getDay() + 6) % 7;
+      let cells = '<i></i>'.repeat(lead);
+      for (let day = 1; day <= n; day++) {
+        const s = `${y}-${String(mo + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const cls = [tr[s] ? 'tr' : sug[s] ? 'sg' : '', b[s] ? 'bh' : '', Hol.inSchool(s, s, sl) ? 'sc' : '',
+          Hol.isOff(s, {}) ? 'we' : '', s === d ? 'td' : ''].filter(Boolean).join(' ');
+        cells += `<i class="${cls}"${b[s] ? ` title="${esc(b[s])}"` : ''}>${day}</i>`;
+      }
+      months.push(`<div class="mo"><div class="mh">${m.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}</div><div class="mg">${cells}</div></div>`);
+    }
+    return `<div class="card"><h2>Your year</h2><div class="cal">${months.join('')}</div>` +
+      `<div class="lg"><span><i class="bh"></i>Bank holiday</span><span><i class="sc"></i>School holiday</span>` +
+      `<span><i class="sg"></i>Suggested leave</span><span><i class="tr"></i>Your trips</span></div></div>`;
   }
 
   /* ---------- Friends ---------- */
@@ -132,6 +180,7 @@
     const a = b.dataset.act, id = b.dataset.id;
     if (a === 'close') return close();
     if (a === 'new') return tripForm();
+    if (a === 'plan') return tripForm({ name: 'Time off', from: b.dataset.f, to: b.dataset.t });
     if (a === 'edit') return tripForm(Kit.get('trips', id));
     if (a === 'past') { showPast = !showPast; render(); return; }
     if (a === 'ck') { const t = Kit.get('trips', id), ck = Object.assign({}, t.ck); ck[b.dataset.k] = !ck[b.dataset.k]; Kit.put('trips', Object.assign({}, t, { ck })); render(); return; }
@@ -150,7 +199,7 @@
     }
     if (a === 'saveset') {
       const allow = Math.max(0, Math.round(+$('sa').value || 0));
-      Kit.put('settings', Object.assign({}, Kit.get('settings', 'hol') || {}, { id: 'hol', allow, start: +$('ss').value, region: $('sr').value }));
+      Kit.put('settings', Object.assign({}, Kit.get('settings', 'hol') || {}, { id: 'hol', allow, start: +$('ss').value, region: $('sr').value, kids: !!$('sk').value }));
       render(); toast('Saved'); return;
     }
     if (a === 'fnew') return friendForm();

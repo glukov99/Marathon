@@ -30,4 +30,17 @@ assert.strictEqual(H.friend({ every: 14 }, '2026-10-20').due, true, 'never met i
 const ics = H.ics([{ id: 't1', name: 'Rome, with Sam', from: '2026-11-02', to: '2026-11-06', place: 'Rome' }], '20261022T120000Z');
 assert.ok(ics.includes('DTSTART;VALUE=DATE:20261102') && ics.includes('DTEND;VALUE=DATE:20261107'));
 assert.ok(ics.includes('SUMMARY:Rome\\, with Sam'), 'commas escaped');
+// best windows: Easter 2027 in England (Good Friday 26 Mar, Easter Monday 29 Mar)
+const ew = { '2027-03-26': 1, '2027-03-29': 1 };
+const br = H.bridges('2027-03-01', '2027-04-30', ew, 5);
+const easter = br.find(w => w.from <= '2027-03-26' && w.to >= '2027-03-29');
+assert.ok(easter && easter.days / easter.leave >= 2.5, 'Easter turns 4 leave days into 10: ' + JSON.stringify(easter));
+assert.ok(br.every(w => w.leave >= 1 && w.leave <= 5), 'never a free weekend, never more than 5 days');
+assert.ok(br.every((w, i) => !br.some((o, j) => j !== i && w.from <= o.to && w.to >= o.from)), 'no overlaps');
+assert.deepStrictEqual(H.bridges('2026-11-02', '2026-11-27', {}, 5), [], 'no bank holidays: nothing beats a plain week');
+// quiet weeks start on a Saturday a week after schools return, and are term time
+const ql = H.school('england-and-wales'), qw = H.quietWeeks('2027-01-01', '2027-12-31', ql, ew);
+assert.ok(qw.length >= 4 && qw.every(w => new Date(w.from + 'T12:00Z').getUTCDay() === 6 && !H.inSchool(w.from, w.to, ql)));
+assert.ok(qw.find(w => w.after === 'Easter holidays').from === '2027-04-17', 'Easter ends Sun 11 Apr; back Mon 12; the week after starts Sat 17');
+assert.strictEqual(H.inSchool('2027-08-01', '2027-08-07', ql)[2], 'Summer holidays');
 console.log('holidays ok');

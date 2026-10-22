@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Holidays</title>
-<link rel="stylesheet" href="../kit.css?v=202610222238">
+<link rel="stylesheet" href="../kit.css?v=202610222252">
 <style>
 .hero{margin-top:6px;font-size:15px;color:var(--soft)}
 .hero b{color:var(--ink);font-size:22px;font-weight:800;letter-spacing:-.01em;display:block}
@@ -25,6 +25,19 @@
 .fr .n span{font-size:12.5px;color:var(--soft)}
 .fr.due .n span{color:var(--clay)}
 .fld{display:grid;gap:4px;margin-top:10px}
+.cal{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px 12px;margin-top:10px}
+.mh{font-size:12px;font-weight:700;color:var(--soft);margin-bottom:4px}
+.mg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.mg i,.lg i{font-style:normal;font-size:10.5px;text-align:center;line-height:19px;border-radius:5px;color:var(--soft)}
+.mg i.we{color:var(--faint)}
+.mg i.sc,.lg i.sc{background:rgba(110,154,151,.28)}
+.mg i.bh{color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--warn)}
+.mg i.sg,.lg i.sg{background:var(--sand);color:#1E2522;font-weight:700}
+.mg i.tr,.lg i.tr{background:var(--acc);color:#1E2522;font-weight:700}
+.mg i.td{outline:1.5px solid var(--ink)}
+.lg{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;font-size:12px;color:var(--soft)}
+.lg i{display:inline-block;width:14px;height:14px;line-height:14px;margin-right:5px;vertical-align:-2px}
+.lg i.bh{box-shadow:inset 0 0 0 1.5px var(--warn)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 </style>
 </head>
@@ -45,8 +58,8 @@
   <div id="kit-status"></div>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../kit.js?v=202610222238"></script>
-<script src="hol.js?v=202610222238"></script>
-<script src="app.js?v=202610222238"></script>
+<script src="../kit.js?v=202610222252"></script>
+<script src="hol.js?v=202610222252"></script>
+<script src="app.js?v=202610222252"></script>
 </body>
 </html>
