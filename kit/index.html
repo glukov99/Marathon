@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Your hub</title>
+<link rel="stylesheet" href="kit.css?v=202610222228">
+<style>
+.t{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--rule)}
+.t:first-of-type{border-top:0}
+.t .sl{flex:0 0 74px;font-size:12px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;padding-top:2px}
+.t b{font-weight:600;flex:1}
+.t span{font-size:12.5px;color:var(--soft)}
+.card-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.card-h a{font-size:13px;font-weight:700;color:var(--acc);text-decoration:none}
+</style>
+</head>
+<body>
+<nav id="kit-bar" aria-label="Pages"></nav>
+<main class="wrap">
+  <div class="k" id="hk"></div>
+  <h1 id="hi">Today</h1>
+  <div class="card" id="today"></div>
+  <div class="card" id="shopc"></div>
+  <p class="sub" style="margin-top:24px"><span id="who"></span> · <a href="#" id="out" style="color:var(--soft)">Sign out on this device</a></p>
+  <div id="kit-status"></div>
+</main>
+<script src="kit.js?v=202610222228"></script>
+<script src="meals/plan.js?v=202610222228"></script>
+<script>
+/* Home: today's meals at the person's target, and what is left to buy. */
+Kit.ready.then(async s => {
+  const $ = id => document.getElementById(id);
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  $('hk').textContent = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('hi').textContent = 'Hello' + (s.name ? ', ' + s.name : '');
+  $('who').textContent = s.email;
+  $('out').onclick = e => { e.preventDefault(); if (confirm('Sign out on this device?')) Kit.signOut(); };
+  const SL = { breakfast: 'Breakfast', snack: 'Snack', lunch: 'Lunch', dinner: 'Dinner' };
+  function draw() {
+    let D = null; try { D = JSON.parse(localStorage.getItem('kit-ideas')); } catch (e) {}
+    const day = new Date().toLocaleDateString('en-CA'), tg = +((Kit.get('settings', 'me') || {}).target) || 0;
+    const rows = Plan.SLOTS.map(sl => {
+      const w = Kit.get('week', day + '_' + sl); let name = '', kc = '';
+      if (w && w.meal.startsWith('own:')) { const o = Kit.get('meals', w.meal.slice(4)); if (o) { name = o.name; kc = o.kcal ? o.kcal + ' kcal' : ''; } }
+      else if (w && D) { const i = D.ideas.find(x => x[0] === w.meal); if (i) { name = i[2]; kc = Math.round(Plan.kcal(i, D.products) * Plan.factor(i, sl, tg, D.products, D.shares)) + ' kcal'; } }
+      return `<div class="t"><span class="sl">${SL[sl]}</span><b>${name ? esc(name) : '<span>Nothing planned</span>'}</b><span>${kc}</span></div>`;
+    }).join('');
+    $('today').innerHTML = `<div class="card-h"><h2>Today's meals</h2><a href="meals/">Plan</a></div>${rows}`;
+    const ticks = Kit.list('shop').filter(x => x.id.startsWith('t-')).length;
+    $('shopc').innerHTML = `<div class="card-h"><h2>Shopping</h2><a href="meals/#shop">Open</a></div>` +
+      `<div class="sub">${ticks ? ticks + ' ticked off so far.' : 'Built from your week of meals.'}</div>`;
+  }
+  draw();
+  ['week', 'meals', 'settings', 'shop'].forEach(c => Kit.on(c, draw));
+  await Promise.all(['settings', 'week', 'meals', 'shop'].map(Kit.pull));
+  if (!localStorage.getItem('kit-ideas')) {
+    try { const j = await Kit.api('ideas'); localStorage.setItem('kit-ideas', JSON.stringify({ ideas: j.ideas, products: j.products, shares: j.shares, swaps: j.swaps })); draw(); } catch (e) {}
+  }
+});
+</script>
+</body>
+</html>

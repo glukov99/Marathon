@@ -36,7 +36,8 @@ console.log('scripts ok: ' + checked + ' shared files are loaded where they are 
 
 // Every page carries the shared menu, and the menu lists every page.
 const nav = fs.readFileSync(path.join(root, 'shared/nav.js'), 'utf8');
-fs.readdirSync(root).filter(d => fs.existsSync(path.join(root, d, 'index.html'))).forEach(d => {
+// kit/ is the separate hub for other people, with its own bar and sign-in.
+fs.readdirSync(root).filter(d => d !== 'kit' && fs.existsSync(path.join(root, d, 'index.html'))).forEach(d => {
   assert.ok(/<div id="lhn"><\/div><script src="[^"]*shared\/nav\.js/.test(
     fs.readFileSync(path.join(root, d, 'index.html'), 'utf8')), d + '/index.html does not load the menu');
   assert.ok(nav.includes(`['${d}/'`), d + '/ is missing from GROUPS in shared/nav.js');

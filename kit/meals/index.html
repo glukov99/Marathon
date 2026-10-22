@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Meals</title>
+<link rel="stylesheet" href="../kit.css?v=202610222228">
+<style>
+.day{margin-top:14px}
+.day .dh{display:flex;justify-content:space-between;align-items:baseline}
+.slot{display:flex;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--rule);cursor:pointer}
+.slot:first-of-type{border-top:0}
+.slot .sl{flex:0 0 74px;font-size:12px;font-weight:700;color:var(--faint);text-transform:uppercase;letter-spacing:.05em}
+.slot .nm{flex:1;min-width:0;font-weight:600}
+.slot .nm.none{color:var(--faint);font-weight:500}
+.slot .kc{font-size:12.5px;color:var(--soft);white-space:nowrap}
+.det{padding:4px 0 12px 84px;font-size:13.5px}
+.det ul{margin:4px 0 8px;padding-left:16px}
+.det li{margin:2px 0}
+.det li b{font-weight:700}
+.tip{font-size:12.5px;color:var(--soft);margin-bottom:8px}
+.idea{padding:10px 0;border-top:1px solid var(--rule);cursor:pointer}
+.idea:first-child{border-top:0}
+.idea .r{display:flex;justify-content:space-between;gap:10px}
+.idea .r b{font-weight:600}
+.shop li{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--rule);list-style:none}
+.shop{margin:0;padding:0}
+.shop li:first-child{border-top:0}
+.shop li span{flex:1}
+.shop li em{font-style:normal;color:var(--soft);font-size:13px}
+.shop li.done span,.shop li.done em{text-decoration:line-through;color:var(--faint)}
+.box{flex:0 0 24px;height:24px;border-radius:7px;border:1.5px solid var(--rule);background:none;cursor:pointer;padding:0}
+.done .box{background:var(--acc);border-color:var(--acc)}
+.big{font-size:34px;font-weight:800;letter-spacing:-.02em}
+.swap h3{font-size:14px;margin:14px 0 4px}
+.swap ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--soft)}
+</style>
+</head>
+<body>
+<nav id="kit-bar" aria-label="Pages"></nav>
+<main class="wrap">
+  <div class="k">Meals</div>
+  <h1>This week</h1>
+  <div class="sub" id="tline"></div>
+  <div class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-t="week" aria-selected="true">Week</button>
+    <button role="tab" data-t="ideas" aria-selected="false">Ideas</button>
+    <button role="tab" data-t="shop" aria-selected="false">Shopping</button>
+    <button role="tab" data-t="target" aria-selected="false">Target</button>
+  </div>
+  <section id="t-week"></section>
+  <section id="t-ideas" class="hidden"></section>
+  <section id="t-shop" class="hidden"></section>
+  <section id="t-target" class="hidden"></section>
+  <div id="kit-status"></div>
+</main>
+<div class="toast" id="toast"></div>
+<script src="../kit.js?v=202610222228"></script>
+<script src="plan.js?v=202610222228"></script>
+<script src="app.js?v=202610222228"></script>
+</body>
+</html>
