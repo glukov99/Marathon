@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="../shared/auth.js?v=202610221818"></script>
+<script src="../shared/auth.js?v=202610221825"></script>
 <title>Heating — Life hub</title>
 <style>
 :root{
@@ -27,6 +27,16 @@ button,input{font:inherit;color:inherit}
 .out .dot{width:10px;height:10px;border-radius:50%;background:var(--c,var(--faint));box-shadow:0 0 12px var(--c,transparent)}
 .sub{font-size:13px;color:var(--soft)}
 .panel{background:var(--card);border:1px solid var(--rule);border-radius:3px;margin-top:14px;box-shadow:var(--shadow);padding:14px 16px}
+.sun{margin-top:16px;border-radius:26px;padding:14px 16px 14px;background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 50%),var(--card);box-shadow:0 10px 28px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden}
+.sun svg{display:block;width:100%;height:auto}
+.sunrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:2px}
+.sunrow div{display:flex;flex-direction:column;min-width:0}
+.sunrow .mid{text-align:center}.sunrow .r{text-align:right}
+.sunrow .sl{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.sunrow b{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.sunnote{margin-top:8px;text-align:center}
+@keyframes sunpulse{0%,100%{opacity:.55}50%{opacity:.9}}
+.sun .halo{animation:sunpulse 4s ease-in-out infinite}
 .rooms{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
 @media (min-width:640px){.rooms{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .room{position:relative;overflow:hidden;border-radius:26px;padding:20px 18px 16px;background:var(--card);
@@ -125,10 +135,10 @@ button,input{font:inherit;color:inherit}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610221818">
+<link rel="stylesheet" href="../shared/theme.css?v=202610221825">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610221818"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610221825"></script>
 <main class="wrap">
   <header class="hero">
     <div><div class="k">Home</div><h1>Heating</h1></div>
@@ -136,6 +146,15 @@ button,input{font:inherit;color:inherit}
   </header>
   <div class="sub" id="upd">Loading…</div>
   <div id="nosync" class="panel hidden">Sync is not set up on this device. Set it up on the <a href="../training/">Training</a> page (Apps Script URL + token), then come back.</div>
+  <section class="sun" id="sun" aria-label="Sun today">
+    <svg id="sunsvg" viewBox="0 0 320 128" role="img" aria-label="Where the sun is"></svg>
+    <div class="sunrow">
+      <div><span class="sl">Sunrise</span><b id="srise">–</b></div>
+      <div class="mid"><span class="sl" id="snowl">Daylight</span><b id="snow">–</b></div>
+      <div class="r"><span class="sl">Sunset</span><b id="sset">–</b></div>
+    </div>
+    <div class="sub sunnote" id="snote"></div>
+  </section>
   <section class="rooms" id="rooms"></section>
 
   <div class="sec">Modes</div>
@@ -179,8 +198,8 @@ button,input{font:inherit;color:inherit}
   <p class="foot">The brain runs every 10 minutes in Apps Script. It sets both heaters from the clock, the outside temperature in Plovdiv and these modes. Each heater gets a new command when its plan changes and once an hour, so a change made in the Adax app lasts up to an hour.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610221818"></script>
-<script src="icons.js?v=202610221818"></script>
-<script src="app.js?v=202610221818"></script>
+<script src="../shared/sync.js?v=202610221825"></script>
+<script src="icons.js?v=202610221825"></script>
+<script src="app.js?v=202610221825"></script>
 </body>
 </html>

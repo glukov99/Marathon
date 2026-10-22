@@ -86,11 +86,72 @@
     setTog('b-keep', st.keepOn.on, null, st.keepOn.on ? 'On until ' + hm(st.keepOn.until) : 'Ignore me leaving');
     setTog('b-hol', st.holiday.on, null, st.holiday.on ? 'Back ' + fmt(st.holiday.until) : 'All off until return');
     renderEnergy();
+    try { renderSun(); } catch (e) {}
     if (!wxAsked && st.energy) { wxAsked = true; loadWx(); }
     $('log').innerHTML = (st.log || []).length ? st.log.map(l =>
       '<li><time>' + fmt(l.at).replace(/^\w+ /, '') + '</time><span>' + l.msg.replace(/</g, '&lt;') + '</span></li>').join('')
       : '<li class="empty">Nothing yet</li>';
   }
+
+  /* ---------- sun: sunrise/sunset for Plovdiv (NOAA formula, about ±1 min) ---------- */
+  const LAT = 42.1354, LON = 24.7453, RAD = Math.PI / 180;
+  function sunEvent(y, mo, d, rise) {
+    const N = Math.round((Date.UTC(y, mo - 1, d) - Date.UTC(y, 0, 0)) / 864e5);
+    const lh = LON / 15, t = N + ((rise ? 6 : 18) - lh) / 24;
+    const M = 0.9856 * t - 3.289;
+    let L = (M + 1.916 * Math.sin(M * RAD) + 0.020 * Math.sin(2 * M * RAD) + 282.634 + 360) % 360;
+    let RA = (Math.atan(0.91764 * Math.tan(L * RAD)) / RAD + 360) % 360;
+    RA = (RA + Math.floor(L / 90) * 90 - Math.floor(RA / 90) * 90) / 15;
+    const sinD = 0.39782 * Math.sin(L * RAD), cosD = Math.cos(Math.asin(sinD));
+    const cosH = (Math.cos(90.833 * RAD) - sinD * Math.sin(LAT * RAD)) / (cosD * Math.cos(LAT * RAD));
+    if (cosH > 1 || cosH < -1) return null;
+    const H = (rise ? 360 - Math.acos(cosH) / RAD : Math.acos(cosH) / RAD) / 15;
+    const UT = ((H + RA - 0.06571 * t - 6.622 - lh) % 24 + 24) % 24;
+    return Date.UTC(y, mo - 1, d) + UT * 3600e3;
+  }
+  function sunDay(ms) {
+    const p = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(ms)).split('-').map(Number);
+    return { rise: sunEvent(p[0], p[1], p[2], true), set: sunEvent(p[0], p[1], p[2], false) };
+  }
+  const dur = ms => { const m = Math.round(ms / 6e4); return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
+  function renderSun() {
+    const now = Date.now(), today = sunDay(now);
+    const yest = sunDay(now - 864e5), tom = sunDay(now + 864e5);
+    let mode, f, from, to;
+    if (now < today.rise) { mode = 'night'; from = yest.set; to = today.rise; }
+    else if (now < today.set) { mode = 'day'; from = today.rise; to = today.set; }
+    else { mode = 'night'; from = today.set; to = tom.rise; }
+    f = Math.max(0, Math.min(1, (now - from) / (to - from)));
+    const X = q => 22 + 276 * q, HZ = 96;
+    const dayY = q => HZ - 78 * Math.sin(Math.PI * q), nightY = q => HZ + 22 * Math.sin(Math.PI * q);
+    const path = (fy, a, b) => { let d = ''; for (let i = 0; i <= 40; i++) { const q = a + (b - a) * i / 40; d += (i ? 'L' : 'M') + X(q).toFixed(1) + ' ' + fy(q).toFixed(1); } return d; };
+    const sx = X(f), sy = mode === 'day' ? dayY(f) : nightY(f);
+    const col = mode === 'day' ? 'var(--warm)' : 'var(--cold)';
+    const travelled = mode === 'day'
+      ? '<path d="' + path(dayY, 0, f) + ' L' + sx.toFixed(1) + ' ' + HZ + ' L' + X(0) + ' ' + HZ + 'Z" fill="url(#sunfill)"/>' +
+        '<path d="' + path(dayY, 0, f) + '" stroke="var(--warm)" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
+      : '<path d="' + path(nightY, 0, f) + '" stroke="var(--cold)" stroke-width="2" fill="none" stroke-linecap="round" opacity=".8"/>';
+    $('sunsvg').innerHTML =
+      '<defs><linearGradient id="sunfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF8A3D" stop-opacity=".35"/><stop offset="1" stop-color="#FF8A3D" stop-opacity="0"/></linearGradient>' +
+      '<radialGradient id="sunglow"><stop offset="0" stop-color="' + (mode === 'day' ? '#FFB36B' : '#8FD0FF') + '" stop-opacity=".9"/><stop offset="1" stop-color="' + (mode === 'day' ? '#FF8A3D' : '#5BB4FF') + '" stop-opacity="0"/></radialGradient></defs>' +
+      '<path d="' + path(dayY, 0, 1) + '" stroke="rgba(255,255,255,.14)" stroke-width="1.5" stroke-dasharray="3 5" fill="none"/>' +
+      '<path d="' + path(nightY, 0, 1) + '" stroke="rgba(255,255,255,.08)" stroke-width="1.5" stroke-dasharray="2 5" fill="none"/>' +
+      '<line x1="8" y1="' + HZ + '" x2="312" y2="' + HZ + '" stroke="rgba(255,255,255,.18)" stroke-width="1"/>' +
+      travelled +
+      '<circle class="halo" cx="' + sx.toFixed(1) + '" cy="' + sy.toFixed(1) + '" r="22" fill="url(#sunglow)"/>' +
+      '<circle cx="' + sx.toFixed(1) + '" cy="' + sy.toFixed(1) + '" r="' + (mode === 'day' ? 8 : 6) + '" fill="' + col + '" style="filter:drop-shadow(0 0 6px ' + (mode === 'day' ? '#FF8A3D' : '#5BB4FF') + ')"/>' +
+      (mode === 'night' ? '<circle cx="' + (sx + 2.6).toFixed(1) + '" cy="' + (sy - 1.8).toFixed(1) + '" r="5" fill="var(--card)"/>' : '');
+    $('srise').textContent = hm(today.rise);
+    $('sset').textContent = hm(today.set);
+    if (mode === 'day') { $('snowl').textContent = 'Daylight left'; $('snow').textContent = dur(today.set - now); }
+    else { $('snowl').textContent = 'Sunrise in'; $('snow').textContent = dur(to - now); }
+    const lim = st && st.warmLimit != null;
+    $('snote').textContent = 'Day length ' + dur(today.set - today.rise) +
+      (mode === 'day' ? ' · living room limit 19° until ' + hm(today.set) + ', then 21°' : ' · living room limit 21° until ' + hm(to) + ', then 19°') +
+      (lim && st.outside != null ? ' · now ' + (Math.round(st.outside * 10) / 10) + '° outside' : '');
+  }
+  try { renderSun(); } catch (e) {}
+  setInterval(() => { try { renderSun(); } catch (e) {} }, 60e3);
 
   /* ---------- energy ----------
      Each room/day: w = Wh, n = night-tariff Wh (null before 22 Oct 2026: then estimated).
