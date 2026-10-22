@@ -37,7 +37,11 @@
     return r.json();
   }
   async function api(action, body) {
-    const j = await post(Object.assign({ action, s: (ses() || {}).s }, body || {}));
+    const send = () => post(Object.assign({ action, s: (ses() || {}).s }, body || {}));
+    let j = await send();
+    // For a minute after a deploy Google can answer from the old version, which may not
+    // read what the new one stored and refuse a good session. Ask again before signing out.
+    if (j.error === 'signin') { await new Promise(r => setTimeout(r, 3000)); j = await send(); }
     if (j.error === 'signin') { ls.set('kit-session', null); gate('Please sign in again.'); throw new Error('signin'); }
     if (j.error) throw new Error(j.error);
     return j;
