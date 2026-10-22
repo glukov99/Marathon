@@ -79,7 +79,7 @@
     const o = $('out');
     o.style.setProperty('--c', tempColor(st.outside));
     o.lastElementChild.textContent = st.outside == null ? 'Outside: –' : Math.round(st.outside) + '° in Plovdiv';
-    $('upd').textContent = 'Updated ' + hm(st.lastRun || st.now) + (st.outside != null && st.warmLimit != null && st.outside >= st.warmLimit ? ' · warm outside, living room rests' : '') + (st.warmLimit != null ? ' · living room limit ' + st.warmLimit + '° (' + (st.isDay === false ? 'after sunset' : 'sun up') + ')' : '');
+    $('upd').textContent = 'Updated ' + hm(st.lastRun || st.now) + (st.outside != null && st.warmLimit != null && st.outside >= st.warmLimit ? ' · warm outside, living room rests' : '');
     $('b-home').setAttribute('aria-pressed', String(!st.away));
     $('b-away').setAttribute('aria-pressed', String(!!st.away));
     setTog('b-sammy', st.sammy.on, null, st.sammy.on ? 'On until ' + hm(st.sammy.until) : 'Kids room 20° by day');
