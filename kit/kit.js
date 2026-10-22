@@ -131,7 +131,7 @@
     const el = document.getElementById('kit-bar'); if (!el) return;
     const here = location.pathname.replace(/index\.html$/, '');
     const link = (p, n) => `<a href="${ROOT}${p}"${here.endsWith('/kit/' + p) ? ' aria-current="page"' : ''}>${n}</a>`;
-    el.innerHTML = link('', 'Home') + link('meals/', 'Meals');
+    el.innerHTML = link('', 'Home') + link('meals/', 'Meals') + link('holidays/', 'Holidays');
   }
 
   const s = ses();

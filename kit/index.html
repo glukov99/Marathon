@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Your hub</title>
-<link rel="stylesheet" href="kit.css?v=202610222235">
+<link rel="stylesheet" href="kit.css?v=202610222238">
 <style>
 .t{display:flex;gap:10px;padding:9px 0;border-top:1px solid var(--rule)}
 .t:first-of-type{border-top:0}
@@ -23,11 +23,13 @@
   <h1 id="hi">Today</h1>
   <div class="card" id="today"></div>
   <div class="card" id="shopc"></div>
+  <div class="card" id="holc"></div>
   <p class="sub" style="margin-top:24px"><span id="who"></span> · <a href="#" id="out" style="color:var(--soft)">Sign out on this device</a></p>
   <div id="kit-status"></div>
 </main>
-<script src="kit.js?v=202610222235"></script>
-<script src="meals/plan.js?v=202610222235"></script>
+<script src="kit.js?v=202610222238"></script>
+<script src="holidays/hol.js?v=202610222238"></script>
+<script src="meals/plan.js?v=202610222238"></script>
 <script>
 /* Home: today's meals at the person's target, and what is left to buy. */
 Kit.ready.then(async s => {
@@ -52,9 +54,18 @@ Kit.ready.then(async s => {
     $('shopc').innerHTML = `<div class="card-h"><h2>Shopping</h2><a href="meals/#shop">Open</a></div>` +
       `<div class="sub">${ticks ? ticks + ' ticked off so far.' : 'Built from your week of meals.'}</div>`;
   }
-  draw();
+  function hol() {
+    const d = new Date().toLocaleDateString('en-CA'), fd = x => new Date(x + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const trips = Kit.list('trips').filter(t => t.from && t.to && t.to >= d).sort((a, b) => a.from.localeCompare(b.from)), t = trips[0];
+    const due = Kit.list('friends').map(f => Object.assign({ name: f.name }, Hol.friend(f, d))).filter(x => x.due).sort((a, b) => b.over - a.over);
+    $('holc').innerHTML = `<div class="card-h"><h2>Holidays</h2><a href="holidays/">Open</a></div>` +
+      `<div class="sub">${t ? (t.from <= d ? 'Away now: ' + esc(t.name) : Hol.diff(d, t.from) + ' days to ' + esc(t.name) + ' (' + fd(t.from) + ')') : 'No trip planned yet.'}</div>` +
+      `<div class="sub" style="margin-top:4px">${due.length ? 'Time to see: ' + due.slice(0, 3).map(x => esc(x.name)).join(', ') + (due.length > 3 ? ' and ' + (due.length - 3) + ' more' : '') : 'Friends: everyone is up to date.'}</div>`;
+  }
+  draw(); hol();
   ['week', 'meals', 'settings', 'shop'].forEach(c => Kit.on(c, draw));
-  await Promise.all(['settings', 'week', 'meals', 'shop'].map(Kit.pull));
+  ['trips', 'friends'].forEach(c => Kit.on(c, hol));
+  await Promise.all(['settings', 'week', 'meals', 'shop', 'trips', 'friends'].map(Kit.pull));
   if (!localStorage.getItem('kit-ideas')) {
     try { const j = await Kit.api('ideas'); localStorage.setItem('kit-ideas', JSON.stringify({ ideas: j.ideas, products: j.products, shares: j.shares, swaps: j.swaps })); draw(); } catch (e) {}
   }
