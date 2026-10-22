@@ -91,7 +91,7 @@
   }
   function bestCard(c, b) {
     const list = best(c, b), booked = w => trips().some(x => x.from <= w.to && x.to >= w.from);
-    const why = w => w.kind === 'quiet' ? 'term time, after the ' + esc(w.after.toLowerCase()) + ': cheaper to fly'
+    const why = w => w.kind === 'quiet' ? 'term time, after the ' + esc(w.after.replace(/^(Summer|Mid)/, m => m.toLowerCase())) + ': cheaper to fly'
       : w.sc ? esc(w.sc[2]) + (c.kids ? '' : ': busier, dearer flights') : 'term time: cheaper to fly';
     const row = w => `<div class="li" style="align-items:center"><div><b style="font-weight:700">${fd(w.from)} – ${fd(w.to)}</b>` +
       `<div class="sub">${w.days} days off for ${w.leave} leave day${w.leave === 1 ? '' : 's'} · ${why(w)}</div></div>` +
