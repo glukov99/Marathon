@@ -81,13 +81,14 @@
     document.head.appendChild(sc);
   }
   async function signedIn(resp) {
-    const msg = document.getElementById('kit-msg'); msg.textContent = 'Checking…';
+    const msg = document.getElementById('kit-msg'), note = t => { msg.textContent = t; ls.set('kit-lastmsg', new Date().toISOString() + ' ' + t); };
+    note('Checking…');
     try {
       const r = await post({ action: 'auth', credential: resp.credential, device: navigator.platform || '' });
-      if (!r.ok) { msg.textContent = r.error || 'Sign-in failed.'; return; }
+      if (!r.ok) { note(r.error || 'Sign-in failed.'); return; }
       ls.set('kit-session', JSON.stringify({ s: r.s, email: r.email, name: r.name }));
       location.reload();
-    } catch (e) { msg.textContent = 'Offline. Try again.'; }
+    } catch (e) { note('Could not reach your hub: ' + (e.message || e)); }
   }
 
   /* ---------- lists: local first, merged by id ---------- */
