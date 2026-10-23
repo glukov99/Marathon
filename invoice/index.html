@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="../shared/auth.js?v=202610231940"></script>
+<title>New invoice — Life hub</title>
+<style>
+:root{
+  --paper:#ECEAE4; --card:#FBFAF7; --ink:#1B1E1A; --soft:#5F665D; --faint:#8C9289; --rule:#D6D3CA;
+  --acc:#3F6B3A; --acc2:#B5782B; --sand:#E2D3BC; --shadow:0 1px 2px rgba(27,30,26,.06),0 4px 14px rgba(27,30,26,.05);
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:820px;margin:0 auto;padding:0 16px 90px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+.hidden{display:none!important}
+.hero{padding:22px 0 6px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.hero .k{font-size:13px;color:var(--soft)}
+.hero h1{margin:2px 0 0}
+.no{font-size:15px;font-weight:800;padding:7px 12px;border-radius:14px;background:rgba(255,255,255,.06);font-variant-numeric:tabular-nums}
+.sub{font-size:13px;color:var(--soft)}
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:3px;margin-top:14px;box-shadow:var(--shadow);padding:14px 16px}
+.panel h3{margin:0 0 10px;padding-top:0!important}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.grid .full{grid-column:1/-1}
+@media (max-width:560px){.grid{grid-template-columns:minmax(0,1fr)}}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--faint);font-weight:700;letter-spacing:.03em;min-width:0}
+input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px;border:1px solid var(--rule);background:rgba(255,255,255,.05);font-size:16px;color-scheme:dark}
+.row{display:flex;gap:8px;align-items:flex-end}
+.row>*{min-width:0}
+.btn{background:var(--ink);color:var(--paper);border:0;border-radius:3px;padding:9px 14px;cursor:pointer;font-weight:700;font-size:14px;white-space:nowrap}
+.btn.ghost{background:none;color:var(--ink);border:1px solid var(--rule)}
+.btn.sm{padding:6px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+.line{display:grid;grid-template-columns:minmax(0,1fr) 74px 70px 100px 34px;gap:8px;align-items:center;margin-top:8px}
+.line .x{background:none;border:0;color:var(--faint);font-size:20px;cursor:pointer;padding:0}
+.lh{display:grid;grid-template-columns:minmax(0,1fr) 74px 70px 100px 34px;gap:8px;font-size:11.5px;color:var(--faint);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+@media (max-width:560px){
+  .lh{display:none}
+  .line{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 34px;padding:10px 0;border-bottom:1px solid var(--rule)}
+  .line .d{grid-column:1/-1}
+}
+.seg{display:inline-flex;padding:3px;gap:3px;border-radius:14px;background:rgba(0,0,0,.22);border:1px solid var(--rule)}
+.seg button{border:0;background:none;border-radius:11px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer;color:var(--soft)}
+.seg button[aria-pressed="true"]{background:var(--sand);color:#1E2522}
+.opts{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.tot{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.tot div{border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.04)}
+.tot .l{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.tot .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.tot .big .v{font-size:24px;color:var(--acc2)}
+.words{margin-top:8px;font-size:13.5px;color:var(--soft)}
+.pv{margin-top:14px;border-radius:10px;overflow:hidden;background:#fff;position:relative}
+.pv iframe{display:block;border:0;width:794px;height:1123px;transform-origin:0 0}
+.err{color:#E07A63;font-size:13.5px;min-height:20px;margin-top:8px}
+.issue{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom,0px));margin-top:16px;display:flex;gap:10px;align-items:center;justify-content:space-between;
+  padding:12px 14px;border-radius:18px;background:var(--card);box-shadow:0 10px 30px rgba(0,0,0,.45);border:1px solid var(--rule);z-index:5}
+.issue b{font-size:18px;font-variant-numeric:tabular-nums}
+.done{border-left:3px solid var(--acc)}
+.list{list-style:none;margin:0;padding:0}
+.list li{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--rule);font-size:14px}
+.list li:last-child{border-bottom:0}
+.list .n{font-variant-numeric:tabular-nums;color:var(--faint);min-width:96px}
+.list .c{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list a{color:var(--acc2);text-decoration:none;font-weight:700}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:12px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:40;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+<link rel="stylesheet" href="../shared/theme.css?v=202610231940">
+</head>
+<body>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610231940"></script>
+<main class="wrap">
+  <header class="hero">
+    <div><div class="k">GL Studio · Фактура</div><h1>New invoice</h1></div>
+    <div class="no" id="no">№ …</div>
+  </header>
+  <div class="sub" id="state">Loading clients…</div>
+
+  <section class="panel">
+    <h3>Client · Получател</h3>
+    <div class="grid">
+      <label class="f full">Company or person<input id="c-name" list="clients" autocomplete="off" placeholder="Start typing a past client"></label>
+      <label class="f">ЕИК<div class="row"><input id="c-eik" inputmode="numeric"><button class="btn ghost sm" id="vies" type="button">Look up</button></div></label>
+      <label class="f">ДДС No<input id="c-vat" placeholder="BG…"></label>
+      <label class="f">Град<input id="c-city"></label>
+      <label class="f">Адрес<input id="c-address"></label>
+      <label class="f">МОЛ<input id="c-mol"></label>
+      <label class="f">Received by (signature)<input id="recipient" placeholder="Same as МОЛ"></label>
+    </div>
+    <datalist id="clients"></datalist>
+  </section>
+
+  <section class="panel">
+    <h3>Services · Услуги</h3>
+    <div class="lh"><span>Description</span><span>Unit</span><span>Qty</span><span id="ph">Price</span><span></span></div>
+    <div id="lines"></div>
+    <datalist id="items"><option>фотографски услуги</option><option>Продуктова фотография</option><option>Портретна фотосесия</option><option>Семейна фотография</option><option>Събитийна фотография</option><option>Сватбена фотография</option><option>Видеозаснемане</option><option>Обработка на снимки</option><option>Пътни разходи</option><option>Наем на студио</option><option>Обучение</option></datalist>
+    <div class="opts">
+      <button class="btn ghost sm" id="add" type="button">+ Add line</button>
+      <div class="seg" id="pmode"><button data-v="gross" aria-pressed="true">Price incl. VAT</button><button data-v="net" aria-pressed="false">Price excl. VAT</button></div>
+      <label class="f" style="flex-direction:row;align-items:center;gap:8px">VAT<select id="vat" style="width:auto"><option value="20">20 %</option><option value="9">9 %</option><option value="0">0 %</option></select></label>
+    </div>
+    <label class="f hidden" id="basisw" style="margin-top:10px">Основание на сделка по ЗДДС (needed for 0 %)<input id="basis" placeholder="напр. чл. 21, ал. 2 от ЗДДС"></label>
+  </section>
+
+  <section class="panel">
+    <h3>Details</h3>
+    <div class="grid">
+      <label class="f">Дата на издаване<input type="date" id="issued"></label>
+      <label class="f">Дата на дан. събитие<input type="date" id="event"></label>
+      <label class="f">Място на сделката<input id="place" value="Пловдив"></label>
+      <label class="f">Начин на плащане<select id="pay"><option>Банков път</option><option>В брой</option><option>С карта</option></select></label>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="tot">
+      <div><div class="l">Данъчна основа</div><div class="v" id="t-base">–</div></div>
+      <div><div class="l">ДДС</div><div class="v" id="t-vat">–</div></div>
+      <div class="big"><div class="l">За плащане</div><div class="v" id="t-total">–</div></div>
+    </div>
+    <div class="words" id="words"></div>
+    <div class="err" id="err"></div>
+    <div class="pv" id="pv"><iframe id="frame" title="Invoice preview"></iframe></div>
+  </section>
+
+  <section class="panel done hidden" id="result"></section>
+
+  <div class="issue"><div><div class="sub" id="iss-sub">Ready when the preview looks right</div><b id="iss-total">–</b></div>
+    <button class="btn" id="issue" disabled>Issue invoice</button></div>
+
+  <h3 style="margin:26px 0 6px">Issued here</h3>
+  <section class="panel"><ul class="list" id="issued-list"><li class="sub">None yet. Invoices 1–76 were issued in InvoicePro (see Business).</li></ul></section>
+</main>
+<div class="toast" id="toast"></div>
+<script src="../shared/sync.js?v=202610231940"></script>
+<script src="app.js?v=202610231940"></script>
+</body>
+</html>
