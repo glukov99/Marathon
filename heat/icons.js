@@ -1,7 +1,7 @@
 /* The glowing mode icons (Georgi's set, 21 Oct 2026), drawn as SVG so they
    stay sharp and sit on the dark theme without the white of the source image.
    Used by the Heating page and the Heating panel on the home page.
-   Any element with data-ic="home|away|holiday|sammy|keep" gets its icon. */
+   Any element with data-ic="home|away|holiday|sammy|sammyaway|keep" gets its icon. */
 (function () {
   const P = {
     home: '<path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M6 9.5V19.5h12V9.5"/><path d="M15.5 6.5V4.5h2V8.4"/>' +
@@ -13,6 +13,8 @@
     sammy: '<circle cx="12" cy="13" r="6.6"/><path d="M5.4 11.4a1.7 1.7 0 0 0 0 3.4"/><path d="M18.6 11.4a1.7 1.7 0 0 1 0 3.4"/>' +
       '<path class="f" d="M10.3 4.6 12 6.6l1.7-2z"/><g class="f"><circle cx="9.6" cy="12.4" r=".9"/><circle cx="14.4" cy="12.4" r=".9"/></g>' +
       '<path d="M9.9 15.4c1.2 1.1 3 1.1 4.2 0"/>',
+    sammyaway: '<rect x="4.5" y="8.5" width="15" height="11" rx="2"/><path d="M9.5 8.5V6.3a1.3 1.3 0 0 1 1.3-1.3h2.4a1.3 1.3 0 0 1 1.3 1.3v2.2"/>' +
+      '<path d="M8.5 8.5v11M15.5 8.5v11"/><g class="f"><circle cx="7" cy="20.6" r=".9"/><circle cx="17" cy="20.6" r=".9"/></g>',
     keep: '<path d="M12 3c.6 3 4.9 5.2 5.6 9.3A5.8 5.8 0 0 1 6.3 15c-.6-2.2.2-4.2 1.6-5.6.1 1.5.8 2.5 1.9 2.8C9.2 8.7 10.6 5.3 12 3z"/>' +
       '<path class="f" d="M12 12.2c1.7 1.6 2.4 2.9 2.4 4.2a2.4 2.4 0 0 1-4.8 0c0-1.3.8-2.6 2.4-4.2z"/>',
   };

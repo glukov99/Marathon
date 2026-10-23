@@ -22,6 +22,7 @@
 
   function plan(key) {
     if (st && st.holiday && st.holiday.on && Date.now() < st.holiday.resumeAt) return [[0, 1440, null]];
+    if (key === 'bed' && st && st.sammyAway && st.sammyAway.on) return [[0, 1440, null]];
     if (key === 'living') return [[0, 420, null], [420, 1320, 20], [1320, 1380, 18], [1380, 1440, null]];
     const sam = st && st.sammy && st.sammy.on;
     return [[0, 360, 17], [360, 480, 21], [480, 1035, sam ? 20 : null], [1035, 1185, 21], [1185, 1440, 17]];
@@ -83,6 +84,7 @@
     $('b-home').setAttribute('aria-pressed', String(!st.away));
     $('b-away').setAttribute('aria-pressed', String(!!st.away));
     setTog('b-sammy', st.sammy.on, null, st.sammy.on ? 'On until ' + hm(st.sammy.until) : 'Kids room 20° by day');
+    setTog('b-saway', st.sammyAway && st.sammyAway.on, null, st.sammyAway && st.sammyAway.on ? 'Off until you tap again' : 'Kids room off');
     setTog('b-keep', st.keepOn.on, null, st.keepOn.on ? 'On until ' + hm(st.keepOn.until) : 'Ignore me leaving');
     setTog('b-hol', st.holiday.on, null, st.holiday.on ? 'Back ' + fmt(st.holiday.until) : 'All off until return');
     renderEnergy();
@@ -367,6 +369,7 @@
   $('b-home').onclick = async () => { if (st && !st.away) return; const r = await call('&cmd=arrive'); if (r) say(r.msg); };
   $('b-away').onclick = async () => { if (st && st.away) return; const r = await call('&cmd=leave'); if (r) say(r.msg); };
   $('b-sammy').onclick = async () => { const r = await call('&cmd=sammy'); if (r) say(r.msg); };
+  $('b-saway').onclick = async () => { const r = await call('&cmd=sammyaway'); if (r) say(r.msg); };
   $('b-keep').onclick = async () => { const r = await call('&cmd=keepon'); if (r) say(r.msg); };
   $('b-hol').onclick = async () => {
     if (st && st.holiday.on) {

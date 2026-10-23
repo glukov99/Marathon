@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="../shared/auth.js?v=202610222228"></script>
+<script src="../shared/auth.js?v=202610231904"></script>
 <title>Heating — Life hub</title>
 <style>
 :root{
@@ -116,7 +116,6 @@ button,input{font:inherit;color:inherit}
 .tog[aria-pressed="true"]{background:color-mix(in srgb,var(--warm) 16%,transparent);border-color:color-mix(in srgb,var(--warm) 55%,transparent);box-shadow:0 0 22px color-mix(in srgb,var(--warm) 22%,transparent)}
 .tog.blue[aria-pressed="true"]{background:color-mix(in srgb,var(--cold) 16%,transparent);border-color:color-mix(in srgb,var(--cold) 55%,transparent);box-shadow:0 0 22px color-mix(in srgb,var(--cold) 22%,transparent)}
 .tog:disabled{opacity:.5}
-.ctrls .tog:last-child{grid-column:1/-1}
 .hol{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
 .hol input{flex:1;min-width:180px;padding:9px 12px;border-radius:14px;border:1px solid var(--rule);background:rgba(255,255,255,.05);color-scheme:dark}
 .btn{background:var(--ink);color:var(--paper);border:0;border-radius:3px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:14px}
@@ -132,10 +131,10 @@ button,input{font:inherit;color:inherit}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610222228">
+<link rel="stylesheet" href="../shared/theme.css?v=202610231904">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610222228"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610231904"></script>
 <main class="wrap">
   <header class="hero">
     <div><div class="k">Home</div><h1>Heating</h1></div>
@@ -158,6 +157,7 @@ button,input{font:inherit;color:inherit}
     <div class="ctrls">
       <div class="seg" role="group" aria-label="Where are you"><button id="b-home" aria-pressed="true"><span class="sm" data-ic="home"></span>I'm home</button><button id="b-away" aria-pressed="false"><span class="sm" data-ic="away"></span>I'm away</button></div>
       <button class="tog" id="b-sammy" aria-pressed="false"><span data-ic="sammy"></span><span class="tx"><b>Sammy home</b><span>Kids room 20° by day</span></span></button>
+      <button class="tog blue" id="b-saway" aria-pressed="false"><span data-ic="sammyaway"></span><span class="tx"><b>Sammy away</b><span>Kids room off</span></span></button>
       <button class="tog" id="b-keep" aria-pressed="false"><span data-ic="keep"></span><span class="tx"><b>Keep on</b><span>Ignore me leaving</span></span></button>
       <button class="tog blue" id="b-hol" aria-pressed="false"><span data-ic="holiday"></span><span class="tx"><b>Holiday</b><span>All off until return</span></span></button>
     </div>
@@ -194,8 +194,8 @@ button,input{font:inherit;color:inherit}
   <p class="foot">The brain runs every 10 minutes in Apps Script. It sets both heaters from the clock, the outside temperature in Plovdiv and these modes. Each heater gets a new command when its plan changes and once an hour, so a change made in the Adax app lasts up to an hour.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610222228"></script>
-<script src="icons.js?v=202610222228"></script>
-<script src="app.js?v=202610222228"></script>
+<script src="../shared/sync.js?v=202610231904"></script>
+<script src="icons.js?v=202610231904"></script>
+<script src="app.js?v=202610231904"></script>
 </body>
 </html>
