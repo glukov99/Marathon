@@ -19,8 +19,8 @@
     const d = document.createElement('div'); d.className = 'line';
     d.innerHTML = '<input class="d" list="items" placeholder="фотографски услуги">' +
       '<input class="u" value="бр.">' + '<input class="q" inputmode="decimal" value="1">' +
-      '<input class="p" inputmode="decimal" placeholder="0.00">' + '<button class="x" type="button" aria-label="Remove line">×</button>';
-    if (l) { d.querySelector('.d').value = l.name || ''; d.querySelector('.u').value = l.unit || 'бр.'; d.querySelector('.q').value = l.qty || 1; d.querySelector('.p').value = l.price != null ? l.price : ''; }
+      '<input class="p" inputmode="decimal" placeholder="0.00">' + '<input class="dc" inputmode="decimal" placeholder="0">' + '<button class="x" type="button" aria-label="Remove line">×</button>';
+    if (l) { d.querySelector('.d').value = l.name || ''; d.querySelector('.u').value = l.unit || 'бр.'; d.querySelector('.q').value = l.qty || 1; d.querySelector('.p').value = l.price != null ? l.price : ''; d.querySelector('.dc').value = l.disc || ''; }
     d.querySelector('.x').onclick = () => { if ($('lines').children.length > 1) { d.remove(); changed(); } };
     return d;
   }
@@ -32,10 +32,11 @@
     return {
       client: { name: v('c-name'), eik: v('c-eik'), vat: v('c-vat'), city: v('c-city'), address: v('c-address'), mol: v('c-mol') },
       recipient: v('recipient'),
-      lines: [...$('lines').children].map(d => ({ name: d.querySelector('.d').value, unit: d.querySelector('.u').value, qty: d.querySelector('.q').value, price: d.querySelector('.p').value }))
+      lines: [...$('lines').children].map(d => ({ name: d.querySelector('.d').value, unit: d.querySelector('.u').value, qty: d.querySelector('.q').value, price: d.querySelector('.p').value, disc: d.querySelector('.dc').value }))
         .filter(l => l.name.trim() || String(l.price).trim()),
       priceMode: mode, vatRate: Number($('vat').value), basis: v('basis'),
-      issued: $('issued').value, event: $('event').value || $('issued').value, place: v('place'), pay: $('pay').value
+      issued: $('issued').value, event: $('event').value || $('issued').value, place: v('place'), pay: $('pay').value,
+      bank: $('bank').value, due: $('due').value, terms: v('terms'), maker: v('maker'), cash: $('cash').checked, note: v('note')
     };
   }
   function keepDraft() { try { localStorage.setItem(DRAFT, JSON.stringify(data())); } catch (e) {} }
@@ -44,7 +45,7 @@
     if (d && d.client) {
       ['name', 'eik', 'vat', 'city', 'address', 'mol'].forEach(k => $('c-' + k).value = d.client[k] || '');
       $('recipient').value = d.recipient || ''; $('basis').value = d.basis || ''; $('place').value = d.place || 'Пловдив';
-      $('pay').value = d.pay || 'Банков път'; $('vat').value = String(d.vatRate == null ? 20 : d.vatRate); setMode(d.priceMode || 'gross');
+      $('pay').value = d.pay || 'Банков път'; $('terms').value = d.terms || ''; $('note').value = d.note || ''; $('cash').checked = !!d.cash; if (d.maker) $('maker').value = d.maker; if (d.bank) $('bank').dataset.want = d.bank; $('vat').value = String(d.vatRate == null ? 20 : d.vatRate); setMode(d.priceMode || 'gross');
       (d.lines && d.lines.length ? d.lines : [{}]).forEach(l => $('lines').appendChild(lineEl(l)));
     } else $('lines').appendChild(lineEl());
     $('issued').value = today(); $('event').value = today();
@@ -73,7 +74,9 @@
     } catch (e) { if (my === seq) $('err').textContent = 'Offline. Try again.'; }
   }
   document.querySelector('main').addEventListener('input', e => { if (e.target.closest('#result')) return; changed(); });
-  document.querySelector('main').addEventListener('change', e => { if (e.target.id === 'vat') $('basisw').classList.toggle('hidden', $('vat').value !== '0'); });
+  const showBank = () => $('bankw').classList.toggle('hidden', $('pay').value !== 'Банков път');
+  const showBasis = () => { $('basisreq').textContent = $('vat').value === '0' ? '(required for 0 %)' : '(only for 0 %)'; };
+  document.querySelector('main').addEventListener('change', e => { showBank(); showBasis(); if (e.target.type === 'checkbox' || e.target.tagName === 'SELECT') changed(); });
 
   function setMode(m) { mode = m; document.querySelectorAll('#pmode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === m))); $('ph').textContent = m === 'gross' ? 'Price incl. VAT' : 'Price excl. VAT'; }
   $('pmode').onclick = e => { const b = e.target.closest('button[data-v]'); if (!b) return; setMode(b.dataset.v); changed(); };
@@ -84,22 +87,24 @@
     $('c-city').value = c.city || ''; $('c-address').value = c.address || ''; $('c-mol').value = c.mol || '';
   }
   $('c-name').addEventListener('change', () => {
-    const c = clients.find(x => x.name === $('c-name').value.trim()); if (c) { fillClient(c); changed(); }
+    const c = clients.find(x => x.name === $('c-name').value.trim());
+    if (c) { fillClient(c); changed(); if (/^\d{9}$/.test(c.eik || '') && !c.address) lookup(true); }
   });
-  $('vies').onclick = async () => {
+  $('vies').onclick = () => lookup(false);
+  async function lookup(quiet) {
     const eik = $('c-eik').value.trim(); if (!eik) return say('Type the ЕИК first');
     $('vies').disabled = true;
     try {
       const r = await api('&inv=vies&eik=' + encodeURIComponent(eik));
-      if (!r.ok) say(r.error || 'Lookup failed');
-      else if (!r.valid) say('Not in the EU VAT register: check the number, or the client is not VAT registered');
+      if (!r.ok) { if (!quiet) say(r.error || 'Lookup failed'); }
+      else if (!r.valid) { $('c-vat').value = ''; say('Not VAT registered (not in the EU VAT register): ДДС No left empty'); changed(); }
       else {
         if (!$('c-name').value.trim()) $('c-name').value = r.name;
-        $('c-vat').value = r.vat; if (r.city) $('c-city').value = r.city; if (r.address) $('c-address').value = r.address;
-        say('Found: ' + r.name + '. Check the address; the register is often in capitals.'); changed();
+        $('c-vat').value = r.vat; if (r.address) $('c-address').value = r.address; if (r.city && !$('c-city').value.trim()) $('c-city').value = r.city;
+        say((quiet ? 'Address filled from the register' : 'Found: ' + r.name) + '. Check it; the register is often in capitals.'); changed();
       }
-    } catch (e) { say('Offline'); } finally { $('vies').disabled = false; }
-  };
+    } catch (e) { if (!quiet) say('Offline'); } finally { $('vies').disabled = false; }
+  }
 
   /* ---------- issue ---------- */
   $('issue').onclick = async () => {
@@ -116,7 +121,7 @@
         '<div class="opts"><a class="btn" href="' + r.url + '" target="_blank" rel="noopener">Open PDF in Drive</a>' +
         '<button class="btn ghost" id="dl" data-no="' + r.no + '">Download PDF</button><button class="btn ghost" id="again">New invoice</button></div>';
       $('dl').onclick = () => download(r.no);
-      $('again').onclick = () => { $('result').classList.add('hidden'); [...$('lines').children].forEach((x, i) => i ? x.remove() : x.querySelectorAll('input').forEach(inp => { if (!inp.classList.contains('u') && !inp.classList.contains('q')) inp.value = ''; })); fillClient({}); $('recipient').value = ''; keepDraft(); window.scrollTo(0, 0); };
+      $('again').onclick = () => { $('result').classList.add('hidden'); [...$('lines').children].forEach((x, i) => i ? x.remove() : x.querySelectorAll('input').forEach(inp => { if (!inp.classList.contains('u') && !inp.classList.contains('q')) inp.value = ''; })); fillClient({}); ['recipient', 'due', 'terms', 'note'].forEach(id => $(id).value = ''); $('cash').checked = false; keepDraft(); window.scrollTo(0, 0); };
       try { localStorage.removeItem(DRAFT); } catch (e) {}
       $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
       say('Invoice ' + r.no + ' issued');
@@ -138,6 +143,11 @@
       const r = await api('&inv=next');
       if (!r.ok) { $('state').textContent = r.error === 'unauthorised' ? 'Sign in to use this page.' : (r.error || 'Could not load'); return; }
       next = r.next; lastDate = r.lastDate || ''; clients = r.clients || [];
+      if (!$('bank').options.length) {
+        $('bank').innerHTML = (r.banks || []).map(b => '<option value="' + b.key + '">' + b.label + ' · ' + b.iban + '</option>').join('');
+        if ($('bank').dataset.want) $('bank').value = $('bank').dataset.want;
+      }
+      if (!$('maker').value) $('maker').value = r.maker || '';
       $('no').textContent = '№ ' + next;
       $('state').textContent = 'Next number ' + next + (lastDate ? ' · last invoice ' + lastDate.split('-').reverse().join('.') : '');
       $('clients').innerHTML = clients.map(c => '<option value="' + String(c.name).replace(/"/g, '&quot;') + '">' + (c.eik || '') + '</option>').join('');
@@ -146,5 +156,5 @@
       preview();
     } catch (e) { $('state').textContent = 'Offline. Reload to try again.'; }
   }
-  setMode(mode); loadDraft(); $('basisw').classList.toggle('hidden', $('vat').value !== '0'); scale(); load();
+  setMode(mode); loadDraft(); showBank(); showBasis(); scale(); load();
 })();

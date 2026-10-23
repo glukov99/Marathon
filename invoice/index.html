@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="../shared/auth.js?v=202610231940"></script>
+<script src="../shared/auth.js?v=202610231946"></script>
 <title>New invoice — Life hub</title>
 <style>
 :root{
@@ -36,12 +36,12 @@ input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px
 .btn.ghost{background:none;color:var(--ink);border:1px solid var(--rule)}
 .btn.sm{padding:6px 10px;font-size:13px}
 .btn:disabled{opacity:.5;cursor:default}
-.line{display:grid;grid-template-columns:minmax(0,1fr) 74px 70px 100px 34px;gap:8px;align-items:center;margin-top:8px}
+.line{display:grid;grid-template-columns:minmax(0,1fr) 70px 62px 96px 62px 30px;gap:8px;align-items:center;margin-top:8px}
 .line .x{background:none;border:0;color:var(--faint);font-size:20px;cursor:pointer;padding:0}
-.lh{display:grid;grid-template-columns:minmax(0,1fr) 74px 70px 100px 34px;gap:8px;font-size:11.5px;color:var(--faint);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.lh{display:grid;grid-template-columns:minmax(0,1fr) 70px 62px 96px 62px 30px;gap:8px;font-size:11.5px;color:var(--faint);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
 @media (max-width:560px){
   .lh{display:none}
-  .line{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 34px;padding:10px 0;border-bottom:1px solid var(--rule)}
+  .line{grid-template-columns:repeat(4,minmax(0,1fr)) 30px;padding:10px 0;border-bottom:1px solid var(--rule)}
   .line .d{grid-column:1/-1}
 }
 .seg{display:inline-flex;padding:3px;gap:3px;border-radius:14px;background:rgba(0,0,0,.22);border:1px solid var(--rule)}
@@ -70,10 +70,10 @@ input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:12px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:40;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610231940">
+<link rel="stylesheet" href="../shared/theme.css?v=202610231946">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610231940"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610231946"></script>
 <main class="wrap">
   <header class="hero">
     <div><div class="k">GL Studio · Фактура</div><h1>New invoice</h1></div>
@@ -97,7 +97,7 @@ input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px
 
   <section class="panel">
     <h3>Services · Услуги</h3>
-    <div class="lh"><span>Description</span><span>Unit</span><span>Qty</span><span id="ph">Price</span><span></span></div>
+    <div class="lh"><span>Description</span><span>Unit</span><span>Qty</span><span id="ph">Price</span><span>Disc. %</span><span></span></div>
     <div id="lines"></div>
     <datalist id="items"><option>фотографски услуги</option><option>Продуктова фотография</option><option>Портретна фотосесия</option><option>Семейна фотография</option><option>Събитийна фотография</option><option>Сватбена фотография</option><option>Видеозаснемане</option><option>Обработка на снимки</option><option>Пътни разходи</option><option>Наем на студио</option><option>Обучение</option></datalist>
     <div class="opts">
@@ -105,7 +105,8 @@ input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px
       <div class="seg" id="pmode"><button data-v="gross" aria-pressed="true">Price incl. VAT</button><button data-v="net" aria-pressed="false">Price excl. VAT</button></div>
       <label class="f" style="flex-direction:row;align-items:center;gap:8px">VAT<select id="vat" style="width:auto"><option value="20">20 %</option><option value="9">9 %</option><option value="0">0 %</option></select></label>
     </div>
-    <label class="f hidden" id="basisw" style="margin-top:10px">Основание на сделка по ЗДДС (needed for 0 %)<input id="basis" placeholder="напр. чл. 21, ал. 2 от ЗДДС"></label>
+    <label class="f" id="basisw" style="margin-top:10px">Основание на сделка по ЗДДС <span id="basisreq" style="font-weight:500">(only for 0 %)</span><input id="basis" list="bases" placeholder="Empty for a normal 20 % invoice"></label>
+    <datalist id="bases"><option value="чл. 21, ал. 2 от ЗДДС">услуга за клиент-бизнес извън България</option><option value="чл. 69, ал. 2 от ЗДДС">обратно начисляване, клиент в ЕС</option><option value="чл. 86, ал. 3 от ЗДДС">обратно начисляване</option></datalist>
   </section>
 
   <section class="panel">
@@ -115,6 +116,12 @@ input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px
       <label class="f">Дата на дан. събитие<input type="date" id="event"></label>
       <label class="f">Място на сделката<input id="place" value="Пловдив"></label>
       <label class="f">Начин на плащане<select id="pay"><option>Банков път</option><option>В брой</option><option>С карта</option></select></label>
+      <label class="f" id="bankw">Банкова сметка<select id="bank"></select></label>
+      <label class="f">Дата на падеж (optional)<input type="date" id="due"></label>
+      <label class="f full">Условия на сделката (printed, optional)<textarea id="terms" rows="2"></textarea></label>
+      <label class="f">Съставил<input id="maker"></label>
+      <label class="f" style="flex-direction:row;align-items:center;gap:8px;align-self:end;padding-bottom:10px"><input type="checkbox" id="cash" style="width:auto"> Касова отчетност на ДДС</label>
+      <label class="f full">Note for me (not printed)<textarea id="note" rows="2" placeholder="Shown in Business next to this invoice"></textarea></label>
     </div>
   </section>
 
@@ -138,7 +145,7 @@ input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px
   <section class="panel"><ul class="list" id="issued-list"><li class="sub">None yet. Invoices 1–76 were issued in InvoicePro (see Business).</li></ul></section>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610231940"></script>
-<script src="app.js?v=202610231940"></script>
+<script src="../shared/sync.js?v=202610231946"></script>
+<script src="app.js?v=202610231946"></script>
 </body>
 </html>
