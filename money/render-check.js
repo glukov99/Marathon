@@ -45,6 +45,17 @@ assert.ok(/data-act="sync"/.test(out.view), 'the Accounts tab can ask the banks 
 assert.ok(/by hand/.test(out.view), 'a hand-kept balance says it is hand-kept');
 assert.ok(/check it/.test(out.view), 'and shouts once it is over a month old');
 
+// A pending card payment is shown on the newest month, never counted, never tappable.
+ctx.setData(Object.assign(data, { pending: { at: '2026-03-02T06:00:00Z', tx: [
+  { d: '2026-03-03', a: -55, c: 'EUR', acc: 'Main', own: 'Personal', who: 'Temu', desc: '', pending: true },
+  { d: '2026-03-03', a: -9, c: 'EUR', acc: 'Biz', own: 'Business', who: 'Not mine', desc: '', pending: true }] } }));
+ctx.setMonth('2026-03'); ctx.tabs('daily'); ctx.render();
+assert.ok(/Pending/.test(out.view) && /Temu/.test(out.view) && !/Not mine/.test(out.view), 'pending shows, by owner');
+assert.ok(/€12\.00/.test(out.sum) && !/€67/.test(out.sum), 'and is not in the month total');
+assert.ok(!/data-k="[^"]*"[^>]*>\s*<div class="tc">Pending/.test(out.view), 'and cannot be tapped');
+ctx.setMonth('2026-02'); ctx.render();
+assert.ok(!/Temu/.test(out.view), 'an older month does not show it');
+
 ctx.tabs('monthly'); ctx.render();
 assert.ok(/a month/.test(out.sum), 'a year says what each figure is a month');
 console.log('render ok: every tab builds');

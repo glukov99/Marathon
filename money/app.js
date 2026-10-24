@@ -242,7 +242,21 @@ function dayList(rows) {
       ${days[d].map(rowHtml).join('')}</div>`;
   }).join('');
 }
-function renderDaily(rows) { $('#view').innerHTML = dayList(rows); }
+/* Card payments the bank has not booked yet. They sit in data.pending, never in
+   data.tx, so no total, chart or year figure can count them. Shown on the newest
+   month only, greyed, without a category, and not tappable (no data-k). */
+function pendingHtml() {
+  const pd = data.pending || {};
+  const p = (pd.tx || []).filter(t => (owner === 'All' ? t.own !== 'Business' : t.own === owner));
+  if (!p.length || month !== allMonths()[0]) return '';
+  const day = d => new Date(d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const at = pd.at ? ' · as of ' + new Date(pd.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+  return `<div class="day pend"><div class="dh"><b>Pending</b><span class="dw">not booked yet, not counted${at}</span></div>
+    ${p.map(t => `<div class="tr"><div class="tc">Pending</div>
+      <div class="tb"><b>${esc(t.who || t.desc || '—')}</b><span>${[t.acc, t.d && day(t.d)].filter(Boolean).map(esc).join(' · ')}</span></div>
+      <div class="ta mv">${sfmt(t.a, t.c)}</div></div>`).join('')}</div>`;
+}
+function renderDaily(rows) { $('#view').innerHTML = pendingHtml() + dayList(rows); }
 
 // ===== Monthly =====
 function renderMonthly(year) {
