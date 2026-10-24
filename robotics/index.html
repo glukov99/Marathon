@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script src="../shared/auth.js?v=202610241358"></script>
+<title>Robotics — Life hub</title>
+<style>
+:root{
+  --paper:#ECEAE4; --card:#FBFAF7; --card2:#F2F0EA; --ink:#1B1E1A; --soft:#5F665D; --faint:#8C9289; --rule:#D6D3CA;
+  --acc:#3F6B3A; --acc2:#B5782B; --big:#A8432F; --sand:#E2D3BC; --shadow:0 1px 2px rgba(27,30,26,.06),0 4px 14px rgba(27,30,26,.05);
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,'Segoe UI',sans-serif;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--paper)}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px 80px}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--acc2);outline-offset:2px}
+.hidden{display:none!important}
+.hero{padding:22px 0 6px}
+.hero .k{font-size:13px;color:var(--soft)}
+.hero h1{margin:2px 0 0}
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:3px;margin-top:14px;box-shadow:var(--shadow);padding:14px 16px}
+.sub{font-size:13px;color:var(--soft)}
+.add textarea{width:100%;min-height:64px;resize:vertical;padding:10px 12px;border:1px solid var(--rule);border-radius:12px;background:rgba(255,255,255,.04);font-size:16px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chips button{border:1px solid var(--rule);background:rgba(255,255,255,.04);border-radius:12px;padding:4px 12px;font-size:13px;cursor:pointer;color:var(--soft)}
+.chips button[aria-pressed="true"]{background:var(--sand);color:#1E2522;border-color:var(--sand)}
+.chips .lbl{font-size:12px;color:var(--faint);align-self:center;min-width:44px}
+.row{display:flex;gap:8px;align-items:center;margin-top:12px}
+.btn{background:var(--ink);color:var(--paper);border:0;border-radius:3px;padding:8px 14px;cursor:pointer;font-weight:600;font-size:14px}
+.btn.ghost{background:none;color:var(--ink);border:1px solid var(--rule)}
+.btn.sm{padding:4px 10px;font-size:12.5px}
+.tabs{display:flex;gap:4px;margin-top:18px;border-bottom:1px solid var(--rule);overflow-x:auto;scrollbar-width:none}
+.tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:9px 10px 8px;cursor:pointer;font-weight:700;color:var(--soft);white-space:nowrap;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--acc2)}
+.tabs i{font-style:normal;font-weight:500;color:var(--faint);margin-left:4px}
+.day{margin:16px 0 2px;font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);font-weight:700}
+.idea{background:var(--card);border-radius:14px;padding:12px 14px;margin-top:8px;box-shadow:var(--shadow)}
+.idea p{margin:0;font-size:15.5px;white-space:pre-wrap;word-break:break-word}
+.meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;font-size:12.5px;color:var(--faint)}
+.tag{font-size:12px;font-weight:700;padding:2px 9px;border-radius:10px;background:rgba(255,255,255,.06);color:var(--soft)}
+.tag.done{color:var(--acc)}
+.tag.dropped{color:var(--faint);text-decoration:line-through}
+.acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.empty{padding:28px 4px;text-align:center;color:var(--faint)}
+.ttl{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ttl b{font-size:16px;min-width:0}
+.ttl .tag{white-space:nowrap;flex:none}
+.idea select{border:1px solid var(--rule);background:var(--card2);border-radius:10px;padding:3px 8px;font:inherit;font-size:12.5px;color:var(--soft);flex:none}
+.next{margin:8px 0 0!important;font-size:15px}
+.next span{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--acc2);font-weight:700;margin-right:8px}
+.notes{margin:6px 0 0!important;font-size:13.5px!important;color:var(--soft);white-space:pre-wrap}
+.short{color:var(--big)}
+.meta a{color:var(--acc);font-weight:600}
+.fld{display:grid;gap:4px;margin-top:10px;font-size:12.5px;color:var(--soft)}
+.fld input,.fld textarea,.fld select,.add input{width:100%;padding:8px 10px;border:1px solid var(--rule);border-radius:10px;background:rgba(255,255,255,.04);font:inherit;font-size:16px;color:var(--ink)}
+.need{display:flex;gap:10px;align-items:center;color:var(--ink);font-size:14px;margin-top:4px}
+.need input{width:64px!important;flex:none}
+.chk{display:flex;gap:8px;align-items:center;margin-top:12px;font-size:14px}
+.cnt{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:14px}
+.add .row{margin-top:0}
+.add .row input:first-child{flex:1}
+.add input[name=qty]{width:72px;flex:none}
+.warn{color:var(--big);font-size:14px}
+.foot{margin-top:24px;font-size:12.5px;color:var(--faint)}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:7px 14px;border-radius:3px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:40}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<link rel="stylesheet" href="../shared/theme.css?v=202610241358">
+</head>
+<body>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610241358"></script>
+<div class="wrap">
+  <header class="hero">
+    <div class="k">Builds, parts, and what to learn next</div>
+    <h1>Robotics</h1>
+  </header>
+  <div class="tabs" role="tablist" id="tabs"></div>
+  <section id="t-projects">
+    <form class="panel add" data-add="projects" autocomplete="off"><div class="row">
+      <input name="t" placeholder="New build, e.g. Plant watering" aria-label="New build"><button class="btn" type="submit">Add</button></div></form>
+    <div id="pList"></div>
+  </section>
+  <section id="t-parts" class="hidden">
+    <form class="panel add" data-add="parts" autocomplete="off"><div class="row">
+      <input name="t" placeholder="New part, e.g. SG90 servo" aria-label="New part">
+      <input name="qty" type="number" min="0" inputmode="numeric" value="1" aria-label="How many"><button class="btn" type="submit">Add</button></div></form>
+    <div id="xList"></div>
+  </section>
+  <section id="t-learn" class="hidden">
+    <form class="panel add" data-add="lessons" autocomplete="off"><div class="row">
+      <input name="t" placeholder="A skill a build needs" aria-label="New thing to learn"><button class="btn" type="submit">Add</button></div></form>
+    <div id="lList"></div>
+  </section>
+  <div class="foot" id="store">Saved on this device</div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="../shared/sync.js?v=202610241358"></script>
+<script src="app.js?v=202610241358"></script>
+</body>
+</html>

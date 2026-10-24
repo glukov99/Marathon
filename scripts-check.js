@@ -17,7 +17,7 @@ const FILE = { Year: 'year.js', Charts: 'charts.js', Invoices: 'invoices.js',
 // page html -> the javascript that runs on it (inline, plus its own app.js)
 const PAGES = [['index.html', []], ['money/index.html', ['money/app.js']],
   ['business/index.html', ['business/app.js']],
-  ['jar/index.html', ['jar/app.js']]];
+  ['jar/index.html', ['jar/app.js']], ['robotics/index.html', ['robotics/app.js']]];
 
 let checked = 0;
 PAGES.forEach(([page, scripts]) => {
