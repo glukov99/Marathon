@@ -190,6 +190,27 @@
     finally { $('s-go').disabled = false; $('s-go').textContent = 'Send'; }
   };
 
+  /* ---------- issued list: PDF, email, share, cancel ---------- */
+  function issuedRow(x) {
+    const off = x.status === 'cancelled', date = String(x.issued).split('-').reverse().join('.');
+    return '<li' + (off ? ' class="off"' : '') + '><span class="n">№ ' + x.no + '</span><span class="c">' + x.client + ' · ' + date + '</span><span>' + eur(x.total) + '</span>' +
+      '<a href="' + x.url + '" target="_blank" rel="noopener">PDF</a>' +
+      (off ? '<span class="sent">cancelled</span><button class="act" data-undo="' + x.no + '" data-issued="' + x.issued + '">Undo</button>'
+        : '<button class="act" data-mail="' + x.no + '" title="' + (x.sentAt ? 'Sent ' + x.sentAt + ' to ' + x.sentTo : 'Not sent by email yet') + '">' + (x.sentAt ? '<span class="sent">✓</span> Email' : 'Email') + '</button>' +
+          '<button class="act" data-share="' + x.no + '">Share</button>' +
+          '<button class="act" data-cancel="' + x.no + '" data-issued="' + x.issued + '" data-client="' + String(x.client).replace(/"/g, '&quot;') + '">Cancel</button>') + '</li>';
+  }
+  // Same status the Business page sets: a cancelled invoice is neither billed nor owed. The number stays used, the PDF stays in Drive.
+  async function setStatus(b, v) {
+    if (v && !confirm('Cancel invoice № ' + b.dataset.cancel + ' for ' + b.dataset.client + '?\n\nThe number stays used and the PDF stays in Drive. Tell the accountant.')) return;
+    b.disabled = true;
+    try {
+      const r = await api('&biz=setinv&no=' + Number(b.dataset.cancel || b.dataset.undo) + '&issued=' + encodeURIComponent(String(b.dataset.issued).slice(0, 10)) + '&f=status&v=' + v);
+      if (!r.ok) { b.disabled = false; return say(r.error || 'Not changed'); }
+      say(v ? 'Invoice cancelled' : 'Cancel undone'); await load();
+    } catch (e) { b.disabled = false; say('Offline'); }
+  }
+
   /* ---------- start ---------- */
   async function load() {
     try {
@@ -204,11 +225,11 @@
       $('no').textContent = '№ ' + next;
       $('state').textContent = 'Next number ' + next + (lastDate ? ' · last invoice ' + lastDate.split('-').reverse().join('.') : '');
       $('clients').innerHTML = clients.map(c => '<option value="' + String(c.name).replace(/"/g, '&quot;') + '">' + (c.eik || '') + '</option>').join('');
-      $('issued-list').innerHTML = (r.issued || []).length ? r.issued.map(x => '<li><span class="n">№ ' + x.no + '</span><span class="c">' + x.client + ' · ' + String(x.issued).split('-').reverse().join('.') + '</span><span>' + eur(x.total) + '</span><a href="' + x.url + '" target="_blank" rel="noopener">PDF</a></li>').join('')
+      $('issued-list').innerHTML = (r.issued || []).length ? r.issued.map(issuedRow).join('')
         : '<li class="sub">None yet. Invoices 1–76 were issued in InvoicePro (see Business).</li>';
       preview();
     } catch (e) { $('state').textContent = 'Offline. Reload to try again.'; }
   }
-  $('issued-list').onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.mail) openSend(b.dataset.mail); else if (b.dataset.share) share(b.dataset.share, b); };
+  $('issued-list').onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.mail) openSend(b.dataset.mail); else if (b.dataset.share) share(b.dataset.share, b); else if (b.dataset.cancel) setStatus(b, 'cancelled'); else if (b.dataset.undo) setStatus(b, ''); };
   setMode(mode); loadDraft(); showBank(); showBasis(); scale(); load();
 })();
