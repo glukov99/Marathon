@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="../shared/auth.js?v=202610261919"></script>
+<script src="../shared/auth.js?v=202610262012"></script>
 <title>Season 2027 — Plovdiv, Bairi, Vitosha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -184,11 +184,11 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610261919">
-<link rel="stylesheet" href="body.css?v=202610261919">
+<link rel="stylesheet" href="../shared/theme.css?v=202610262012">
+<link rel="stylesheet" href="body.css?v=202610262012">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610261919"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610262012"></script>
 <div class="wrap">
   <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
@@ -235,12 +235,12 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="plan.js?v=202610261919"></script>
-<script src="../shared/sync.js?v=202610261919"></script>
-<script src="../holidays/holidays-data.js?v=202610261919"></script>
-<script src="../shared/travel.js?v=202610261919"></script>
-<script src="body-shapes.js?v=202610261919"></script>
-<script src="body.js?v=202610261919"></script>
+<script src="plan.js?v=202610262012"></script>
+<script src="../shared/sync.js?v=202610262012"></script>
+<script src="../holidays/holidays-data.js?v=202610262012"></script>
+<script src="../shared/travel.js?v=202610262012"></script>
+<script src="body-shapes.js?v=202610262012"></script>
+<script src="body.js?v=202610262012"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -318,6 +318,7 @@ function renderWeek(){
         <div class="ib"><div class="t">${esc(x.t)}${x.m?`<small>${x.m>=60?Math.floor(x.m/60)+'h'+(x.m%60?String(x.m%60).padStart(2,'0'):''):x.m+' min'}</small>`:''}</div>
         <div class="d">${esc(x.d)}</div>
         ${x.ex?exList(x.ex):''}
+        ${x.after&&!items.slice(i+1).some(y=>y.after)?'<div class="d">Then: post-training stretch, 10 min (Yoga tab).</div>':''}
         ${lgTxt?`<div class="logged">Logged: ${esc(lgTxt)}</div>`:''}
         ${x.link?`<a class="lg-t" href="${x.link}" target="_blank" rel="noopener">Open on YouTube</a>`:''}
         ${canLog?`<button class="lg-t" data-lg="${k}">${openLog===k?'Close':(lg?'Edit log':'Log it')}</button>`:''}
@@ -448,6 +449,9 @@ function renderYoga(){
     <tr><td><b>Lighter weeks</b></td><td><span style="color:var(--easy)">Green</span> only</td></tr>
     <tr><td><b>Race weeks</b></td><td>Sleep and breathwork only</td></tr></table>
     <div class="note warn"><b>The test:</b> if a session gives you DOMS, it was training, not recovery. It counts against your strength sessions for the week, not on top of them.</div></div></div>
+  <div class="panel"><h3>Post-training stretch<span class="yc">10 min</span></h3><div class="pc">
+    <p>After Gym A and the key runs, while you are still warm. Hips, quads, hamstrings and shoulders. No load, so it is fine with sore legs. From a Breathe and Flow video.</p>
+    <table><tr><th>Move</th><th>How long</th><th>How</th></tr>${STRETCH.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')}</table></div></div>
   <div class="panel"><h3>★ Priority<span class="yc">${prio.length} videos</span></h3>
     <div class="pc" style="padding-bottom:0"><p style="font-size:13.5px;color:var(--soft);margin:0 0 4px">Ankles, toes, knees, hips, back and fascia. These protect you through the vert and the ultras.</p></div>
     <ul class="ylist">${prio.map(li).join('')}</ul></div>
