@@ -68,6 +68,7 @@ const cancelled = i => Invoices.cancelled(i);
 const shortType = t => String(t).split(' (')[0];
 
 function prep(j) {
+  j.time = j.time || [];
   pairTransfers(j.tx);
   (j.tx || []).forEach(t => { const k = classify(t); t._k = k.k; t._cat = k.cat; });
   const r = Invoices.reconcile(j.invoices, j.tx);
@@ -86,6 +87,7 @@ async function load() {
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || 'unknown error');
     try { localStorage.setItem(CKEY, JSON.stringify(j)); } catch (e) {}
+    if (j.now) skew = j.now - Date.now();
     data = prep(j);
     $('#status').textContent = 'Updated ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     render();
@@ -384,6 +386,138 @@ async function cashConfirm(depKey, when, ids) {
   } catch (e) { $('#status').textContent = 'Could not save: ' + e.message; }
 }
 
+/* The job clock (Biz_Time). A session is two timestamps written by the
+   server, so nothing runs while the page is shut: start at the shoot on the
+   phone, stop on the Mac after editing. An `end` of 0 is the clock running,
+   and what it shows is now minus start, worked out again every second.
+   `skew` is how far this device's clock is from the server's, so the figure
+   is right even on a phone whose clock is a minute out. */
+let timeEdit = null, timePick = '', skew = 0;
+const nowMs = () => Date.now() + skew;
+const sessLen = s => (s.end || nowMs()) - s.start;
+const running = () => (data.time || []).find(s => !s.end);
+const jobHours = id => (data.time || []).filter(s => s.job === id).reduce((a, s) => a + sessLen(s), 0);
+const hm = ms => { const m = Math.round(ms / 6e4); return Math.floor(m / 60) + 'h ' + String(m % 60).padStart(2, '0') + 'm'; };
+const clock = ms => {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  return Math.floor(s / 3600) + ':' + String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+};
+const hhmm = ms => new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+const localDT = ms => ms ? new Date(ms - new Date(ms).getTimezoneOffset() * 6e4).toISOString().slice(0, 16) : '';
+const jobName = id => {
+  const b = (data.bookings || []).find(x => x.id === id);
+  return b ? b.client + ' · ' + dshort(b.shoot) : 'a removed booking';
+};
+// Over this, a running clock is probably one he forgot.
+const LONG_RUN = 10 * 3600e3;
+
+function timeCard() {
+  const books = (data.bookings || []).slice().sort((a, b) =>
+    (!!a.delivered - !!b.delivered) || (a.shoot < b.shoot ? 1 : -1));
+  const r = running();
+  const last = (data.time || []).slice().sort((a, b) => b.start - a.start);
+  if (!timePick || !books.some(b => b.id === timePick)) timePick = (last[0] && last[0].job) || (books[0] && books[0].id) || '';
+  const opts = (sel, withNew) => books.map(b =>
+    `<option value="${esc(b.id)}"${b.id === sel ? ' selected' : ''}>${esc(b.client)} · ${dshort(b.shoot)}</option>`).join('') +
+    (withNew ? '<option value="__new">+ new job</option>' : '');
+  const phaseSel = p => ['shoot', 'edit'].map(x => `<option value="${x}"${x === p ? ' selected' : ''}>${x === 'shoot' ? 'Shoot' : 'Edit'}</option>`).join('');
+
+  const head = r
+    ? `<div class="tclk" id="tclock">${clock(nowMs() - r.start)}</div>
+       <div class="tsub">${r.phase === 'edit' ? 'Editing' : 'Shooting'} · ${esc(jobName(r.job))} · since ${hhmm(r.start)}</div>
+       <div class="tbtn"><button class="go" data-act="tstop">Stop</button>
+         <button class="go ghost" data-act="tstart" data-j="${esc(r.job)}" data-p="${r.phase === 'edit' ? 'shoot' : 'edit'}">Switch to ${r.phase === 'edit' ? 'shoot' : 'edit'}</button></div>
+       ${nowMs() - r.start > LONG_RUN ? '<span class="gap">Running for over 10 hours. Forgot to stop? Stop it, then Edit the end below.</span>' : ''}`
+    : books.length
+      ? `<label class="tsel">Job<select id="tJob">${opts(timePick, true)}</select></label>
+         <div class="tbtn"><button class="go" data-act="tstart" data-p="shoot">Start shoot</button>
+           <button class="go" data-act="tstart" data-p="edit">Start edit</button></div>`
+      : '<div class="tsub">Add a booking below, then time it here.</div>';
+
+  const row = s => timeEdit === s.id
+    ? sessForm(s, opts, phaseSel)
+    : `<div class="inv"><b>${esc(jobName(s.job))}</b><span class="amt">${s.end ? hm(sessLen(s)) : 'running'}</span>
+        <span class="svc">${s.phase === 'edit' ? 'Edit' : 'Shoot'} · ${dshort(localDT(s.start).slice(0, 10))}
+          ${hhmm(s.start)}–${s.end ? hhmm(s.end) : 'now'}</span>
+        <span class="st"><button class="mk" data-act="tedit" data-id="${esc(s.id)}">Edit</button>
+          <button class="mk" data-act="tdel" data-id="${esc(s.id)}">Delete</button></span></div>`;
+
+  return `<div class="card tmr">${head}</div>` +
+    (books.length ? `<div class="card">${timeEdit === '__new' ? sessForm(null, opts, phaseSel) : ''}
+      ${last.slice(0, 8).map(row).join('')}
+      <div class="note2">${timeEdit === '__new' ? '' : '<button class="mk go2" data-act="tedit" data-id="__new">+ Add time by hand</button> '}
+        Times are kept by the server, so the clock runs with the page shut. One clock at a time:
+        starting one stops the other.</div></div>` : '');
+}
+
+function sessForm(s, opts, phaseSel) {
+  return `<div class="bkf sessf">
+    ${s ? '' : `<label class="wide">Job<select id="tfJob">${opts(timePick, false)}</select></label>`}
+    <label>Phase<select id="tfPhase">${phaseSel(s ? s.phase : 'edit')}</select></label><span></span>
+    <label>Start<input id="tfStart" type="datetime-local" value="${localDT(s && s.start)}"></label>
+    <label>End<input id="tfEnd" type="datetime-local" value="${localDT(s && s.end)}"></label>
+    <button class="go" data-act="tsave">${s ? 'Save' : 'Add the time'}</button>
+    <button class="go ghost" data-act="tcancel">Leave it</button>
+    <div class="note2" id="tMsg">${s && !s.end ? 'Leave End empty to keep it running.' : ''}</div></div>`;
+}
+
+const keep = () => { try { localStorage.setItem(CKEY, JSON.stringify(data)); } catch (e) {} };
+
+async function timeStart(job, phase) {
+  if (!job) return;
+  $('#status').textContent = 'Starting…';
+  try {
+    const j = await api('&biz=tstart&job=' + encodeURIComponent(job) + '&phase=' + phase);
+    if (!j.ok) throw new Error(j.error || 'failed');
+    (data.time || []).forEach(s => { if (!s.end) s.end = nowMs(); });
+    data.time = (data.time || []).concat([{ id: j.session.id, job: job, phase: phase, start: j.session.start, end: 0 }]);
+    timePick = job; keep();
+    $('#status').textContent = (phase === 'edit' ? 'Editing ' : 'Shooting ') + jobName(job);
+    render();
+  } catch (e) { $('#status').textContent = 'Could not start: ' + e.message; }
+}
+
+async function timeStop() {
+  $('#status').textContent = 'Stopping…';
+  try {
+    const j = await api('&biz=tstop');
+    if (!j.ok) throw new Error(j.error || 'failed');
+    const r = running();
+    (data.time || []).forEach(s => { if (!s.end) s.end = nowMs(); });
+    keep();
+    $('#status').textContent = r ? 'Stopped at ' + hm(sessLen(r)) : 'Nothing was running';
+    render();
+  } catch (e) { $('#status').textContent = 'Could not stop: ' + e.message; }
+}
+
+async function timeSave() {
+  const v = id => (($('#' + id) || {}).value || '').trim();
+  const ms = s => (s ? new Date(s).getTime() : '');
+  const q = { phase: v('tfPhase'), start: ms(v('tfStart')), end: ms(v('tfEnd')) };
+  const isNew = timeEdit === '__new';
+  if (isNew) q.job = v('tfJob'); else q.id = timeEdit;
+  if (!q.start || (isNew && !q.end)) { $('#tMsg').textContent = 'A start and an end, please.'; return; }
+  $('#tMsg').textContent = 'Saving…';
+  try {
+    const j = await api('&biz=' + (isNew ? 'tadd' : 'tedit') + '&' +
+      Object.keys(q).map(k => k + '=' + encodeURIComponent(q[k])).join('&'));
+    if (!j.ok) throw new Error(j.error || 'failed');
+    if (isNew) data.time = (data.time || []).concat([{ id: j.session.id, job: q.job, phase: q.phase, start: q.start, end: q.end }]);
+    else Object.assign((data.time || []).find(s => s.id === q.id) || {}, { phase: q.phase, start: q.start, end: q.end || 0 });
+    timeEdit = null; keep(); render();
+  } catch (e) { $('#tMsg').textContent = 'Could not save: ' + e.message; }
+}
+
+async function timeDel(id) {
+  const s = (data.time || []).find(x => x.id === id);
+  if (!s || !confirm('Delete ' + hm(sessLen(s)) + ' of ' + s.phase + ' on ' + jobName(s.job) + '?')) return;
+  try {
+    const j = await api('&biz=tdel&id=' + encodeURIComponent(id));
+    if (!j.ok) throw new Error(j.error || 'failed');
+    data.time = (data.time || []).filter(x => x.id !== id); keep(); render();
+  } catch (e) { $('#status').textContent = 'Could not delete: ' + e.message; }
+}
+
 function renderJobs() {
   const invByNo = {};
   (data.invoices || []).forEach(i => { invByNo[String(i.no).trim()] = i; });
@@ -397,7 +531,7 @@ function renderJobs() {
   const list = (sets[jobFilter] || []).slice().sort((a, b) =>
     (JOB_ORDER[a._s.k] - JOB_ORDER[b._s.k]) || (a.shoot < b.shoot ? -1 : 1));
 
-  $('#view').innerHTML = jobForm() + cashCard() +
+  $('#view').innerHTML = timeCard() + jobForm() + cashCard() +
     `<div class="chips">${Object.keys(sets).map(k =>
       `<button data-act="jfilter" data-f="${k}" aria-pressed="${jobFilter === k}">${names[k]} ${sets[k].length}</button>`).join('')}</div>` +
     (list.length ? `<div class="card">${list.map(jobRow).join('')}</div>` +
@@ -416,6 +550,7 @@ function jobRow(j) {
     <b>${esc(j.client)}</b><span class="amt">${j.price ? fmt(j.price) : ''}</span>
     <span class="svc">${dshort(j.shoot)}${bits ? ' · ' + bits : ''}${j.contact ? ' · ' + esc(j.contact) : ''}</span>
     <span class="st"><span class="tag ${s.k === 'paid' || s.k === 'delivered' ? 'found' : s.k === 'late' ? 'owed' : ''}">${esc(s.label)}</span>
+      ${jobHours(j.id) ? `<span class="tag">\u23f1 ${hm(jobHours(j.id))}</span>` : ''}
       ${j.deposit ? `<span class="tag">${j.deposit_in ? 'deposit in' : 'deposit due'} ${fmt(j.deposit)}</span>` : ''}
       ${j.price && owed > 0.01 && s.k !== 'paid' ? `<span class="tag">${fmt(owed)} to come</span>` : ''}
       ${j.delivered ? '' : `<button class="mk" data-act="jdone" data-id="${esc(j.id)}">Delivered</button>`}
@@ -479,6 +614,7 @@ async function addJob() {
       : (data.bookings || []).concat([j.job]);
     try { localStorage.setItem(CKEY, JSON.stringify(data)); } catch (e) {}
     jobEdit = null;
+    if (!was) timePick = j.job.id;
     $('#status').textContent = was ? q.client + ' updated' : q.client + ' booked for ' + dshort(q.shoot);
     render();
   } catch (e) { $('#jMsg').textContent = 'Could not save: ' + e.message; }
@@ -513,7 +649,8 @@ async function delJob(id) {
    a single year are the same code.
 
    What each is allowed to say:
-   - the years, the months and the quarters come from the BANK, which is complete;
+   - the years and the months come from the BANK, which is complete;
+   - an average January, February... comes from the INVOICES, every year together;
    - billed and pay-per-job come from the INVOICES, which are complete for money
      but can bill several shoots on one invoice, mostly for Фешън Лаб;
    - the type of shoot comes from the `category` column, which says how much of
@@ -524,16 +661,7 @@ function chartRows(year) {
   return { tx, inv };
 }
 
-function quarters(tx) {
-  const q = [0, 0, 0, 0], qi = [0, 0, 0, 0];
-  tx.forEach(t => {
-    const k = Math.floor((+t.d.slice(5, 7) - 1) / 3);
-    if (t._k === 'inc') qi[k] += t.a; else if (t._k === 'exp') q[k] += -t.a;
-  });
-  return { out: q, inn: qi };
-}
-
-function charts() {
+function charts(st) {
   const years = [...new Set((data.tx || []).map(t => t.d.slice(0, 4)))].sort();
   /* Shoots paid in cash are invisible to every chart here: no invoice is ever
      written for them and the money goes to his personal account, so neither
@@ -568,8 +696,9 @@ function charts() {
 
   const best = periods.slice().sort((a, b) => b.inn - a.inn)[0];
   const dear = periods.slice().sort((a, b) => b.out - a.out)[0];
-  const q = quarters(tx);
-  const qBest = q.inn.indexOf(Math.max(...q.inn));
+  const mo = monthAvg();
+  const thin = st ? mo.filter(m => m.years >= 2 && m.avg < st.floor) : [];
+  const trend = rateTrend(), mix = clientMix(), yr = today().slice(0, 4);
 
   // Billed per client, and what one invoice is worth on average: the closest
   // thing to "what is worth my time" that the invoices can honestly carry.
@@ -630,10 +759,11 @@ function charts() {
         The bank, not the invoices. Every month's own figures are on the Year tab.</div>
     </div>
     <div class="card">
-      <div class="chh">Quarters</div>
-      ${Charts.groups(q.inn.map((v, i) => ({ label: 'Q' + (i + 1), parts: [
-        { v: v, cls: 'in', name: 'in' }, { v: q.out[i], cls: 'out', name: 'out' }] })), fmt0)}
-      <div class="note2">${q.inn[qBest] ? `<b>Q${qBest + 1} is your strongest quarter at ${fmt0(q.inn[qBest])} in.</b>` : 'Nothing here yet.'}</div>
+      <div class="chh">An average January, February\u2026</div>
+      ${Charts.bars(mo.filter(m => m.years).map(m => [m.label, m.avg]), fmt0)}
+      <div class="note2">${thin.length ? `<b>${thin.map(m => m.label).join(', ')} bill less than the floor of
+        ${fmt0(st.floor)}</b>, year after year. ` : ''}What each calendar month billed, averaged over every year it
+        appears in the invoices. It ignores the year chips: one year cannot show a season.</div>
     </div>
     <div class="card">
       <div class="chh">By type of shoot</div>
@@ -641,7 +771,12 @@ function charts() {
       ${types.length ? Charts.bars(types.map(([k, v]) =>
         [shortType(k) + ' \u00b7 ' + v.n, v.sum, v.sum / v.n]), fmt0)
         : '<div class="empty">Nothing tagged yet.</div>'}
-      <div class="note2"><b>${fmt0(tagged)} of ${fmt0(billed)} billed carries a type</b>
+      ${trend.length ? `<div class="rt">${trend.map(r => `<div class="arow"><span>${esc(shortType(r.type))}</span><b>${
+        r.years.map(x => `<span class="${st && st.minInv && x.y === yr && x.avg < st.minInv ? 'exp' : ''}">\u2019${x.y.slice(2)} ${fmt0(x.avg)}</span>`).join(' \u00b7 ')}${
+        r.change != null ? ` <i class="${r.change < 0 ? 'exp' : 'inc'}">${r.change < 0 ? '\u2212' : '+'}${Math.round(Math.abs(r.change) * 100)}%</i>` : ''}</b></div>`).join('')}</div>` : ''}
+      <div class="note2">${trend.length ? `<b>Each, year by year</b>, for every year: the percentage compares the first and last years with two or more invoices.
+        ${st && st.minInv ? `Red is under ${fmt0(st.minInv)}, the share of the floor one invoice has to carry.` : ''}<br>` : ''}
+        <b>${fmt0(tagged)} of ${fmt0(billed)} billed carries a type</b>
         (${pcTagged}%), so the shape is sound and the totals are still a little low.
         Tap <i>Set type</i> on any invoice to add one.${cashNote}</div>
     </div>
@@ -649,7 +784,9 @@ function charts() {
       <div class="chh">By client</div>
       <div class="barh"><span></span><span></span><span>billed</span><span>each</span></div>
       ${Charts.bars(clients.slice(0, 10).map(([k, v]) => [k + ' \u00b7 ' + v.n, v.sum, v.sum / v.n]), fmt0)}
-      <div class="note2">${cashNote ? cashNote.replace('<br>', '') + '<br>' : ''}<b>Billed per client, and what one of its invoices is worth.</b>
+      ${mix.rep.length ? `<div class="arow tot"><span>Came back, ${mix.rep.length} client${mix.rep.length === 1 ? '' : 's'}</span><b>${Math.round(mix.repShare * 100)}% \u00b7 ${fmt0(mix.repAvg)} each</b></div>
+        <div class="arow"><span>Came once, ${mix.one.length}</span><b>${Math.round((1 - mix.repShare) * 100)}% \u00b7 ${fmt0(mix.oneAvg)} each</b></div>` : ''}
+      <div class="note2">${cashNote ? cashNote.replace('<br>', '') + '<br>' : ''}${mix.rep.length ? 'Came back and came once are every year together: what a client is worth over time. ' : ''}<b>Billed per client, and what one of its invoices is worth.</b>
         The number after the name is how many invoices that is. One invoice can cover several
         shoots, mostly for Фешън Лаб, so a big client's "each" is a run of work rather than a day.
         Cancelled invoices are left out.</div>
@@ -662,12 +799,250 @@ function charts() {
     </div>`;
 }
 
+/* ===== What the numbers say (26 Oct 2026) ==========================
+   Georgi: "a month u earn this much, avg expenses are that much, so you need
+   X. What effort is with the biggest ROI." The charts below say what
+   happened; these say where he stands and what is worth doing next.
+
+   The business is side income (his answer), so the question is whether the
+   work is worth the time, and the floor is what every month has to clear
+   before any of it is his: rent, taxes, accounting, bank fees and
+   subscriptions, averaged over the last twelve complete months. */
+const FIXED = ['Rent', 'Taxes', 'Accounting', 'Fees', 'Subscriptions'];
+const DRAW = ['Salary', 'Dividend', 'Drawings'];
+const ymAdd = (ym, n) => { const d = new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1 + n, 1)); return d.toISOString().slice(0, 7); };
+const ymDiff = (a, b) => (+b.slice(0, 4) - +a.slice(0, 4)) * 12 + (+b.slice(5, 7) - +a.slice(5, 7));
+const fullMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function standing(now) {
+  now = now || today();
+  const cur = now.slice(0, 7), yr = now.slice(0, 4);
+  const tx = (data.tx || []).filter(t => t.c === 'EUR' && t._k !== 'move');
+  const first = tx.map(t => t.d).sort()[0];
+  if (!first) return null;
+  const from = [ymAdd(cur, -12), first.slice(0, 7)].sort()[1];
+  const months = ymDiff(from, cur);
+  if (months < 1) return null;
+  const inWin = t => t.d.slice(0, 7) >= from && t.d.slice(0, 7) < cur;
+  const fixedBy = {};
+  tx.filter(t => t._k === 'exp' && inWin(t) && FIXED.indexOf(t._cat) >= 0)
+    .forEach(t => { fixedBy[t._cat] = (fixedBy[t._cat] || 0) - t.a / months; });
+  const floor = Object.values(fixedBy).reduce((a, v) => a + v, 0);
+  const n3 = Math.min(3, months), from3 = ymAdd(cur, -n3);
+  const run3 = tx.filter(t => t._k === 'inc' && t.d.slice(0, 7) >= from3 && t.d.slice(0, 7) < cur)
+    .reduce((a, t) => a + t.a, 0) / n3;
+  const inThis = tx.filter(t => t._k === 'inc' && t.d.startsWith(cur)).reduce((a, t) => a + t.a, 0);
+  const live = data.live || [];
+  const thisYr = live.filter(i => String(i.issued || '').startsWith(yr));
+  const avgInv = thisYr.length ? thisYr.reduce((a, i) => a + i.amount_eur, 0) / thisYr.length : 0;
+  const perMonth = live.filter(i => { const m = String(i.issued || '').slice(0, 7); return m >= from && m < cur; }).length / months;
+  const draws = tx.filter(t => t._k === 'exp' && DRAW.indexOf(t._cat) >= 0);
+  const taken = draws.filter(t => t.d.startsWith(yr)).reduce((a, t) => a - t.a, 0);
+  const lastDraw = draws.map(t => t.d).sort().pop() || '';
+  const end = new Date(+cur.slice(0, 4), +cur.slice(5, 7), 0).getDate();
+  return { cur, yr, months, floor, fixedBy, run3, n3, inThis, avgInv, perMonth,
+    minInv: perMonth ? floor / perMonth : 0, taken, lastDraw, daysLeft: end - +now.slice(8, 10) };
+}
+
+/* What one invoice of each type is worth, year by year. The all-years
+   average on the chart hid the one thing worth knowing: product work fell
+   from €627 an invoice in 2024 to €446 in 2026. */
+function rateTrend() {
+  const by = {};
+  (data.live || []).forEach(i => {
+    const t = String(i.category || '').trim(), y = String(i.issued || '').slice(0, 4);
+    if (!t || !y) return;
+    const c = ((by[t] = by[t] || {})[y] = by[t][y] || { n: 0, sum: 0 });
+    c.n++; c.sum += i.amount_eur;
+  });
+  return Object.keys(by).map(t => {
+    const years = Object.keys(by[t]).sort().map(y => ({ y, n: by[t][y].n, avg: by[t][y].sum / by[t][y].n }));
+    const solid = years.filter(x => x.n >= 2);
+    const a = solid[0], b = solid[solid.length - 1];
+    return { type: t, years, n: years.reduce((s, x) => s + x.n, 0),
+      change: a && b && a !== b ? (b.avg - a.avg) / a.avg : null };
+  }).sort((a, b) => b.n - a.n);
+}
+
+/* Who comes back. Four repeat clients carried 68% of all billing at about
+   €3,850 each; thirty one-off clients averaged €242. */
+function clientMix(now) {
+  now = now || today();
+  const by = {};
+  (data.live || []).forEach(i => {
+    const k = i.client || '—';
+    const c = (by[k] = by[k] || { name: k, n: 0, sum: 0, first: i.issued, last: i.issued });
+    c.n++; c.sum += i.amount_eur;
+    if (i.issued < c.first) c.first = i.issued;
+    if (i.issued > c.last) c.last = i.issued;
+  });
+  const all = Object.values(by), total = all.reduce((a, c) => a + c.sum, 0);
+  const rep = all.filter(c => c.n >= 2), one = all.filter(c => c.n < 2);
+  const avg = l => (l.length ? l.reduce((a, c) => a + c.sum, 0) / l.length : 0);
+  // The middle client, for the step's figure: one big regular (Фешън Лаб,
+  // €12,645 of four regulars' €15,421) would otherwise speak for all four.
+  const med = l => { const v = l.map(c => c.sum).sort((a, b) => a - b), k = v.length >> 1;
+    return v.length ? (v.length % 2 ? v[k] : (v[k - 1] + v[k]) / 2) : 0; };
+  const cut = new Date(new Date(now + 'T12:00') - 180 * 864e5).toISOString().slice(0, 10);
+  const quiet = rep.filter(c => c.last < cut).map(c => Object.assign({}, c, {
+    perYear: c.sum / Math.max(1, (new Date(c.last) - new Date(c.first)) / 365 / 864e5) }));
+  return { total, rep, one, repAvg: avg(rep), oneAvg: avg(one), repMed: med(rep), oneMed: med(one),
+    repShare: total ? rep.reduce((a, c) => a + c.sum, 0) / total : 0, quiet };
+}
+
+/* Billing by calendar month, averaged over the years that month was inside
+   the records. Jan, Feb and Sep fall below the floor every year. */
+function monthAvg(now) {
+  now = now || today();
+  const live = (data.live || []).filter(i => i.issued);
+  const first = live.map(i => i.issued).sort()[0];
+  if (!first) return [];
+  const sums = new Array(12).fill(0), yrs = new Array(12).fill(0);
+  live.forEach(i => { sums[+i.issued.slice(5, 7) - 1] += i.amount_eur; });
+  // A month counts for a year only when it is complete and inside the records.
+  for (let ym = first.slice(0, 7); ym < now.slice(0, 7); ym = ymAdd(ym, 1)) yrs[+ym.slice(5, 7) - 1]++;
+  return MONTHS.map((m, i) => ({ m: i, label: m, avg: yrs[i] ? sums[i] / yrs[i] : 0, years: yrs[i] }));
+}
+
+/* Euro per hour, from the clock. Revenue for a booking is its invoice,
+   split evenly over every booking that names that invoice (one Фешън Лаб
+   invoice covers several shoots), or, for a shoot paid in cash, the price on
+   the booking, marked as such. That is the ONLY place a booking's price is
+   used as money, his call: for the hourly rate, never for a total.
+   Net = revenue less the hours' share of the floor, where an hour carries
+   the floor divided by the hours he logs in an average month (the last
+   three months that have any). */
+function hourRates(st) {
+  const time = (data.time || []).filter(s => s.start);
+  if (!time.length) return null;
+  const inv = {}, onInv = {};
+  (data.live || []).forEach(i => { inv[String(i.no).trim()] = i; });
+  (data.bookings || []).forEach(b => { const n = String(b.invoice || '').trim(); if (n) onInv[n] = (onInv[n] || 0) + 1; });
+  const hrs = {};
+  time.forEach(s => { hrs[s.job] = (hrs[s.job] || 0) + sessLen(s) / 3600e3; });
+  const perMonth = {};
+  time.forEach(s => { const m = localDT(s.start).slice(0, 7); perMonth[m] = (perMonth[m] || 0) + sessLen(s) / 3600e3; });
+  const recent = Object.keys(perMonth).sort().slice(-3);
+  const avgHrs = recent.reduce((a, m) => a + perMonth[m], 0) / Math.max(1, recent.length);
+  const perHour = st && avgHrs ? st.floor / avgHrs : 0;
+  const types = {};
+  let waiting = 0, cashN = 0;
+  (data.bookings || []).forEach(b => {
+    const h = hrs[b.id];
+    if (!h) return;
+    const n = String(b.invoice || '').trim();
+    let rev = null, cash = false;
+    if (n && inv[n]) rev = inv[n].amount_eur / onInv[n];
+    else if (!n && b.paid && Number(b.price)) { rev = Number(b.price); cash = true; }
+    if (rev == null) { waiting++; return; }
+    if (cash) cashN++;
+    const t = shortType(String(b.type || '').trim() || 'No type');
+    const c = (types[t] = types[t] || { type: t, rev: 0, h: 0, jobs: 0, cash: 0 });
+    c.rev += rev; c.h += h; c.jobs++; if (cash) c.cash++;
+  });
+  const rows = Object.values(types).map(c => Object.assign(c, {
+    gross: c.rev / c.h, net: (c.rev - c.h * perHour) / c.h })).sort((a, b) => b.net - a.net);
+  return { rows, waiting, cashN, perHour, avgHrs };
+}
+
+/* What to do next, each with what it is worth in euro, biggest first. */
+function nextSteps(st, now) {
+  now = now || today();
+  const yr = now.slice(0, 4), out = [], watch = [];
+  rateTrend().forEach(r => {
+    const cur = r.years.find(x => x.y === yr);
+    const best = r.years.filter(x => x.y < yr && x.n >= 3).sort((a, b) => b.avg - a.avg)[0];
+    if (!cur || cur.n < 3 || !best || best.avg <= cur.avg) return;
+    out.push({ eur: (best.avg - cur.avg) * cur.n, text: `<b>Charge ${esc(shortType(r.type).toLowerCase())} at your ${best.y} rate.</b>
+      It was ${fmt0(best.avg)} an invoice then and is ${fmt0(cur.avg)} this year, over ${cur.n} invoices.` });
+  });
+  if (st && st.minInv) {
+    const small = (data.live || []).filter(i => String(i.issued || '').startsWith(yr) && i.amount_eur < st.minInv);
+    if (small.length) out.push({ eur: small.reduce((a, i) => a + st.minInv - i.amount_eur, 0),
+      text: `<b>Bundle or re-price work under ${fmt0(st.minInv)}.</b> That is the share of the floor one invoice has to
+        carry at ${st.perMonth.toFixed(1)} invoices a month. ${small.length} invoice${small.length === 1 ? ' was' : 's were'} under it
+        this year; a month of small jobs on one invoice counts as one.` });
+    const thin = monthAvg(now).filter(m => m.years >= 2 && m.avg < st.floor);
+    if (thin.length) out.push({ eur: thin.reduce((a, m) => a + st.floor - m.avg, 0),
+      text: `<b>Book ${thin.map(m => fullMonths[m.m]).join(', ')} ahead.</b> They bill less than the floor
+        year after year (${thin.map(m => m.label + ' ' + fmt0(m.avg)).join(', ')}).` });
+  }
+  const mix = clientMix(now);
+  if (mix.rep.length && mix.one.length && mix.repMed > mix.oneMed) out.push({ eur: mix.repMed - mix.oneMed,
+    text: `<b>Turn one new client into a regular.</b> A typical client who came back has billed
+      ${fmt0(mix.repMed)} so far; a typical one who came once, ${fmt0(mix.oneMed)}.` });
+  if (mix.quiet.length) out.push({ eur: mix.quiet.reduce((a, c) => a + c.perYear, 0),
+    text: `<b>Call ${mix.quiet.map(c => esc(c.name)).join(', ')}.</b> Regular${mix.quiet.length === 1 ? '' : 's'}
+      with nothing booked for six months; that is roughly what they bill in a year.` });
+  const yrInv = (data.live || []).filter(i => String(i.issued || '').startsWith(yr));
+  const yrSum = yrInv.reduce((a, i) => a + i.amount_eur, 0), byC = {};
+  yrInv.forEach(i => { byC[i.client] = (byC[i.client] || 0) + i.amount_eur; });
+  const top = Object.entries(byC).sort((a, b) => b[1] - a[1])[0];
+  if (top && yrSum && top[1] / yrSum > 0.4) watch.push(`<b>${esc(top[0])} is ${Math.round(top[1] / yrSum * 100)}% of
+    this year's billing.</b> If it stopped, ${fmt0(top[1])} a year would go with it, against a floor of ${fmt0(st ? st.floor * 12 : 0)} a year.`);
+  const lags = (data.live || []).filter(i => i._paid && i.issued)
+    .map(i => (new Date(i._paid.row.d) - new Date(i.issued)) / 864e5).sort((a, b) => a - b);
+  if (lags.length >= 5) {
+    const med = lags[Math.floor(lags.length / 2)];
+    if (med <= 7) watch.push(`<b>Chasing payments is worth nothing.</b> Clients pay a median ${Math.max(0, Math.round(med))}
+      day${Math.round(med) === 1 ? '' : 's'} after the invoice.`);
+  }
+  return { steps: out.sort((a, b) => b.eur - a.eur), watch };
+}
+
+function standCard(st) {
+  if (!st) return '';
+  const name = fullMonths[+st.cur.slice(5, 7) - 1];
+  const over = st.inThis - st.floor, r3 = st.run3 - st.floor;
+  const fb = FIXED.filter(k => st.fixedBy[k]).map(k => k.toLowerCase() + ' ' + fmt0(st.fixedBy[k])).join(' · ');
+  return `<div class="card stand">
+    <div class="verdict">${over >= 0
+      ? `<b>${name} has cleared the floor</b>, with ${fmt0(over)} to spare.`
+      : `<b>${name} is ${fmt0(-over)} short of the floor</b>, with ${st.daysLeft} day${st.daysLeft === 1 ? '' : 's'} left.`}
+      The last ${st.n3} months brought in ${fmt0(st.run3)} a month, ${fmt0(Math.abs(r3))} ${r3 >= 0 ? 'above' : 'below'} it.</div>
+    <div class="arow tot"><span>The floor, every month</span><b>${fmt0(st.floor)}</b></div>
+    <div class="arow od"><span>${fb}</span></div>
+    <div class="arow"><span>In this month</span><b class="${over >= 0 ? 'inc' : 'exp'}">${fmt0(st.inThis)}</b></div>
+    <div class="arow"><span>Average, last ${st.n3} months</span><b>${fmt0(st.run3)}</b></div>
+    ${st.avgInv ? `<div class="arow"><span>Invoices a month to cover it, at ${fmt0(st.avgInv)} each</span><b>${(st.floor / st.avgInv).toFixed(1)}</b></div>` : ''}
+    <div class="arow"><span>Taken out for you in ${st.yr}</span><b>${fmt0(st.taken)}</b></div>
+    <div class="note2">The floor is what the company pays before anything is yours: averaged over the last
+      ${st.months} complete months, from the bank.${st.lastDraw ? ` You last took money out on ${dshort(st.lastDraw)}.` : ''}</div>
+  </div>`;
+}
+
+function nextCard(st) {
+  const n = nextSteps(st), h = hourRates(st);
+  const hours = h
+    ? (h.rows.length
+      ? `<div class="chh">An hour of each, after fixed costs</div>
+         ${Charts.bars(h.rows.map(r => [r.type + ' \u00b7 ' + r.jobs + ' job' + (r.jobs === 1 ? '' : 's') +
+           (r.cash ? ', ' + r.cash + ' cash' : '') + ' \u00b7 ' + Math.round(r.h) + 'h', r.net]),
+           v => (v < 0 ? '\u2212' : '') + fmt0(v) + '/h')}
+         <div class="note2">Net is what an hour leaves after its share of the floor, ${fmt0(h.perHour)} an hour at the
+           ${h.avgHrs.toFixed(0)} hours you log in a month.${h.cashN ? ' Cash jobs use the price on the booking.' : ''}
+           ${h.waiting ? ` ${h.waiting} timed job${h.waiting === 1 ? '' : 's'} wait${h.waiting === 1 ? 's' : ''} for an invoice before ${h.waiting === 1 ? 'it counts' : 'they count'}.` : ''}</div>`
+      : `<div class="note2">${h.waiting} timed job${h.waiting === 1 ? '' : 's'}, none invoiced or paid yet. Euro per hour starts with the first.</div>`)
+    : `<div class="note2">Time your jobs on the Jobs tab and this card ranks your work by what an hour of it earns.
+        Until then, it ranks by what an invoice is worth.</div>`;
+  return `<div class="card nx">
+    <div class="chh">What to do next</div>
+    ${n.steps.length ? n.steps.map(s => `<div class="arow"><span>${s.text}</span><b class="inc">+${fmt0(s.eur)}</b></div>`).join('')
+      : '<div class="empty">Nothing stands out.</div>'}
+    ${n.watch.map(w => `<div class="arow"><span>${w}</span></div>`).join('')}
+    <div class="note2">Each figure is what it is worth in a year, or for a client over time, worked out from your
+      invoices and the bank each time the page loads.</div>
+    ${hours}
+  </div>`;
+}
+
 function renderOverview() {
   const m = money(), y = byYear();
   const held = (data.balances || []).reduce((a, x) => a + (Number(x.amount) || 0), 0);
   const before = (data.balances || []).length ? Math.round((held - m.net) * 100) / 100 : 0;
   const open = data.live.filter(i => !i._paid);
-  $('#view').innerHTML = `
+  const st = standing();
+  $('#view').innerHTML = standCard(st) + `
     <div class="card">
       ${Object.keys(y).sort().reverse().map(k => `<div class="arow"><b>${k}</b>` +
         `<span>in ${fmt0(y[k].inn)} · out ${fmt0(y[k].out)} · billed ${fmt0(y[k].billed)}</span></div>`).join('')}
@@ -683,7 +1058,7 @@ function renderOverview() {
       <div class="arow"><span>Not matched</span><b>${open.length}</b></div>
       <div class="note2">Not matched is not the same as unpaid: cash, a payment bundled with others, or an
         amount that differs by a cent all land here. Check them rather than chase them.</div>
-    </div>` + charts();
+    </div>` + charts(st) + nextCard(st);
 }
 
 function invRow(i) {
@@ -768,6 +1143,12 @@ $('#view').addEventListener('click', e => {
   }
   const a = b.dataset.act;
   if (a === 'jadd') { addJob(); return; }
+  if (a === 'tstart') { timeStart(b.dataset.j || (($('#tJob') || {}).value) || timePick, b.dataset.p); return; }
+  if (a === 'tstop') { timeStop(); return; }
+  if (a === 'tedit') { timeEdit = b.dataset.id; render(); return; }
+  if (a === 'tcancel') { timeEdit = null; render(); return; }
+  if (a === 'tsave') { timeSave(); return; }
+  if (a === 'tdel') { timeDel(b.dataset.id); return; }
   if (a === 'jedit') { jobEdit = b.dataset.id; render(); window.scrollTo(0, 0); return; }
   if (a === 'jcancel') { jobEdit = null; render(); return; }
   if (a === 'jdone') { setJob(b.dataset.id, 'delivered', today()); return; }
@@ -793,6 +1174,21 @@ $('#view').addEventListener('click', e => {
   else return;
   render();
 });
+// "+ new job" in the clock's list opens the booking form under it.
+$('#view').addEventListener('change', e => {
+  if (e.target.id !== 'tJob') return;
+  if (e.target.value !== '__new') { timePick = e.target.value; return; }
+  e.target.value = timePick;
+  const f = document.querySelector('.addj');
+  if (f) { f.open = true; f.scrollIntoView({ behavior: 'smooth' }); const c = $('#jClient'); if (c) c.focus(); }
+});
+// The running clock. Only the figure changes, so nothing else is redrawn.
+// unref: in Node (the checks) a bare interval would keep the process alive.
+const tickT = setInterval(() => {
+  const el = document.getElementById('tclock'), r = data && running();
+  if (el && r) el.textContent = clock(nowMs() - r.start);
+}, 1000);
+if (tickT && tickT.unref) tickT.unref();
 $('#tokSave').addEventListener('click', () => {
   const v = $('#tokIn').value.trim(); if (!v) return;
   try { localStorage.setItem(TKEY, v); } catch (e) {}

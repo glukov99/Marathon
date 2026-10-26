@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="../shared/auth.js?v=202610261059"></script>
+<script src="../shared/auth.js?v=202610261227"></script>
 <title>Business · Life hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../shared/year.css?v=202610261059">
-<link rel="stylesheet" href="../shared/theme.css?v=202610261059">
+<link rel="stylesheet" href="../shared/year.css?v=202610261227">
+<link rel="stylesheet" href="../shared/theme.css?v=202610261227">
 <style>
 :root{
   --paper:#ECEAE4; --card:#FBFAF7; --card2:#F2F0EA; --ink:#1B1E1A; --soft:#5F665D; --faint:#8C9289; --rule:#D6D3CA;
@@ -226,6 +226,27 @@ ul.steps li{margin:5px 0}
 .gap{display:block;grid-column:1/-1;margin-top:5px;font-size:11.5px;color:var(--big)}
 .bkf .go.ghost{background:none;border:1px solid var(--rule);color:var(--soft)}
 .mk{margin-left:7px;background:none;border:0;padding:0;font:inherit;font-size:11px;color:var(--faint);text-decoration:underline;cursor:pointer}
+/* The job clock. */
+.tmr{padding:14px 15px}
+.tclk{font-size:44px;font-weight:800;font-variant-numeric:tabular-nums;text-align:center;letter-spacing:1px}
+.tsub{text-align:center;font-size:13px;color:var(--soft);margin:2px 0 12px}
+.tsel{display:block;font-size:11.5px;color:var(--soft);margin-bottom:10px}
+.tsel select{width:100%;margin-top:3px;background:var(--card2);border:1px solid var(--rule);
+  border-radius:8px;padding:9px 10px;font:inherit;font-size:14px;color:inherit}
+.tbtn{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.tbtn .go{background:var(--acc);border:0;border-radius:9px;padding:12px;font:inherit;font-size:15px;
+  font-weight:700;color:var(--paper);cursor:pointer}
+.tbtn .go.ghost{background:none;border:1px solid var(--rule);color:var(--soft)}
+.tmr .gap{text-align:center;margin-top:9px}
+.sessf{padding-top:12px}
+.sessf+.inv{border-top:1px solid var(--rule)}
+/* Where you stand, and what to do next. */
+.stand .verdict{padding:13px 14px 6px;font-size:15px;line-height:1.45}
+.rt .arow{font-size:12.5px;padding:6px 14px}
+.rt .arow b{font-weight:600;text-align:right}
+.rt i{font-style:normal;font-weight:700}
+.nx .arow span{font-size:13.5px;line-height:1.4}
+.nx .arow b{white-space:nowrap}
 .big2{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);border-radius:4px;overflow:hidden;margin-top:12px}
 .big2 div{background:var(--card);padding:11px 12px}
 .big2 span{display:block;font-size:12px;color:var(--soft)}
@@ -233,7 +254,7 @@ ul.steps li{margin:5px 0}
 </style>
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610261059"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610261227"></script>
 <div class="wrap">
   <header class="hero"><div class="k">GL Studio 99 EOOD</div><h1>Business</h1><div class="sub" id="status"></div></header>
   <div id="setup" class="panel hidden"><h3>Connect</h3><div class="pc">
@@ -247,11 +268,11 @@ ul.steps li{margin:5px 0}
     <div id="view"></div>
   </div>
 </div>
-<script src="../shared/catpick.js?v=202610261059"></script>
-<script src="../shared/charts.js?v=202610261059"></script>
-<script src="../shared/invoices.js?v=202610261059"></script>
-<script src="../shared/year.js?v=202610261059"></script>
-<script src="../shared/sync.js?v=202610261059"></script>
-<script src="app.js?v=202610261059"></script>
+<script src="../shared/catpick.js?v=202610261227"></script>
+<script src="../shared/charts.js?v=202610261227"></script>
+<script src="../shared/invoices.js?v=202610261227"></script>
+<script src="../shared/year.js?v=202610261227"></script>
+<script src="../shared/sync.js?v=202610261227"></script>
+<script src="app.js?v=202610261227"></script>
 </body>
 </html>

@@ -17,7 +17,9 @@ new Function('ctx', 'Year', 'Charts', 'Invoices', '$', 'document', 'localStorage
   body + '\nctx.prep=prep;ctx.render=render;ctx.setData=d=>{data=d};' +
   'ctx.tabs=t=>{tab=t};ctx.filter=f=>{filter=f};ctx.out=()=>out;' +
   'ctx.workingDue=workingDue;ctx.jobState=jobState;ctx.jobGaps=jobGaps;ctx.edit=i=>{jobEdit=i};' +
-  'ctx.subsetFor=subsetFor;ctx.cashMatches=cashMatches;')
+  'ctx.subsetFor=subsetFor;ctx.cashMatches=cashMatches;' +
+  'ctx.standing=standing;ctx.nextSteps=nextSteps;ctx.rateTrend=rateTrend;ctx.monthAvg=monthAvg;' +
+  'ctx.hourRates=hourRates;ctx.tedit=i=>{timeEdit=i};')
   (ctx, Year, Charts, Invoices, $, { querySelectorAll: () => [] }, { getItem: () => null, setItem() {} },
    () => Promise.reject(new Error('no network in the check')), { open() {} });
 
@@ -160,4 +162,80 @@ assert.equal(st({ shoot: old, delivered: old }).k, 'delivered', 'delivered but n
 assert.equal(st({ shoot: old, invoice: '7' }, { 7: { no: '7' } }).k, 'invoiced', 'billed, waiting');
 assert.equal(st({ shoot: old, invoice: '7' }, { 7: { no: '7', _paid: {} } }).k, 'paid', 'and paid');
 
-console.log('render ok: every tab builds, due dates land on working days');
+/* Where he stands and what to do next (26 Oct 2026). Made-up books with
+   answers that can be worked out by hand: rent 300 and taxes 100 every month
+   make a floor of 400; 500 comes in every month. */
+{
+  const rows = [];
+  for (let m = 0; m < 22; m++) {
+    const d = new Date(Date.UTC(2025, m, 5)).toISOString().slice(0, 10);
+    rows.push(tx(d, 500, 'client ' + m), tx(d, -300, 'АМАЙЯ РЕНТ', 'Rent'), tx(d, -100, 'НАП', 'Taxes'));
+  }
+  const P = 'Продуктова фотография (продукти)';
+  const inv = (no, d, amt, cat, client) => ({ no, issued: d, client: client || 'C' + no, amount_eur: amt, items: '', category: cat });
+  const H = 3600e3, t0 = Date.UTC(2026, 9, 1, 9);
+  const books = prep_({
+    tx: rows, types: [P],
+    invoices: [inv('1', '2025-03-01', 600, P, 'Reg'), inv('2', '2025-04-01', 600, P, 'Reg'), inv('3', '2025-05-01', 600, P),
+      inv('4', '2026-01-01', 400, P), inv('5', '2026-02-01', 400, P), inv('6', '2026-03-01', 400, P),
+      inv('10', '2026-09-01', 300, '')],
+    bookings: [{ id: 'b1', client: 'A', shoot: '2026-09-01', type: P, invoice: '10' },
+      { id: 'b2', client: 'A', shoot: '2026-09-02', type: P, invoice: '10' },
+      { id: 'b3', client: 'Cash', shoot: '2026-09-03', type: 'Семейна фотография', price: 200, paid: '2026-09-03' },
+      { id: 'b4', client: 'Later', shoot: '2026-10-01', type: P }],
+    time: [{ id: 's1', job: 'b1', phase: 'shoot', start: t0, end: t0 + 1.5 * H },
+      { id: 's2', job: 'b2', phase: 'edit', start: t0 + 3 * H, end: t0 + 4 * H },
+      { id: 's3', job: 'b3', phase: 'shoot', start: t0 + 5 * H, end: t0 + 6 * H },
+      { id: 's4', job: 'b4', phase: 'shoot', start: t0 + 7 * H, end: t0 + 7.5 * H }]
+  });
+  function prep_(x) { return ctx.prep(x); }
+  ctx.setData(books);
+  const st = ctx.standing('2026-10-15');
+  const near = (a, b, what) => assert.ok(Math.abs(a - b) < 0.01, what + ': ' + a + ' should be ' + b);
+  near(st.floor, 400, 'the floor is rent plus taxes a month');
+  near(st.inThis, 500, 'in this month');
+  near(st.run3, 500, 'the three-month average');
+  near(st.minInv, 400 / (4 / 12), 'what one invoice has to carry, at four invoices in twelve months');
+  const pr = ctx.rateTrend().find(r => r.type === P);
+  near(pr.change, -1 / 3, 'product fell from 600 to 400 an invoice');
+  const n = ctx.nextSteps(st, '2026-10-15');
+  const rate = n.steps.find(x => /2025 rate/.test(x.text));
+  assert.ok(rate, 'the falling rate is a step');
+  near(rate.eur, 600, 'three invoices at 200 under the 2025 rate');
+  assert.deepEqual(n.steps.map(x => x.eur), n.steps.map(x => x.eur).slice().sort((a, b) => b - a), 'biggest first');
+  // Hours: invoice 10 (300) is split over b1 and b2; b3 is cash at its booking
+  // price; b4 is timed but not billed, so it waits, though its half hour still
+  // counts as time worked. Four logged hours carry a floor of 400: 100 an hour.
+  const h = ctx.hourRates(st);
+  near(h.perHour, 100, 'an hour carries the floor over the hours logged');
+  assert.equal(h.waiting, 1, 'a timed job with no invoice waits');
+  assert.equal(h.cashN, 1, 'and the cash job counts, marked');
+  assert.equal(h.rows[0].type, 'Семейна фотография', 'best hour first');
+  near(h.rows[0].net, 100, 'cash: (200 - 100) / 1h');
+  near(h.rows[1].net, 20, 'product: (300 - 2.5h x 100) / 2.5h');
+  ctx.tabs('overview'); ctx.render();
+  assert.ok(/class="card stand"/.test(out.html) && /What to do next/.test(out.html), 'the overview opens and closes with them');
+  assert.ok(/An hour of each/.test(out.html) && /\/h/.test(out.html), 'and ranks an hour of work');
+  assert.ok(/An average January/.test(out.html) && !/Quarters/.test(out.html), 'months of the year replaced quarters');
+
+  // The clock: idle, running, forgotten, and the hand-typed session.
+  ctx.tabs('jobs'); ctx.render();
+  assert.ok(/data-act="tstart" data-p="shoot"/.test(out.html) && /id="tJob"/.test(out.html), 'pick a job, start a clock');
+  assert.ok(/\+ new job/.test(out.html), 'with a new job one tap away');
+  assert.ok(/\u23f1 1h 30m/.test(out.html), 'a booking shows its hours');
+  books.time.push({ id: 's5', job: 'b4', phase: 'edit', start: Date.now() - 65e3, end: 0 });
+  ctx.render();
+  assert.ok(/id="tclock">0:01:0\d/.test(out.html) && /data-act="tstop"/.test(out.html), 'a running clock shows and stops');
+  assert.ok(/Switch to shoot/.test(out.html) && !/Forgot to stop/.test(out.html), 'and can switch phase');
+  books.time[books.time.length - 1].start = Date.now() - 11 * H;
+  ctx.render();
+  assert.ok(/Forgot to stop/.test(out.html), 'a clock over ten hours is called out');
+  books.time.pop();
+  ctx.tedit('__new'); ctx.render();
+  assert.ok(/id="tfJob"/.test(out.html) && /Add the time/.test(out.html), 'time can be typed by hand');
+  ctx.tedit('s1'); ctx.render();
+  assert.ok(/id="tfStart" type="datetime-local" value="2026-10-01T/.test(out.html), 'and an old session edited');
+  ctx.tedit(null); ctx.setData(j);
+}
+
+console.log('render ok: every tab builds, due dates land on working days, the floor, steps and clock add up');
