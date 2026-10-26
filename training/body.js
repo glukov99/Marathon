@@ -2,20 +2,58 @@
    Reads: W, START, dayDate, today0, id(), state (from the page) and HubSync config. */
 const BH={view:'front',sel:null,well:null};
 const BH_RUN=['easy','rec','st','hard','mp','race'];
-/* What each session works, 0–1.5 per muscle group. */
+/* Muscles per exercise: "primary|secondary" (1 and .5), copied from Garmin Connect's exercise list:
+   github.com/mrnabilnoh/workout-plan-garmin-connect/blob/main/garmin_connect_exercise_list.md
+   Rows marked * are not in that list and are our own estimate. Each regex finds the exercise in a session's text. */
+const BH_EX=[
+  ['run',/\d+ m run/i,'quads hips hamstrings glutes calves|abs'],                                   // Indoor Track Run
+  ['boxjump',/box jump|broad jump/i,'quads calves|hips glutes hamstrings'],                          // Box Jump
+  ['kbswing',/kettlebell swing/i,'glutes hips|quads lats abs hamstrings shoulders'],                 // Kettlebell Swing
+  ['trapbar',/deadlift/i,'hamstrings quads glutes lower_back|lats traps forearm adductors'],          // Trap Bar Deadlift
+  ['split',/split squat/i,'quads glutes|hamstrings'],                                                // Dumbbell Bulgarian Split Squat
+  ['slrdl',/\brdl/i,'hamstrings lower_back|traps lats glutes adductors'],                            // Single Leg Romanian Deadlift
+  ['step',/step-?(up|down)/i,'quads glutes|hamstrings calves hips'],                                 // Step Up
+  ['calf',/calf (and tib )?raise/i,'calves'],                                                        // Calf Raise, Seated Calf Raise
+  ['tib',/\btib\b/i,'shin'],                                                                         // * Garmin files toe raises under calves
+  ['spanish',/spanish squat/i,'quads'],                                                              // *
+  ['sidewalk',/side walk|band walk/i,'abductors|glutes'],                                            // Lateral Band Walks
+  ['cossack',/cossack/i,'quads glutes|hamstrings adductors abductors'],                              // Side Lunge
+  ['deadbug',/dead bug/i,'abs shoulders hips|quads hamstrings'],                                     // Dead Bug
+  ['pallof',/pallof/i,'abs obliques|shoulders'],                                                     // *
+  ['plank',/plank/i,'abs|shoulders'],                                                                // Plank
+  ['pullup',/pull-?ups?/i,'lats traps|biceps forearm shoulders'],                                    // Pull Up
+  ['pike',/pike push/i,'chest shoulders|triceps'],                                                   // Pike Push Up
+  ['pushup',/(?<!pike )push-?ups?|sally/i,'chest|abs shoulders triceps'],                            // Push Up (Bring Sally Up is push-ups here)
+  ['row',/(band|dumbbell) rows?|\brows\b/i,'lats traps|biceps lower_back shoulders'],                // Dumbbell Row
+  ['rower',/rower|\d+ ?k row|row erg/i,'lats traps quads|biceps lower_back shoulders'],               // Indoor Row
+  ['ohp',/overhead press/i,'shoulders|chest triceps traps'],                                         // Dumbbell Shoulder Press
+  ['hang',/dead hang/i,'forearm|lats shoulders'],                                                    // * Hanging rows without the leg raise
+  ['facepull',/face pull/i,'shoulders traps'],                                                       // Banded Face Pulls
+  ['squat',/air squats?|\d+ squats/i,'quads glutes|hamstrings'],                                     // Air Squat
+  ['thruster',/thruster/i,'quads glutes shoulders|abs calves chest hamstrings hips lower_back traps triceps forearm'], // Thrusters
+  ['farmer',/farmer/i,'forearm|hamstrings quads lower_back traps shoulders'],                        // Farmers Carry
+  ['skierg',/ski erg/i,'lats triceps|abs shoulders'],                                                // *
+];
+/* Fixed sessions: the Strength tab's, and the named tests. A retest's text often names no exercises. */
+const BH_SESS={A:'boxjump kbswing trapbar split slrdl step calf',B:'pullup pushup row ohp hang facepull',
+  C1:'pullup pushup squat',C2:'rower farmer',C3:'pushup rower',
+  cindy:'pullup pushup squat',fran:'thruster pullup',murph:'run pullup pushup squat'};
+/* Muscles the figure has no shape for go to the nearest one that is drawn. */
+const BH_FOLD={hips:null,abductors:['glutes',1],obliques:['abs',.5],lower_back:['lats',.5]};
+function bhRow(r,o,k){const[p,s='']=r.split('|');[[p,1],[s,.5]].forEach(([l,v])=>l.split(' ').filter(Boolean).forEach(m=>{
+  const f=m in BH_FOLD?BH_FOLD[m]:[m,1];if(f)o[f[0]]=(o[f[0]]||0)+v*f[1]*k}));return o}
+/* What a session works, per muscle, strongest = 1 (vert 1.3). */
 function bhMuscles(x){
-  const t=x.t||'';
-  if(BH_RUN.includes(x.z)||(x.z==='test'&&/10k|time trial/i.test(t)))return {calves:1,quads:1,hams:.8,glutes:.8,abs:.3};
-  if(x.z==='vert')return {glutes:1.3,calves:1.3,quads:1.2,hams:.6,lowerback:.3};
-  if(x.z==='swim')return {shoulders:1,back:1,arms:.6,chest:.4};
-  if(x.z==='gym'||x.z==='test'){
-    if(/Gym A/.test(t))return {quads:1,glutes:1.2,hams:1,calves:.8,abs:.6,lowerback:.5};
-    if(/Gym B|push-up|pull-up|dead hang/i.test(t))return {back:1.2,chest:1,shoulders:1,arms:1,abs:.4};
-    if(/Core \+ hips/.test(t))return {abs:1,obliques:.8,glutes:.8,quads:.5,calves:.5};
-    if(/Core/.test(t))return {abs:1.2,obliques:1,lowerback:.5};
-    return {quads:.7,glutes:.7,hams:.6,calves:.5,back:.7,chest:.7,shoulders:.7,arms:.6,abs:.6,obliques:.4};
-  }
-  return {};
+  const t=(x.t||'')+' '+(x.d||''),o={};
+  if(BH_RUN.includes(x.z)||(x.z==='test'&&/10k|time trial/i.test(x.t)))return bhRow('quads hips hamstrings glutes calves|abs',o,1);
+  if(x.z==='vert')return bhRow('quads glutes calves|hamstrings lower_back',o,1.3);   // * uphill hiking
+  if(x.z==='swim')return bhRow('lats shoulders|triceps chest traps abs',o,1);         // *
+  if(x.z!=='gym'&&x.z!=='test')return o;
+  const fixed=BH_SESS[x.g==='C'?x.t.slice(-2):x.g]||BH_SESS[((x.t.match(/cindy|fran|murph/i)||[''])[0]).toLowerCase()]||(/upper/i.test(x.t)&&!BH_EX.some(e=>e[1].test(t))?BH_SESS.B:'');
+  const ex=fixed?fixed.split(' ').map(k=>BH_EX.find(e=>e[0]===k)):BH_EX.filter(e=>e[1].test(t));
+  ex.forEach(e=>bhRow(e[2],o,1));
+  const top=Math.max(0,...Object.values(o));Object.keys(o).forEach(m=>o[m]/=top||1);
+  return o;
 }
 /* Load per muscle from ticked sessions in the last 7 days. Fades linearly over 7 days. */
 function bhLoad(){
@@ -73,9 +111,7 @@ const BH_ANCH={front:{swim:[179,236],str:[161,323],mob:[262,470],rec:[318,80],ru
 function bhFit(view){const B=BH_SHAPES[view].box,s=395/B[3];return {s,tx:180-(B[0]+B[2]/2)*s,ty:4-B[1]*s}}
 function bhAnchor(view,k){const f=bhFit(view),p=BH_ANCH[view][k];return [p[0]*f.s+f.tx,p[1]*f.s+f.ty]}
 function bhBodySVG(load,view){
-  const V=BH_SHAPES[view],f=bhFit(view),g=m=>Math.min(1,(load[m]||0)/1.6);
-  const L={...load};if(L.obliques)L.abs=(L.abs||0)+L.obliques*.5;if(L.lowerback)L.back=(L.back||0)+L.lowerback*.5;
-  const val=m=>Math.min(1,(L[m]||0)/1.6);
+  const V=BH_SHAPES[view],f=bhFit(view),val=m=>Math.min(1,(load[m]||0)/1.6);
   let base='',hot='',crisp='';
   Object.entries(V.m).forEach(([m,ps])=>{const v=val(m),d=ps.join(' ');
     base+=`<path d="${d}" fill="rgba(190,232,150,.09)" stroke="rgba(190,232,150,.30)" stroke-width="1.6"/>`;
