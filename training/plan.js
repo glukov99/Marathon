@@ -49,7 +49,8 @@ const EX={
  farmer:['Farmer carry','CARRY','FARMERS_WALK','','forearm|hamstrings quads lower_back traps shoulders'],
  thruster:['Thrusters','SQUAT','THRUSTERS','','quads glutes shoulders|abs calves chest hamstrings hips lower_back traps triceps forearm'],
 };
-/* A session is a list of blocks [rounds, rows, note]; a row is [exercise, amount, how].
+/* Away from home there are only bands and bodyweight: the hotel sessions need nothing else.
+   A session is a list of blocks [rounds, rows, note]; a row is [exercise, amount, how].
    Amount: reps (a number), or '45 s', '10 min', '3:30', '500 m', 'max'. Straight sets are one row; a circuit has several. */
 const X=(n,k,a,h)=>[n,[[k,a,h||'']]];
 const GYM={
@@ -67,7 +68,7 @@ const GYM={
  activation:[X(3,'boxjump',3,'no weights')],
  upper:[X(2,'pushup','max','light, stop well short'),X(2,'row',12,'light')],
  legs:[X(3,'stepup',10,'each leg'),X(3,'split',8,'each leg'),X(3,'calf',12,'each leg'),X(3,'tib',20)],
- hotelA:[X(4,'jumpsquat',6),X(3,'slrdl',10,'each leg, bodyweight or backpack'),X(3,'split',10,'each leg'),X(3,'stepup',12,'each leg, bench or stairs'),X(3,'calf',20)],
+ hotelA:[X(4,'jumpsquat',6),X(3,'slrdl',10,'each leg, bodyweight or band'),X(3,'split',10,'each leg, band under the front foot for load'),X(3,'stepup',12,'each leg, bench or stairs'),X(3,'calf',20)],
  hotelBaway:[X(4,'pushup','max','3 reps short of max'),X(4,'bandrow',15),X(3,'pike',8),X(3,'plank','40 s')],
 };
 /* A week's version: sets caps every block, drop removes exercises, set changes one exercise's [amount, how]. */

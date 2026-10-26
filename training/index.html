@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="../shared/auth.js?v=202610261916"></script>
+<script src="../shared/auth.js?v=202610261919"></script>
 <title>Season 2027 — Plovdiv, Bairi, Vitosha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -122,6 +122,7 @@ nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)
 .lg label{font-size:11.5px;color:var(--soft);display:block}
 .exl{list-style:none;margin:6px 0 2px;padding:0;font-size:13.5px;line-height:1.45}
 .exl li{display:grid;grid-template-columns:64px 1fr;gap:0 4px}
+.lgw{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
 .exl b{font-variant-numeric:tabular-nums}
 .exl span{color:var(--soft)}
 .logged{font-size:12.5px;color:var(--easy);margin-top:3px}
@@ -183,11 +184,11 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610261916">
-<link rel="stylesheet" href="body.css?v=202610261916">
+<link rel="stylesheet" href="../shared/theme.css?v=202610261919">
+<link rel="stylesheet" href="body.css?v=202610261919">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610261916"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610261919"></script>
 <div class="wrap">
   <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
@@ -234,12 +235,12 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="plan.js?v=202610261916"></script>
-<script src="../shared/sync.js?v=202610261916"></script>
-<script src="../holidays/holidays-data.js?v=202610261916"></script>
-<script src="../shared/travel.js?v=202610261916"></script>
-<script src="body-shapes.js?v=202610261916"></script>
-<script src="body.js?v=202610261916"></script>
+<script src="plan.js?v=202610261919"></script>
+<script src="../shared/sync.js?v=202610261919"></script>
+<script src="../holidays/holidays-data.js?v=202610261919"></script>
+<script src="../shared/travel.js?v=202610261919"></script>
+<script src="body-shapes.js?v=202610261919"></script>
+<script src="body.js?v=202610261919"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -310,7 +311,7 @@ function renderWeek(){
       const k=id(wsel,d,i); const on=!!state.checks[k]; tot++; if(on)done++; if(x.z==='yoga'){if(on)yd++}else pm+=x.m||0;
       const lg=state.logs[k]; const canLog=x.z!=='rest'&&x.z!=='yoga';
       const str=x.z==='gym'||(x.z==='test'&&!/10k|5k|time trial/i.test(x.t)); // strength: effort and loads, not distance
-      const lgTxt=lg?[lg.t&&lg.t+' min',lg.km&&lg.km+' km',lg.hr&&'HR '+lg.hr,lg.rpe&&'RPE '+lg.rpe,lg.n&&'“'+lg.n+'”'].filter(Boolean).join(', '):'';
+      const lgTxt=lg?[...lgParts(lg),lg.n&&'“'+lg.n+'”'].filter(Boolean).join(', '):'';
       return `<div class="it ${on?'on':''}">
         <button class="box" data-k="${k}" aria-pressed="${on}" aria-label="Mark ${esc(x.t)} done">${CHECK}</button>
         <span class="zbar" style="--zc:${x.yc||'var(--'+x.z+')'}"></span>
@@ -322,10 +323,12 @@ function renderWeek(){
         ${canLog?`<button class="lg-t" data-lg="${k}">${openLog===k?'Close':(lg?'Edit log':'Log it')}</button>`:''}
         ${openLog===k?`<div class="lg">
           <div><label for="t-${k}">Time (min)</label><input id="t-${k}" inputmode="decimal" data-f="t" data-lk="${k}" value="${esc(lg?.t||'')}"></div>
-          ${str?`<div><label for="rpe-${k}">Effort (RPE 1–10)</label><input id="rpe-${k}" inputmode="numeric" data-f="rpe" data-lk="${k}" value="${esc(lg?.rpe||'')}"></div>`
+          ${str?`<div><label for="rpe-${k}">Effort (RPE 1–10)</label><input id="rpe-${k}" inputmode="numeric" data-f="rpe" data-lk="${k}" value="${esc(lg?.rpe||'')}"></div>
+          ${x.ex?`<div class="lgw">${[...new Set(x.ex.flatMap(b=>b[1].map(r=>r[0])))].map(e=>{const last=lastKg(e,k);
+            return `<label>${esc(exShort(e))}<input inputmode="decimal" data-f="w.${e}" data-lk="${k}" value="${esc(lg?.w?.[e]||'')}" placeholder="${last?last+' kg last time':'kg'}"></label>`}).join('')}</div>`:''}`
           :`<div><label for="km-${k}">Distance (km)</label><input id="km-${k}" inputmode="decimal" data-f="km" data-lk="${k}" value="${esc(lg?.km||'')}"></div>
           <div><label for="hr-${k}">Avg HR</label><input id="hr-${k}" inputmode="numeric" data-f="hr" data-lk="${k}" value="${esc(lg?.hr||'')}"></div>`}
-          <textarea aria-label="Note" placeholder="${str?'Loads used, e.g. deadlift 4×5 at 80 kg. Anything hurt?':'How did it feel? Anything hurt?'}" data-f="n" data-lk="${k}">${esc(lg?.n||'')}</textarea></div>`:''}
+          <textarea aria-label="Note" placeholder="${str?'Reps if different from the plan. How did it feel? Anything hurt?':'How did it feel? Anything hurt?'}" data-f="n" data-lk="${k}">${esc(lg?.n||'')}</textarea></div>`:''}
         </div></div>`}).join('');
     return `<div class="day ${isT?'today':''}"><div class="day-h">${DN[d]}<span class="dt">${fd(dt)}${isT?', today':''}</span>${hard?'<span class="hd">Hard day</span>':''}${trip?`<span class="away">Away: ${esc(trip.n)}${trip.dest?', '+esc(trip.dest):''}</span>`:''}</div>${rows}</div>`;
   }).join('');
@@ -372,6 +375,13 @@ function renderRaces(){
     <li><b>Early December trip dates.</b> Week 6 is the trip week. Slide it if the dates differ.</li></ul></div></div>`;
   document.getElementById('bairiCP').addEventListener('input',e=>{state.bairiCP=e.target.value;save()});
 }
+/* A log's figures, for the Plan tab and the two exports. Weights are kg per exercise. */
+const exShort=e=>EX[e][0].replace(/[,:(].*$/,'').trim();
+const lgParts=lg=>[lg.t&&lg.t+' min',lg.km&&lg.km+' km',lg.hr&&'HR '+lg.hr,lg.rpe&&'RPE '+lg.rpe,
+  ...Object.entries(lg.w||{}).filter(([e])=>EX[e]).map(([e,v])=>exShort(e)+' '+v+' kg')].filter(Boolean);
+/* The weight last logged for an exercise in another session, newest first, so the next load is easy to pick. */
+function lastKg(e,cur){let best='',at=-1;Object.entries(state.logs).forEach(([k,l])=>{const m=k.match(/^w(\d+)-(\d+)-/);
+  if(k===cur||!m||!l.w||!l.w[e])return;const o=+m[1]*7+ +m[2];if(o>at){at=o;best=l.w[e]}});return best}
 /* Exact sets from plan.js GYM: one line per block. Shared by the Plan and Strength tabs. */
 function exRows(ex){return ex.map(([n,rows,note])=>rows.length>1
   ?{s:n+' rounds',t:rows.map(r=>r[1]+' '+EX[r[0]][0].replace(/ \(.*\)$/,'').toLowerCase()).join(', '),h:note||'',why:''}
@@ -488,7 +498,7 @@ function weekSummary(){
   let km=0,min=0,yd=0;
   w.days.forEach((items,d)=>items.forEach((x,i)=>{const k=id(wsel,d,i);if(x.z==='rest')return;if(x.z==='yoga'){if(state.checks[k])yd++;return}const lg=state.logs[k]||{};
     if(lg.km)km+=parseFloat(lg.km)||0; if(lg.t)min+=parseFloat(lg.t)||0;
-    lines.push(`${state.checks[k]?'[x]':'[ ]'} ${DN[d]} ${x.t}${lg.t||lg.km||lg.hr||lg.rpe?` — ${[lg.t&&lg.t+' min',lg.km&&lg.km+' km',lg.hr&&'HR '+lg.hr,lg.rpe&&'RPE '+lg.rpe].filter(Boolean).join(', ')}`:''}${lg.n?` — "${lg.n}"`:''}`)}));
+    lines.push(`${state.checks[k]?'[x]':'[ ]'} ${DN[d]} ${x.t}${lgParts(lg).length?` — ${lgParts(lg).join(', ')}`:''}${lg.n?` — "${lg.n}"`:''}`)}));
   lines.push(`Logged: ${km.toFixed(1)} km, ${Math.round(min)} min. Yoga: ${yd} of 7 days.`);
   if(ci.rhr)lines.push(`Resting HR: ${ci.rhr}`); if(ci.wt)lines.push(`Weight: ${ci.wt} kg`);
   if(ci.load)lines.push(`Garmin load ratio: ${ci.load}`); if(ci.sleep)lines.push(`Sleep: ${ci.sleep}`);
@@ -537,7 +547,7 @@ function seasonSummary(){
       if(x.z==='yoga'){if(state.checks[k])yd++;return}
       tot++; if(state.checks[k])dn++; const lg=state.logs[k];
       if(lg){km+=parseFloat(lg.km)||0;min+=parseFloat(lg.t)||0}
-      if(state.checks[k]||lg)rows.push(`  ${state.checks[k]?'[x]':'[ ]'} ${DN[d]} ${x.t}${lg?' — '+[lg.t&&lg.t+' min',lg.km&&lg.km+' km',lg.hr&&'HR '+lg.hr,lg.rpe&&'RPE '+lg.rpe,lg.n&&'"'+lg.n+'"'].filter(Boolean).join(', '):''}`)}));
+      if(state.checks[k]||lg)rows.push(`  ${state.checks[k]?'[x]':'[ ]'} ${DN[d]} ${x.t}${lg?' — '+[...lgParts(lg),lg.n&&'"'+lg.n+'"'].filter(Boolean).join(', '):''}`)}));
     L.push('',`Week ${wi+1} (${fd(dayDate(wi,0))}–${fd(dayDate(wi,6))}), ${w.title}. Target ${w.km}. Done ${dn}/${tot}. Logged ${km.toFixed(1)} km, ${Math.round(min)} min. Yoga ${yd}/7.`);
     rows.forEach(r=>L.push(r));
     const ci=state.ci[wi]; if(ci){const c=[ci.rhr&&'RHR '+ci.rhr,ci.wt&&ci.wt+' kg',ci.load&&'load '+ci.load,ci.sleep&&'sleep '+ci.sleep,ci.pain&&'pain: '+ci.pain,ci.notes&&'notes: '+ci.notes].filter(Boolean);if(c.length)L.push('  Check-in: '+c.join(', '))}
@@ -645,7 +655,8 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('input',e=>{
   const t=e.target;
-  if(t.dataset.lk){const k=t.dataset.lk;state.logs[k]=state.logs[k]||{};state.logs[k][t.dataset.f]=t.value;
+  if(t.dataset.lk){const k=t.dataset.lk,f=t.dataset.f,L=state.logs[k]=state.logs[k]||{};
+    if(f.startsWith('w.')){L.w=L.w||{};if(t.value)L.w[f.slice(2)]=t.value;else delete L.w[f.slice(2)];if(!Object.keys(L.w).length)delete L.w}else L[f]=t.value;
     if(!Object.values(state.logs[k]).some(Boolean))delete state.logs[k];save();return}
   if(t.dataset.ci){state.ci[wsel]=state.ci[wsel]||{};state.ci[wsel][t.dataset.ci]=t.value;save()}
 });

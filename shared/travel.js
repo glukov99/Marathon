@@ -6,7 +6,7 @@ const Travel=(()=>{
   function tripOn(date){const s=iso(date);return list().find(t=>s>=t.from&&s<=t.to)||null}
   const r5=m=>Math.max(15,Math.round(m*0.7/5)*5);
   const HOTEL={
-    A:['Hotel legs and power (away)','25 min. Bodyweight or a backpack.',25,'hotelA'],
+    A:['Hotel legs and power (away)','25 min. Bands and bodyweight.',25,'hotelA'],
     B:['Hotel upper body (away)','25 min. Pack the band. Bring Sally Up every second session.',25,'hotelBaway'],
     C:['Hotel circuit (away)','15 min, steady.',20,'hotelC']};
   function lighten(x){
