@@ -201,6 +201,7 @@ assert.equal(st({ shoot: old, invoice: '7' }, { 7: { no: '7', _paid: {} } }).k, 
   near(st.inThis, 500, 'in this month');
   near(st.run3, 500, 'the three-month average');
   near(st.minInv, 400 / (4 / 12), 'what one invoice has to carry, at four invoices in twelve months');
+  near(st.medInv, 400, 'the target counts in median invoices (300, 400, 400, 400 this year)');
   const pr = ctx.rateTrend().find(r => r.type === P);
   near(pr.change, -1 / 3, 'product fell from 600 to 400 an invoice');
   const n = ctx.nextSteps(st, '2026-10-15');

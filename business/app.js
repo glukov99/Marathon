@@ -860,13 +860,16 @@ function standing(now) {
   const inThis = tx.filter(t => t._k === 'inc' && t.d.startsWith(cur)).reduce((a, t) => a + t.a, 0);
   const live = data.photo || [];
   const thisYr = live.filter(i => String(i.issued || '').startsWith(yr));
-  const avgInv = thisYr.length ? thisYr.reduce((a, i) => a + i.amount_eur, 0) / thisYr.length : 0;
+  /* The target counts in median invoices, not average ones: the pessimistic
+     view, his call (26 Oct 2026). Cover the costs with ordinary orders and
+     every big one is extra, rather than counting on a lucky catch. */
+  const medInv = median(thisYr.map(i => i.amount_eur));
   const perMonth = live.filter(i => { const m = String(i.issued || '').slice(0, 7); return m >= from && m < cur; }).length / months;
   const draws = tx.filter(t => t._k === 'exp' && DRAW.indexOf(t._cat) >= 0);
   const taken = draws.filter(t => t.d.startsWith(yr)).reduce((a, t) => a - t.a, 0);
   const lastDraw = draws.map(t => t.d).sort().pop() || '';
   const end = new Date(+cur.slice(0, 4), +cur.slice(5, 7), 0).getDate();
-  return { cur, yr, months, floor, fixedBy, rentIn, need, run3, n3, inThis, avgInv, perMonth,
+  return { cur, yr, months, floor, fixedBy, rentIn, need, run3, n3, inThis, medInv, perMonth,
     minInv: perMonth ? need / perMonth : 0, taken, lastDraw, daysLeft: end - +now.slice(8, 10) };
 }
 
@@ -1043,10 +1046,11 @@ function standCard(st) {
     <div class="arow"><span>Left for photography to cover</span><b>${fmt0(st.need)}</b></div>` : ''}
     <div class="arow"><span>In this month</span><b class="${over >= 0 ? 'inc' : 'exp'}">${fmt0(st.inThis)}</b></div>
     <div class="arow"><span>Average, last ${st.n3} months</span><b>${fmt0(st.run3)}</b></div>
-    ${st.avgInv ? `<div class="arow"><span>Photography invoices a month to cover it, at ${fmt0(st.avgInv)} each</span><b>${(st.need / st.avgInv).toFixed(1)}</b></div>` : ''}
+    ${st.medInv ? `<div class="arow"><span>Ordinary invoices a month to cover it, at your ${st.yr} median of ${fmt0(st.medInv)}</span><b>${(st.need / st.medInv).toFixed(1)}</b></div>` : ''}
     <div class="arow"><span>Taken out for you in ${st.yr}</span><b>${fmt0(st.taken)}</b></div>
     <div class="note2">The floor is what the company pays before anything is yours: averaged over the last
-      ${st.months} complete months, from the bank.${st.rentIn ? ' In this month counts everything that came in, studio rent included.' : ''}${st.lastDraw ? ` You last took money out on ${dshort(st.lastDraw)}.` : ''}</div>
+      ${st.months} complete months, from the bank.${st.rentIn ? ' In this month counts everything that came in, studio rent included.' : ''}
+      The invoice target uses the median, the pessimistic view: ordinary orders cover the costs, and any bigger one is extra.${st.lastDraw ? ` You last took money out on ${dshort(st.lastDraw)}.` : ''}</div>
   </div>`;
 }
 
