@@ -67,13 +67,13 @@ const here = t => (HERE.find(([re]) => re.test((t.who || '') + ' ' + (t.desc || 
 const cancelled = i => Invoices.cancelled(i);
 const shortType = t => String(t).split(' (')[0];
 
-/* Тетсуджин shares the studio and pays his part of the rent through the
-   company: 250 лв (€127.82) a month, invoiced as "Фотографски услуги". So it is
-   rent coming back, not photography (Georgi, 26 Oct 2026: "I share the rent
-   with tetsudjin, that's why he is a regular"). Those invoices stay in the
-   register and the matching; they leave every photography figure (`photo`),
-   and the money they bring in is filed under Rent, where it brings the cost of
-   the studio down instead of reading as income. */
+/* Тетсуджин rents half the studio and pays through the company: 250 лв
+   (€127.82) a month, invoiced as "Фотографски услуги". It is income, his
+   word: "I see him as an income where I earn from him by renting half of my
+   studio" (26 Oct 2026). It is not photography, though. So his invoices stay
+   in the register and the matching, leave every photography figure (`photo`),
+   and the payments read as income under their own name, Studio rent. Rent
+   itself stays the full cost of the studio. */
 const RENT_SHARE = [/тетсуджин/i];
 const rentShare = i => RENT_SHARE.some(re => re.test(String(i.client || '')));
 
@@ -84,7 +84,7 @@ function prep(j) {
   const r = Invoices.reconcile(j.invoices, j.tx);
   j.invoices = r.invoices; j.live = r.live; j.credits = r.credits; j.unbilled = r.unbilled;
   j.live.filter(rentShare).forEach(i => (i._parts || []).forEach(p => {
-    p.row._k = 'exp'; p.row._cat = 'Rent'; p.row._rent = true;
+    p.row._cat = 'Studio rent'; p.row._rent = true;
   }));
   j.photo = j.live.filter(i => !rentShare(i));
   return j;
@@ -215,7 +215,10 @@ async function markInvoice(no, issued, value, field) {
 function render() {
   show('main');
   document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.t === tab)));
-  const m = money();
+  const m = money(), yr = today().slice(0, 4);
+  const ty = (data.tx || []).filter(t => t.c === 'EUR' && t.d.startsWith(yr));
+  const tyIn = ty.filter(t => t._k === 'inc').reduce((a, t) => a + t.a, 0);
+  const tyOut = ty.filter(t => t._k === 'exp').reduce((a, t) => a - t.a, 0);
   /* "Left" used to be in minus out, presented as if it were cash in hand. It
      was not: the accounts held 76.65 more, which is older than the first row of
      the statement export. So the real balance is shown when it is known, and
@@ -223,11 +226,11 @@ function render() {
   const held = (data.balances || []).reduce((a, x) => a + (Number(x.amount) || 0), 0);
   const before = (data.balances || []).length ? Math.round((held - m.net) * 100) / 100 : 0;
   $('#sum').innerHTML =
-    `<div><span>Into the bank</span><b class="inc">${fmt(m.inn)}</b></div>` +
-    `<div><span>Out of the bank</span><b class="exp">${fmt(m.out)}</b></div>` +
+    // This year, not all time (his ask, 26 Oct 2026). Every year is on the Overview.
+    `<div><span>In, ${yr}</span><b class="inc">${fmt(tyIn)}</b></div>` +
+    `<div><span>Out, ${yr}</span><b class="exp">${fmt(tyOut)}</b></div>` +
     `<div><span>${(data.balances || []).length ? 'In the accounts' : 'Left'}</span>` +
-      `<b>${fmt((data.balances || []).length ? held : m.net)}</b>` +
-      (Math.abs(before) > 0.01 ? `<i>${fmt(m.net)} of it earned here</i>` : '') + `</div>`;
+      `<b>${fmt((data.balances || []).length ? held : m.net)}</b></div>`;
   if (tab === 'jobs') renderJobs();
   else if (tab === 'year') renderYear();
   else if (tab === 'invoices') renderInvoices();
@@ -711,7 +714,7 @@ function charts(st) {
   const best = periods.slice().sort((a, b) => b.inn - a.inn)[0];
   const dear = periods.slice().sort((a, b) => b.out - a.out)[0];
   const mo = monthAvg();
-  const thin = st ? mo.filter(m => m.years >= 2 && m.avg < st.floor) : [];
+  const thin = st ? mo.filter(m => m.years >= 2 && m.avg < st.need) : [];
   const trend = rateTrend(), mix = clientMix(), yr = today().slice(0, 4);
 
   // Billed per client, and what one invoice is worth on average: the closest
@@ -775,8 +778,8 @@ function charts(st) {
     <div class="card">
       <div class="chh">An average January, February\u2026</div>
       ${Charts.bars(mo.filter(m => m.years).map(m => [m.label, m.avg]), fmt0)}
-      <div class="note2">${thin.length ? `<b>${thin.map(m => m.label).join(', ')} bill less than the floor of
-        ${fmt0(st.floor)}</b>, year after year. ` : ''}What each calendar month billed, averaged over every year it
+      <div class="note2">${thin.length ? `<b>${thin.map(m => m.label).join(', ')} bill less than the ${fmt0(st.need)}
+        photography has to cover</b>, year after year. ` : ''}What each calendar month billed, averaged over every year it
         appears in the invoices. It ignores the year chips: one year cannot show a season.</div>
     </div>
     <div class="card">
@@ -789,7 +792,7 @@ function charts(st) {
         r.years.map(x => `<span class="${st && st.minInv && x.y === yr && x.avg < st.minInv ? 'exp' : ''}">\u2019${x.y.slice(2)} ${fmt0(x.avg)}</span>`).join(' \u00b7 ')}${
         r.change != null ? ` <i class="${r.change < 0 ? 'exp' : 'inc'}">${r.change < 0 ? '\u2212' : '+'}${Math.round(Math.abs(r.change) * 100)}%</i>` : ''}</b></div>`).join('')}</div>` : ''}
       <div class="note2">${trend.length ? `<b>Each, year by year</b>, for every year: the percentage compares the first and last years with two or more invoices.
-        ${st && st.minInv ? `Red is under ${fmt0(st.minInv)}, the share of the floor one invoice has to carry.` : ''}<br>` : ''}
+        ${st && st.minInv ? `Red is under ${fmt0(st.minInv)}, what one invoice has to carry.` : ''}<br>` : ''}
         <b>${fmt0(tagged)} of ${fmt0(billed)} billed carries a type</b>
         (${pcTagged}%), so the shape is sound and the totals are still a little low.
         Tap <i>Set type</i> on any invoice to add one.${cashNote}</div>
@@ -842,7 +845,9 @@ function standing(now) {
   tx.filter(t => t._k === 'exp' && inWin(t) && FIXED.indexOf(t._cat) >= 0)
     .forEach(t => { fixedBy[t._cat] = (fixedBy[t._cat] || 0) - t.a / months; });
   const floor = Object.values(fixedBy).reduce((a, v) => a + v, 0);
-  const rentBack = tx.filter(t => t._rent && inWin(t)).reduce((a, t) => a + t.a, 0) / months;
+  // The studio rent he takes in is steady, so photography only has to cover the rest.
+  const rentIn = tx.filter(t => t._rent && inWin(t)).reduce((a, t) => a + t.a, 0) / months;
+  const need = floor - rentIn;
   const n3 = Math.min(3, months), from3 = ymAdd(cur, -n3);
   const run3 = tx.filter(t => t._k === 'inc' && t.d.slice(0, 7) >= from3 && t.d.slice(0, 7) < cur)
     .reduce((a, t) => a + t.a, 0) / n3;
@@ -855,8 +860,8 @@ function standing(now) {
   const taken = draws.filter(t => t.d.startsWith(yr)).reduce((a, t) => a - t.a, 0);
   const lastDraw = draws.map(t => t.d).sort().pop() || '';
   const end = new Date(+cur.slice(0, 4), +cur.slice(5, 7), 0).getDate();
-  return { cur, yr, months, floor, fixedBy, rentBack, run3, n3, inThis, avgInv, perMonth,
-    minInv: perMonth ? floor / perMonth : 0, taken, lastDraw, daysLeft: end - +now.slice(8, 10) };
+  return { cur, yr, months, floor, fixedBy, rentIn, need, run3, n3, inThis, avgInv, perMonth,
+    minInv: perMonth ? need / perMonth : 0, taken, lastDraw, daysLeft: end - +now.slice(8, 10) };
 }
 
 /* What one invoice of each type is worth, year by year. The all-years
@@ -939,7 +944,7 @@ function hourRates(st) {
   time.forEach(s => { const m = localDT(s.start).slice(0, 7); perMonth[m] = (perMonth[m] || 0) + sessLen(s) / 3600e3; });
   const recent = Object.keys(perMonth).sort().slice(-3);
   const avgHrs = recent.reduce((a, m) => a + perMonth[m], 0) / Math.max(1, recent.length);
-  const perHour = st && avgHrs ? st.floor / avgHrs : 0;
+  const perHour = st && avgHrs ? st.need / avgHrs : 0;
   const types = {};
   let waiting = 0, cashN = 0;
   (data.bookings || []).forEach(b => {
@@ -974,12 +979,12 @@ function nextSteps(st, now) {
   if (st && st.minInv) {
     const small = (data.photo || []).filter(i => String(i.issued || '').startsWith(yr) && i.amount_eur < st.minInv);
     if (small.length) out.push({ eur: small.reduce((a, i) => a + st.minInv - i.amount_eur, 0),
-      text: `<b>Bundle or re-price work under ${fmt0(st.minInv)}.</b> That is the share of the floor one invoice has to
-        carry at ${st.perMonth.toFixed(1)} invoices a month. ${small.length} invoice${small.length === 1 ? ' was' : 's were'} under it
+      text: `<b>Bundle or re-price work under ${fmt0(st.minInv)}.</b> That is the share of what photography has to cover
+        that one invoice must carry at ${st.perMonth.toFixed(1)} invoices a month. ${small.length} invoice${small.length === 1 ? ' was' : 's were'} under it
         this year; a month of small jobs on one invoice counts as one.` });
-    const thin = monthAvg(now).filter(m => m.years >= 2 && m.avg < st.floor);
-    if (thin.length) out.push({ eur: thin.reduce((a, m) => a + st.floor - m.avg, 0),
-      text: `<b>Book ${thin.map(m => fullMonths[m.m]).join(', ')} ahead.</b> They bill less than the floor
+    const thin = monthAvg(now).filter(m => m.years >= 2 && m.avg < st.need);
+    if (thin.length) out.push({ eur: thin.reduce((a, m) => a + st.need - m.avg, 0),
+      text: `<b>Book ${thin.map(m => fullMonths[m.m]).join(', ')} ahead.</b> They bill less than the ${st ? fmt0(st.need) : ''} photography has to cover,
         year after year (${thin.map(m => m.label + ' ' + fmt0(m.avg)).join(', ')}).` });
   }
   const mix = clientMix(now);
@@ -1009,8 +1014,7 @@ function standCard(st) {
   if (!st) return '';
   const name = fullMonths[+st.cur.slice(5, 7) - 1];
   const over = st.inThis - st.floor, r3 = st.run3 - st.floor;
-  const fb = FIXED.filter(k => st.fixedBy[k]).map(k => k.toLowerCase() + ' ' + fmt0(st.fixedBy[k]) +
-    (k === 'Rent' && st.rentBack ? ` (${fmt0(st.fixedBy[k] + st.rentBack)} less ${fmt0(st.rentBack)} shared)` : '')).join(' \u00b7 ');
+  const fb = FIXED.filter(k => st.fixedBy[k]).map(k => k.toLowerCase() + ' ' + fmt0(st.fixedBy[k])).join(' \u00b7 ');
   return `<div class="card stand">
     <div class="verdict">${over >= 0
       ? `<b>${name} has cleared the floor</b>, with ${fmt0(over)} to spare.`
@@ -1018,12 +1022,14 @@ function standCard(st) {
       The last ${st.n3} months brought in ${fmt0(st.run3)} a month, ${fmt0(Math.abs(r3))} ${r3 >= 0 ? 'above' : 'below'} it.</div>
     <div class="arow tot"><span>The floor, every month</span><b>${fmt0(st.floor)}</b></div>
     <div class="arow od"><span>${fb}</span></div>
+    ${st.rentIn ? `<div class="arow"><span>Studio rent coming in</span><b class="inc">${fmt0(st.rentIn)}</b></div>
+    <div class="arow"><span>Left for photography to cover</span><b>${fmt0(st.need)}</b></div>` : ''}
     <div class="arow"><span>In this month</span><b class="${over >= 0 ? 'inc' : 'exp'}">${fmt0(st.inThis)}</b></div>
     <div class="arow"><span>Average, last ${st.n3} months</span><b>${fmt0(st.run3)}</b></div>
-    ${st.avgInv ? `<div class="arow"><span>Invoices a month to cover it, at ${fmt0(st.avgInv)} each</span><b>${(st.floor / st.avgInv).toFixed(1)}</b></div>` : ''}
+    ${st.avgInv ? `<div class="arow"><span>Photography invoices a month to cover it, at ${fmt0(st.avgInv)} each</span><b>${(st.need / st.avgInv).toFixed(1)}</b></div>` : ''}
     <div class="arow"><span>Taken out for you in ${st.yr}</span><b>${fmt0(st.taken)}</b></div>
     <div class="note2">The floor is what the company pays before anything is yours: averaged over the last
-      ${st.months} complete months, from the bank.${st.lastDraw ? ` You last took money out on ${dshort(st.lastDraw)}.` : ''}</div>
+      ${st.months} complete months, from the bank.${st.rentIn ? ' In this month counts everything that came in, studio rent included.' : ''}${st.lastDraw ? ` You last took money out on ${dshort(st.lastDraw)}.` : ''}</div>
   </div>`;
 }
 

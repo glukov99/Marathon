@@ -237,20 +237,23 @@ assert.equal(st({ shoot: old, invoice: '7' }, { 7: { no: '7', _paid: {} } }).k, 
   assert.ok(/id="tfStart" type="datetime-local" value="2026-10-01T/.test(out.html), 'and an old session edited');
   ctx.tedit(null);
 
-  // The rent share: Тетсуджин pays part of the studio's rent, invoiced as
-  // photography. It must lower the rent and never count as work.
+  // Studio rent: Тетсуджин rents half the studio, invoiced as photography.
+  // It is income (his call), but never photography: rent stays the full cost,
+  // and photography only has to cover what the rent coming in does not.
   const shared = prep_({ tx: rows.concat([tx('2026-08-02', 100, 'Плащане по фактура 0000000020')]), types: [P],
     invoices: books.invoices.concat([inv('20', '2026-08-01', 100, '', 'Тетсуджин ЕООД')]) });
   ctx.setData(shared);
   const st2 = ctx.standing('2026-10-15');
-  near(st2.rentBack, 100 / 12, 'the share paid back, a month');
-  near(st2.floor, 400 - 100 / 12, 'brings the floor down');
-  near(st2.inThis, 500, 'and is not income');
+  near(st2.rentIn, 100 / 12, 'studio rent in, a month');
+  near(st2.floor, 400, 'rent stays the full cost');
+  near(st2.need, 400 - 100 / 12, 'photography covers the rest');
+  assert.equal(shared.tx.find(t => t._rent)._k, 'inc', 'the rent coming in is income');
+  assert.equal(shared.tx.find(t => t._rent)._cat, 'Studio rent', 'under its own name');
   assert.ok(shared.live.some(i => i.no === '20') && !shared.photo.some(i => i.no === '20'),
     'the invoice stays in the register, out of the photography figures');
   assert.ok(!ctx.nextSteps(st2, '2026-10-15').steps.some(x => /Тетсуджин/.test(x.text)), 'and out of the steps');
   ctx.tabs('overview'); ctx.render();
-  assert.ok(/less €8 shared/.test(out.html), 'the floor says so');
+  assert.ok(/Studio rent coming in/.test(out.html) && /Left for photography to cover/.test(out.html), 'the floor says so');
   ctx.setData(j);
 }
 
