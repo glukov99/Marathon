@@ -795,11 +795,9 @@ function charts(st) {
       ${types.length ? Charts.bars(types.map(([k, v]) =>
         [shortType(k) + ' \u00b7 ' + v.n, v.sum, median(v.a)]), fmt0)
         : '<div class="empty">Nothing tagged yet.</div>'}
-      ${trend.length ? `<div class="rt">${trend.map(r => `<div class="arow"><span>${esc(shortType(r.type))}</span><b>${
-        r.years.map(x => `<span class="${st && st.minInv && x.y === yr && x.med < st.minInv ? 'exp' : ''}">\u2019${x.y.slice(2)} ${fmt0(x.med)}</span>`).join(' \u00b7 ')}${
-        r.change != null ? ` <i>${r.change < 0 ? '\u2212' : '+'}${Math.round(Math.abs(r.change) * 100)}%</i>` : ''}</b></div>`).join('')}</div>` : ''}
+      ${trend.length ? rateTable(trend, st, yr) : ''}
       <div class="note2">${trend.length ? `<b>The median invoice, year by year</b>: the size of an order, not your rate, since you charge per photo.
-        The percentage compares the first and last years with two or more invoices.
+        The small figure is how many invoices it rests on; the change compares the first and last years with two or more.
         ${st && st.minInv ? `Red is under ${fmt0(st.minInv)}, what one invoice has to carry.` : ''}<br>` : ''}
         <b>${fmt0(tagged)} of ${fmt0(billed)} billed carries a type</b>
         (${pcTagged}%), so the shape is sound and the totals are still a little low.
@@ -875,6 +873,22 @@ function standing(now) {
 /* The median invoice of each type, year by year. The all-years figure on the
    chart hid the change: the middle product invoice went from €635 in 2024 to
    €271 in 2026. He charges per photo, so this is order size, not price. */
+/* The median invoice per type, as a table: a column per year, so a year's
+   figures line up down the page instead of being read along a sentence
+   ("'24 €635 · '25 €546 · '26 €271", which he found hard to read). */
+function rateTable(trend, st, yr) {
+  const years = [...new Set([].concat(...trend.map(r => r.years.map(x => x.y))))].sort();
+  return `<table class="rtab"><thead><tr><th>Median invoice</th>${years.map(y => `<th>${y}</th>`).join('')}<th>Change</th></tr></thead><tbody>` +
+    trend.map(r => `<tr><td>${esc(shortType(r.type))}</td>${years.map(y => {
+      const x = r.years.find(z => z.y === y);
+      if (!x) return '<td class="nil">\u2013</td>';
+      const low = st && st.minInv && y === yr && x.med < st.minInv;
+      return `<td${low ? ' class="exp"' : ''}>${fmt0(x.med)}<small>${x.n}</small></td>`;
+    }).join('')}<td class="chg">${r.change == null ? ''
+      : (r.change < 0 ? '\u2212' : '+') + Math.round(Math.abs(r.change) * 100) + '%'}</td></tr>`).join('') +
+    `</tbody></table>`;
+}
+
 function rateTrend() {
   const by = {};
   (data.photo || []).forEach(i => {

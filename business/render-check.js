@@ -227,6 +227,8 @@ assert.equal(st({ shoot: old, invoice: '7' }, { 7: { no: '7', _paid: {} } }).k, 
   assert.ok(/class="card stand"/.test(out.html) && /What to do next/.test(out.html), 'the overview opens and closes with them');
   assert.ok(/An hour of each/.test(out.html) && /\/h/.test(out.html), 'and ranks an hour of work');
   assert.ok(/An average January/.test(out.html) && !/Quarters/.test(out.html), 'months of the year replaced quarters');
+  assert.ok(/<table class="rtab">[\s\S]*<th>2025<\/th><th>2026<\/th>[\s\S]*€600<small>3<\/small>/.test(out.html),
+    'the median per year is a table: a column per year, the count under each figure');
 
   // The clock: idle, running, forgotten, and the hand-typed session.
   ctx.tabs('jobs'); ctx.render();
