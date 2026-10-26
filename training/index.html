@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="../shared/auth.js?v=202610261543"></script>
+<script src="../shared/auth.js?v=202610261916"></script>
 <title>Season 2027 — Plovdiv, Bairi, Vitosha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -120,6 +120,10 @@ nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)
 .lg input,.lg textarea{width:100%;font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--paper);color:var(--ink)}
 .lg textarea{grid-column:1/-1;min-height:52px;resize:vertical}
 .lg label{font-size:11.5px;color:var(--soft);display:block}
+.exl{list-style:none;margin:6px 0 2px;padding:0;font-size:13.5px;line-height:1.45}
+.exl li{display:grid;grid-template-columns:64px 1fr;gap:0 4px}
+.exl b{font-variant-numeric:tabular-nums}
+.exl span{color:var(--soft)}
 .logged{font-size:12.5px;color:var(--easy);margin-top:3px}
 
 /* panels */
@@ -179,11 +183,11 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610261543">
-<link rel="stylesheet" href="body.css?v=202610261543">
+<link rel="stylesheet" href="../shared/theme.css?v=202610261916">
+<link rel="stylesheet" href="body.css?v=202610261916">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610261543"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610261916"></script>
 <div class="wrap">
   <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
@@ -230,12 +234,12 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="plan.js?v=202610261543"></script>
-<script src="../shared/sync.js?v=202610261543"></script>
-<script src="../holidays/holidays-data.js?v=202610261543"></script>
-<script src="../shared/travel.js?v=202610261543"></script>
-<script src="body-shapes.js?v=202610261543"></script>
-<script src="body.js?v=202610261543"></script>
+<script src="plan.js?v=202610261916"></script>
+<script src="../shared/sync.js?v=202610261916"></script>
+<script src="../holidays/holidays-data.js?v=202610261916"></script>
+<script src="../shared/travel.js?v=202610261916"></script>
+<script src="body-shapes.js?v=202610261916"></script>
+<script src="body.js?v=202610261916"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -312,6 +316,7 @@ function renderWeek(){
         <span class="zbar" style="--zc:${x.yc||'var(--'+x.z+')'}"></span>
         <div class="ib"><div class="t">${esc(x.t)}${x.m?`<small>${x.m>=60?Math.floor(x.m/60)+'h'+(x.m%60?String(x.m%60).padStart(2,'0'):''):x.m+' min'}</small>`:''}</div>
         <div class="d">${esc(x.d)}</div>
+        ${x.ex?exList(x.ex):''}
         ${lgTxt?`<div class="logged">Logged: ${esc(lgTxt)}</div>`:''}
         ${x.link?`<a class="lg-t" href="${x.link}" target="_blank" rel="noopener">Open on YouTube</a>`:''}
         ${canLog?`<button class="lg-t" data-lg="${k}">${openLog===k?'Close':(lg?'Edit log':'Log it')}</button>`:''}
@@ -367,6 +372,13 @@ function renderRaces(){
     <li><b>Early December trip dates.</b> Week 6 is the trip week. Slide it if the dates differ.</li></ul></div></div>`;
   document.getElementById('bairiCP').addEventListener('input',e=>{state.bairiCP=e.target.value;save()});
 }
+/* Exact sets from plan.js GYM: one line per block. Shared by the Plan and Strength tabs. */
+function exRows(ex){return ex.map(([n,rows,note])=>rows.length>1
+  ?{s:n+' rounds',t:rows.map(r=>r[1]+' '+EX[r[0]][0].replace(/ \(.*\)$/,'').toLowerCase()).join(', '),h:note||'',why:''}
+  :{s:n>1?n+' × '+rows[0][1]:String(rows[0][1]),t:EX[rows[0][0]][0],h:rows[0][2]||'',why:EX[rows[0][0]][3]})}
+const exList=ex=>`<ul class="exl">${exRows(ex).map(r=>`<li><b>${r.s}</b><div>${esc(r.t)}${r.h?` <span>· ${esc(r.h)}</span>`:''}</div></li>`).join('')}</ul>`;
+const gymTable=(k,why=1)=>`<table><tr><th>Exercise</th><th>Sets × reps</th>${why?'<th>Why</th>':''}</tr>${exRows(GYM[k]).map(r=>
+  `<tr><td>${esc(r.t)}</td><td>${r.s}${r.h?', '+esc(r.h):''}</td>${why?`<td>${esc(r.why)}</td>`:''}</tr>`).join('')}</table>`;
 function renderGym(){
   document.getElementById('tab-gym').innerHTML=`
   <div class="panel"><h3>How strength fits</h3><div class="pc">
@@ -378,38 +390,16 @@ function renderGym(){
     <tr><td>Taper and race blocks</td><td>Maintain only. No heavy legs in the 10 days before a race.</td></tr></table>
     <div class="note">Stop every set with 2–3 reps left (RPE 7–8). You are training for strength, not to be wrecked for Wednesday.</div></div></div>
   <div class="panel"><h3>Gym A: lower body and power</h3><div class="pc"><p>Monday, gym, about 45 min, after the run. Heavy and slow: lower for 3 seconds on every lift. Do the exercises in this order.</p>
-    <table><tr><th>Exercise</th><th>Sets × reps</th><th>Why</th></tr>
-    <tr><td>Box jumps (step down)</td><td>4×3</td><td>Explosive power. Fresh legs, full rest.</td></tr>
-    <tr><td>Kettlebell swings</td><td>4×15</td><td>Hip drive. 16 kg, then 20 kg when easy.</td></tr>
-    <tr><td>Trap bar deadlift</td><td>4×5, 3 s down</td><td>Whole-body strength. RPE 8 or less. From January 4×4 heavier.</td></tr>
-    <tr><td>Bulgarian split squat</td><td>3×8 each leg, 3 s down</td><td>Single-leg strength for climbs.</td></tr>
-    <tr><td>Single-leg RDL</td><td>3×8 each leg, 3 s down</td><td>Hamstrings, glute med, ankle balance. Hips stay level.</td></tr>
-    <tr><td>Eccentric step-down, 30 cm box</td><td>3×8 each leg, 5 s down</td><td>Quads for long descents (Bairi, Vitosha).</td></tr>
-    <tr><td>Single-leg calf raise, heavy</td><td>4×8 each leg, 3 s up, 3 s down</td><td>Achilles. On a step, full range.</td></tr></table>
-    <div class="note">Weeks 1–2: about 70% of these loads. Then add 2–5% load or 1 rep every 2 weeks, never both. After a long run over 4 h or with more than 1,500 m of climbing in the last 3 days: do isometrics only (Spanish squat, calf raise holds, plank) at 60%.</div></div></div>
+    ${gymTable('A')}
+    <div class="note">This is the full session. The Plan tab shows each week's own version: week 1 is 2 sets and no jumps; from January the deadlift is 4×4, heavier; the marathon block drops the step-downs. Weeks 1–2: about 70% of these loads. Then add 2–5% load or 1 rep every 2 weeks, never both. After a long run over 4 h or with more than 1,500 m of climbing in the last 3 days: do isometrics only (Spanish squat, calf raise holds, plank) at 60%.</div></div></div>
   <div class="panel"><h3>Core + hips: Thursday</h3><div class="pc"><p>Thursday, after the easy run, about 25 min. Holds and control only, so your legs stay fresh for the Friday long run.</p>
-    <table><tr><th>Exercise</th><th>Sets × reps</th><th>Why</th></tr>
-    <tr><td>Spanish squat hold (band behind knees)</td><td>3×45 s</td><td>Patellar tendon, knee pain on descents.</td></tr>
-    <tr><td>Banded side walks</td><td>3×15 steps each way</td><td>Glute med: stops hip drop and IT band pain.</td></tr>
-    <tr><td>Cossack squat, bodyweight</td><td>3×8 each side</td><td>Groin strength and hip mobility.</td></tr>
-    <tr><td>Tib raise</td><td>3×20</td><td>Shins, foot control on descents.</td></tr>
-    <tr><td>Seated calf raise</td><td>3×12, slow</td><td>Soleus: the main calf muscle at running pace.</td></tr>
-    <tr><td>Dead bug</td><td>3×8 each side</td><td>Core holds the back still while legs move.</td></tr>
-    <tr><td>Pallof press</td><td>3×10 each side</td><td>Core resists rotation on every stride.</td></tr></table></div></div>
+    ${gymTable('core')}</div></div>
   <div class="panel"><h3>Gym B: upper body</h3><div class="pc"><p>Tuesday, home or gym, 30 min.</p>
-    <table><tr><th>Exercise</th><th>Sets × reps</th></tr>
-    <tr><td>Pull-ups (band if needed)</td><td>5 sets, 2 reps short of max</td></tr>
-    <tr><td>Push-ups</td><td>4 sets, 3 reps short of max</td></tr>
-    <tr><td>Rows: dumbbell or band</td><td>3×12</td></tr>
-    <tr><td>Overhead press: dumbbells, or pike push-ups at home</td><td>3×8</td></tr>
-    <tr><td>Dead hang</td><td>3 × max</td></tr>
-    <tr><td>Band face pulls</td><td>2×15</td></tr></table>
+    ${gymTable('B',0)}
     <p>Every second week, finish with Bring Sally Up as practice.</p></div></div>
   <div class="panel"><h3>Hybrid sessions (Sunday, base and Build 1)</h3><div class="pc">
     <p>Low leg load. Effort RPE 6–7. Rotate:</p>
-    <ul><li><b>C1:</b> 15 min, as many rounds as you can at a steady pace: 5 pull-ups, 10 push-ups, 15 air squats. Cindy practice.</li>
-    <li><b>C2:</b> 5×500 m row, 1 min rest. Then 3×40 m farmer carry.</li>
-    <li><b>C3:</b> Bring Sally Up, then 15 min easy row or ski erg.</li></ul></div></div>
+    ${['C1','C2','C3'].map(k=>`<p style="margin:10px 0 4px"><b>${k}</b></p>${gymTable(k,0)}`).join('')}</div></div>
   <div class="panel"><h3>Every day</h3><div class="pc"><ul>
     <li><b>Yoga and stretching, 10–15 min.</b> Dynamic warm-up before hard runs, static stretching after, never before.</li>
     <li><b>Grease the groove:</b> 3–5 small sets of pull-ups at half your max through the day on the home bar. Never to failure.</li></ul></div></div>`;

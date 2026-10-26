@@ -6,9 +6,9 @@ const Travel=(()=>{
   function tripOn(date){const s=iso(date);return list().find(t=>s>=t.from&&s<=t.to)||null}
   const r5=m=>Math.max(15,Math.round(m*0.7/5)*5);
   const HOTEL={
-    A:['Hotel legs and power (away)','Jump squats 4×6, single-leg Romanian deadlift 3×10 each leg (bodyweight or backpack), split squats 3×10 each leg, step-ups on a bench or stairs 3×12 each leg, calf raises 3×20. 25 min.',25],
-    B:['Hotel upper body (away)','Push-ups 4 sets, 3 reps short of max. Band rows 4×15 (pack the band). Pike push-ups 3×8. Plank 3×40 s. Bring Sally Up every second session.',25],
-    C:['Hotel circuit (away)','15 min, steady: 10 band rows, 10 push-ups, 15 squats.',20]};
+    A:['Hotel legs and power (away)','25 min. Bodyweight or a backpack.',25,'hotelA'],
+    B:['Hotel upper body (away)','25 min. Pack the band. Bring Sally Up every second session.',25,'hotelBaway'],
+    C:['Hotel circuit (away)','15 min, steady.',20,'hotelC']};
   function lighten(x){
     const y=Object.assign({},x);
     if(x.race||x.z==='yoga'||x.z==='rest'||x.z==='swim')return y;
@@ -16,14 +16,14 @@ const Travel=(()=>{
     if(x.long){y.m=r5(x.m);y.t=`Long easy run ${y.m} min`;y.d='Lighter week: 30% shorter, all easy. HR under 155.';return y}
     if(x.z==='vert'){y.m=r5(x.m);y.t=`Hills, easy, ${y.m} min`;y.d='Lighter week: fewer laps, all easy.';return y}
     if(x.z==='easy'||x.z==='rec'){y.m=r5(x.m);y.t=y.t.replace(/\d+ min/,y.m+' min');return y}
-    if(x.g==='A'){y.t='Gym A, light';y.d='Lighter week: 2 sets each, no new loads.';return y}
+    if(x.g==='A'){y.t='Gym A, light';y.d='Lighter week: 2 sets each, no new loads.';y.ex=x.ex.map(b=>[Math.min(b[0],2),b[1],b[2]]);return y}
     if(x.test){y.t='Test moved';y.d='Lighter week: do this test next week.';return y}
     return y;
   }
   function travel(x,trip){
     const y=Object.assign({},x), away=` Away: ${trip.n}.`;
     if(x.race||x.z==='yoga'||x.z==='rest')return y;
-    if(x.g&&HOTEL[x.g]){const h=HOTEL[x.g];Object.assign(y,{t:h[0],d:h[1],m:h[2]});return y}
+    if(x.g&&HOTEL[x.g]){const h=HOTEL[x.g];Object.assign(y,{t:h[0],d:h[1],m:h[2],ex:gym(h[3])});return y}
     if(x.test&&!/10k/i.test(x.t)){y.t='Test moved: '+x.t.replace(/^(Test|Retest): /,'');y.d='Away. Do it the week after you get back.';return y}
     if(x.z==='vert'){y.t=`Hills or stairs, ${x.m} min (away)`;y.d='Find a hill or a hotel staircase. Same time on feet, hike up, easy down. If it is flat: easy run, same time.';return y}
     if(x.z==='swim'){y.t='Swim if there is a pool, or walk 30 min';y.d='Recovery. Not a workout.';return y}
