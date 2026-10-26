@@ -119,8 +119,10 @@
       $('result').classList.remove('hidden');
       $('result').innerHTML = '<h3>Issued: № ' + r.no + '</h3><div class="sub">' + eur(r.total) + ' · saved to Drive → Продажби / ' + r.folder + '</div>' +
         '<div class="opts"><a class="btn" href="' + r.url + '" target="_blank" rel="noopener">Open PDF in Drive</a>' +
-        '<button class="btn ghost" id="dl" data-no="' + r.no + '">Download PDF</button><button class="btn ghost" id="again">New invoice</button></div>';
+        '<button class="btn ghost" id="dl" data-no="' + r.no + '">Download PDF</button><button class="btn ghost" id="r-mail">Send by email</button><button class="btn ghost" id="r-share">Share (Viber)</button><button class="btn ghost" id="again">New invoice</button></div>';
       $('dl').onclick = () => download(r.no);
+      $('r-mail').onclick = () => openSend(r.no);
+      $('r-share').onclick = e => share(r.no, e.target);
       $('again').onclick = () => { $('result').classList.add('hidden'); [...$('lines').children].forEach((x, i) => i ? x.remove() : x.querySelectorAll('input').forEach(inp => { if (!inp.classList.contains('u') && !inp.classList.contains('q')) inp.value = ''; })); fillClient({}); ['recipient', 'due', 'terms', 'note'].forEach(id => $(id).value = ''); $('cash').checked = false; keepDraft(); window.scrollTo(0, 0); };
       try { localStorage.removeItem(DRAFT); } catch (e) {}
       $('result').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -129,13 +131,57 @@
     } catch (e) { $('err').textContent = 'No answer. Check "Issued here" before trying again, so the same invoice is not issued twice.'; await load(); }
     finally { busy = false; $('issue').textContent = 'Issue invoice'; }
   };
+  async function pdfFile(no) {
+    const r = await api('&inv=pdf&no=' + Number(no)); if (!r.ok) throw new Error(r.error || 'Not found');
+    const bin = atob(r.b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return new File([u8], r.name, { type: 'application/pdf' });
+  }
+  function save(f) { const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
   async function download(no) {
+    try { save(await pdfFile(no)); } catch (e) { say(e.message === 'Failed to fetch' ? 'Offline' : e.message); }
+  }
+
+  /* ---------- share (Viber etc.): the phone's share sheet with the PDF; where it cannot share files, a download ---------- */
+  const shared = {};
+  async function share(no, btn) {
     try {
-      const r = await api('&inv=pdf&no=' + Number(no)); if (!r.ok) return say(r.error || 'Not found');
-      const bin = atob(r.b64), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([u8], { type: 'application/pdf' })); a.download = r.name; a.click();
+      const f = shared[no] || (shared[no] = await pdfFile(no));
+      if (!(navigator.canShare && navigator.canShare({ files: [f] }))) { save(f); return say('This browser cannot share files: PDF downloaded'); }
+      await navigator.share({ files: [f], title: f.name });
+    } catch (e) {
+      // Safari allows share only right after a tap; fetching the PDF can take too long. The file is kept, so a second tap works.
+      if (e.name === 'NotAllowedError') { if (btn) btn.textContent = 'Tap again to share'; return; }
+      if (e.name !== 'AbortError') say(e.message === 'Failed to fetch' ? 'Offline' : e.message);
+    }
+  }
+
+  /* ---------- send by email: form filled by the backend, confirm, send ---------- */
+  let sendNo = null;
+  async function openSend(no) {
+    try {
+      const r = await api('&inv=mail&no=' + Number(no)); if (!r.ok) return say(r.error || 'Not found');
+      sendNo = r.no;
+      $('s-title').textContent = 'Send № ' + r.no + ' to ' + r.client;
+      $('s-was').textContent = r.sentAt ? 'Already sent ' + String(r.sentAt).split('-').reverse().join('.') + ' to ' + r.sentTo : '';
+      $('s-to').value = r.to; $('s-save').checked = !r.to; $('s-subj').value = r.subject; $('s-body').value = r.body;
+      $('s-file').textContent = 'Attached: ' + r.file;
+      $('send').classList.remove('hidden'); $('send').scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch (e) { say('Offline'); }
   }
+  $('s-cancel').onclick = () => $('send').classList.add('hidden');
+  $('s-go').onclick = async () => {
+    const to = $('s-to').value.trim();
+    if (!/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(to)) return say('That is not one email address');
+    if (!confirm('Send invoice № ' + sendNo + ' to ' + to + '?' + ($('s-was').textContent ? '\n\n' + $('s-was').textContent + '.' : ''))) return;
+    $('s-go').disabled = true; $('s-go').textContent = 'Sending…';
+    try {
+      const r = await api('&inv=send&no=' + Number(sendNo) + '&to=' + encodeURIComponent(to) + '&subject=' + encodeURIComponent($('s-subj').value) +
+        '&body=' + encodeURIComponent($('s-body').value) + ($('s-save').checked ? '&save=1' : ''));
+      if (!r.ok) return say(r.error || 'Not sent');
+      $('send').classList.add('hidden'); say('Sent № ' + r.no + ' to ' + r.to); await load();
+    } catch (e) { say('No answer. Check Gmail Sent before you send again.'); }
+    finally { $('s-go').disabled = false; $('s-go').textContent = 'Send'; }
+  };
 
   /* ---------- start ---------- */
   async function load() {
@@ -156,5 +202,6 @@
       preview();
     } catch (e) { $('state').textContent = 'Offline. Reload to try again.'; }
   }
+  $('issued-list').onclick = e => { const b = e.target.closest('button'); if (!b) return; if (b.dataset.mail) openSend(b.dataset.mail); else if (b.dataset.share) share(b.dataset.share, b); };
   setMode(mode); loadDraft(); showBank(); showBasis(); scale(); load();
 })();

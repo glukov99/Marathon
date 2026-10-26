@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="../shared/auth.js?v=202610261339"></script>
+<script src="../shared/auth.js?v=202610261512"></script>
 <title>New invoice — Life hub</title>
 <style>
 :root{
@@ -67,13 +67,17 @@ input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px
 .list .n{font-variant-numeric:tabular-nums;color:var(--faint);min-width:96px}
 .list .c{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .list a{color:var(--acc2);text-decoration:none;font-weight:700}
+.list .act{background:none;border:0;color:var(--acc2);font-weight:700;cursor:pointer;padding:0;font-size:14px}
+.list .act{white-space:nowrap}
+.list .sent{font-size:12px;color:var(--acc)}
+@media (max-width:560px){.list li{flex-wrap:wrap;row-gap:4px}.list .c{flex-basis:100%;order:-1}.list .n{min-width:0;flex:1;white-space:nowrap}}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:12px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:40;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610261339">
+<link rel="stylesheet" href="../shared/theme.css?v=202610261512">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610261339"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610261512"></script>
 <main class="wrap">
   <header class="hero">
     <div><div class="k">GL Studio · Фактура</div><h1>New invoice</h1></div>
@@ -138,6 +142,19 @@ input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px
 
   <section class="panel done hidden" id="result"></section>
 
+  <section class="panel hidden" id="send">
+    <h3 id="s-title">Send by email</h3>
+    <div class="sub" id="s-was"></div>
+    <div class="grid">
+      <label class="f full">To<input id="s-to" type="email" autocomplete="off"></label>
+      <label class="f full row" style="flex-direction:row;align-items:center;gap:8px"><input id="s-save" type="checkbox" style="width:auto"> Save this address for the client</label>
+      <label class="f full">Subject<input id="s-subj"></label>
+      <label class="f full">Text<textarea id="s-body" rows="7"></textarea></label>
+    </div>
+    <div class="sub" id="s-file"></div>
+    <div class="opts"><button class="btn" id="s-go" type="button">Send</button><button class="btn ghost" id="s-cancel" type="button">Cancel</button></div>
+  </section>
+
   <div class="issue"><div><div class="sub" id="iss-sub">Ready when the preview looks right</div><b id="iss-total">–</b></div>
     <button class="btn" id="issue" disabled>Issue invoice</button></div>
 
@@ -145,7 +162,7 @@ input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px
   <section class="panel"><ul class="list" id="issued-list"><li class="sub">None yet. Invoices 1–76 were issued in InvoicePro (see Business).</li></ul></section>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610261339"></script>
-<script src="app.js?v=202610261339"></script>
+<script src="../shared/sync.js?v=202610261512"></script>
+<script src="app.js?v=202610261512"></script>
 </body>
 </html>
