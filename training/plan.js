@@ -84,7 +84,7 @@ const EZ='HR 148–160. You can talk in full sentences.';
 const E=(m,x,run)=>S('easy',`Easy run ${m} min`,x||EZ,m,run&&{run});
 const R=(m,x)=>S('rec',`Recovery run ${m} min`,x||'HR under 148. As easy as it gets. Do it, then go home.',m);
 const L=(t,d,m,run)=>S('easy',t,d,m,{long:1,run});
-const V=(vert,m,x)=>S('vert',`Mladezhki Halm vert, ~${vert} m`,x||'Hike up hard but controlled, jog down easy. Hiking is training, not failure.',m);
+const V=(vert,m,x)=>S('vert',`Mladezhki Halm vert, ~${vert} m`,x||'Run up slowly, or hike: keep HR under 160 and walk when it goes over. Jog down easy.',m);
 const ST=(t,d,m,run)=>S('st',t,d,m,{key:1,then:'stretch',run});
 const HD=(t,d,m,run)=>S('hard',t,d,m,{key:1,then:'stretch',run});
 const MPS=(t,d,m,run)=>S('mp',t,d,m,{key:1,then:'stretch',run});

@@ -114,9 +114,11 @@ def build_yoga(name, desc, R):
 
 def auto_run(s):
     """Steps for a run the plan gives as text: an HR from "HR a–b" or "HR under N", strides from "N strides".
-    Hikes, trails and vert get time only: HR on a climb says nothing useful."""
+    Vert: HR 140–160, so a slow run up stays aerobic (walk when it goes over). Hikes and trails get time only."""
     d, secs = s.get('d') or '', s['m'] * 60
-    if s['z'] == 'vert' or re.search(r'hike|trail|hill|course|kit|headlamp|explore|section', d + ' ' + s['t'], re.I):
+    if s['z'] == 'vert':
+        return [['run', secs, 'hr:140-160', 'Run up slowly, walk when HR goes over 160. Jog down easy. ' + d]]
+    if re.search(r'hike|trail|hill|course|kit|headlamp|explore|section', d + ' ' + s['t'], re.I):
         return [['run', secs, None, d]]
     if m := re.search(r'HR (\d+)–(\d+)', d): hr = f'hr:{m[1]}-{m[2]}'
     elif m := re.search(r'HR under (\d+)', d): hr = f'hr:{int(m[1]) - 30}-{m[1]}'
