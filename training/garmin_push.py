@@ -22,9 +22,9 @@ PREFIX = 'LH '
 YOGA_POSES = Path(__file__).with_name('garmin-yoga-poses.json')  # keys from connect.garmin.com/web-data/exercises/Yoga.json, Oct 2026
 EXPORT = r"""
 const P=new Function(require('fs').readFileSync(process.argv[1],'utf8')+';return {W,EX,START,ROUTINE}')();
-const out=[];P.W.forEach((w,wi)=>w.days.forEach((xs,d)=>xs.forEach(x=>{if(!x.ex&&!x.then)return;
+const out=[];P.W.forEach((w,wi)=>w.days.forEach((xs,d)=>xs.forEach(x=>{if(!x.ex&&!x.then&&!x.rt)return;
   const t=new Date(P.START);t.setDate(t.getDate()+wi*7+d);
-  out.push({date:t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'),week:wi+1,t:x.t,d:x.d,ex:x.ex,then:x.then})})));
+  out.push({date:t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'),week:wi+1,t:x.t,d:x.d,ex:x.ex,then:x.then,rt:x.rt})})));
 process.stdout.write(JSON.stringify({sessions:out,EX:P.EX,ROUTINE:P.ROUTINE}));
 """
 STRENGTH = {'sportTypeId': 5, 'sportTypeKey': 'strength_training', 'displayOrder': 5}
@@ -122,8 +122,8 @@ def versions(sessions, EX, ROUTINE):
         if s.get('ex'):
             sig = hashlib.sha1(json.dumps([s['t'], s['ex']]).encode()).hexdigest()[:8]
             add(sig, f"{PREFIX}{s['t'].split(':')[0]} · W{s['week']}", s['d'], lambda n, d, s=s: build(n, d, s['ex'], EX), s['date'])
-        if s.get('then'):
-            R = ROUTINE[s['then']]
+        for k in filter(None, (s.get('then'), s.get('rt'))):  # after-session routine, or the day's PM yoga
+            R = ROUTINE[k]
             sig = hashlib.sha1(json.dumps(R).encode()).hexdigest()[:8]
             add(sig, f"{PREFIX}{R['t']}", R['when'], lambda n, d, R=R: build_yoga(n, d, R), s['date'])
     for v in out.values():

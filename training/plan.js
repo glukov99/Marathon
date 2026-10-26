@@ -442,7 +442,7 @@ wk('vit','Race week: Vitosha','100 km race','~2,300 m race','<b>Race date to con
    category, Garmin pose], poses from connect.garmin.com/web-data/exercises/Yoga.json. side(...) = left, then right. */
 const side=(...st)=>[...st.map(s=>[...s,'Left']),...st.map(s=>[...s,'Right'])];
 const ROUTINE={
- stretch:{t:'Post-training stretch',then:'Then',when:'After Gym A and the key runs, while you are still warm. Hips, quads, hamstrings and shoulders. No load, so it is fine with sore legs.',steps:[
+ stretch:{t:'Post-training stretch',then:'Then',video:'Do This After Training to Recover Faster',when:'After Gym A and the key runs, while you are still warm. Hips, quads, hamstrings and shoulders. No load, so it is fine with sore legs.',steps:[
   ['Deep squat',30,'Arrive. Slow the breath, nose only.','POSE','SQUAT_PALM_PRESS'],
   ...side(['Lizard lunge',60,'Hands inside the front foot. Circle the hips, then up and down.','POSE','LIZARD'],
     ['Back knee down, hold the back foot',45,'Push the foot away, then pull it in. Squeeze the back glute. Gentle on sore knees.','POSE','LOW_LUNGE_WITH_KNEE_DOWN'],
@@ -454,24 +454,147 @@ const ROUTINE={
   ['Seated shoulder stretch',30,'Hands behind, hips down, elbows back. Go gently.','MOVE','ARM_STRETCH'],
   ['Hang from a bar, if there is one',45,'','MOVE','STAND_AND_HANG'],
   ['Seated breathing',60,'Long inhales, slower exhales.','MOVE','RIBCAGE_BREATHING']]},
- rest:{t:'Rest-day flow',then:'Also',when:'Rest days and swim days. Gentle: move, breathe, slow down. Breathe 5–6 s in, 5–6 s out.',steps:[
-  ["Child's pose, knees wide",60,'Forehead down, walk the hands forward.','POSE','CHILDS'],
-  ['Cat-cow',45,'6 slow rounds.','CORE','CAT_COW'],
-  ['Downward dog, walk the dog',60,'Bend one knee, then the other. Then settle, heels down.','POSE','DOWNWARD_FACING_DOG'],
+ rest:{t:'Rest-day flow',then:'Also',video:'Your Body Needs This on Rest Days',when:'Rest days and swim days. Gentle: move, breathe, slow down. Breathe 5–6 s in, 5–6 s out.',steps:[
+  ["Child's pose, knees wide",100,'Forehead down, walk the hands forward.','POSE','CHILDS'],
+  ['Cat-cow',80,'Slow rounds.','CORE','CAT_COW'],
+  ['Downward dog, walk the dog',90,'Bend one knee, then the other. Then settle, heels down.','POSE','DOWNWARD_FACING_DOG'],
   ...side(['Three-legged dog, hip open',20,'Knee bent, hips stacked, then square them.','POSE','DOWN_DOG_SPLIT_OPEN_HIP_BENT_KNEE'],
     ['Lizard lunge',60,'Move the hips any way that feels good.','POSE','LIZARD'],
-    ['Lizard to half split',30,'3 times: exhale hips back and legs straight, inhale forward.','POSE','RUNNERS_LUNGE']),
-  ['Forward fold, holding opposite elbows',45,'Legs straight, head heavy.','POSE','STANDING_FORWARD_BEND'],
+    ['Lizard to half split',40,'3 times: exhale hips back and legs straight, inhale forward.','POSE','RUNNERS_LUNGE']),
+  ['Forward fold, holding opposite elbows',40,'Legs straight, head heavy.','POSE','STANDING_FORWARD_BEND'],
   ['Forward fold, hands joined behind the back',30,'Arms up and over the head.','POSE','STANDING_FORWARD_BEND'],
-  ['Sphinx',60,'Feet wide, forearms down. Press up into seal for more.','POSE','SPHINX'],
+  ['Sphinx',80,'Feet wide, forearms down. Press up into seal for more.','POSE','SPHINX'],
   ...side(['Prone twist',45,'On the belly, one arm out, the other foot over behind the knee.','MOVE','SPINAL_TWIST']),
-  ['Bridge',45,'5 breaths.','POSE','BRIDGE'],
-  ...side(['Figure four on the back',45,'Ankle over the knee, pull in, feet flexed. Back off if the knee hurts.','MOVE','PIRIFORMIS_STRETCH']),
+  ['Bridge',60,'5 breaths.','POSE','BRIDGE'],
+  ...side(['Figure four on the back',55,'Ankle over the knee, pull in, feet flexed. Back off if the knee hurts.','MOVE','PIRIFORMIS_STRETCH']),
   ['Happy baby',60,'Knees towards the armpits. Straighten one leg, then the other.','MOVE','HIP_STRETCH'],
-  ['Plow, optional',30,'Gap between chin and chest.','POSE','PLOW'],
-  ['Reclined butterfly',60,'Soles together, knees open. Steady breath.','POSE','BOUND_ANGLE'],
+  ['Plow, optional',40,'Gap between chin and chest.','POSE','PLOW'],
+  ['Reclined butterfly',120,'Soles together, knees open. Steady breath.','POSE','BOUND_ANGLE'],
   ['Seated, hands at the heart',30,'','POSE','EASY_SEATED']]},
+ recovery:{t:'Recovery for strength days',video:'The Recovery Practice Your Strength Training Is Missing',when:'Opens the body in every direction, then a minute of stillness.',steps:[
+  ["Child's pose",40,'Knees apart, hips heavy.','POSE','CHILDS'],
+  ...side(['Bird dog, elbow to knee',30,'Opposite arm and leg long, then touch, then long again.','CORE','ARM_AND_LEG_EXTENSION_ON_KNEES'],
+    ['Supported side plank, lift the knee',20,'Hold 5 s.','PLANK','SIDE_PLANK'],
+    ['Gate side stretch',40,'Leg out to the side, top arm over the head, breathe into the side.','POSE','GATE'],
+    ['Side plank, top leg up',15,'Hold 5 s.','PLANK','SIDE_PLANK'],
+    ['Three-legged dog to one-leg plank, knee to chest',30,'Slow.','POSE','DOWN_DOG_SPLIT'],
+    ['Crescent lunge, back knee low',30,'Low or high, as you need.','POSE','HIGH_LUNGE'],
+    ['Plank, lower down, to down dog',30,'Slow the breath.','POSE','DOWNWARD_FACING_DOG']),
+  ['Deep squat',30,'No weights. Sit comfortably.','POSE','SQUAT_PALM_PRESS'],
+  ['Reverse tabletop',30,'3 times: hips up, then lower and lift with straight legs.','POSE','UPWARD_FACING_PLANK'],
+  ['Seated, one minute of stillness',60,'Breath through the nose.','POSE','EASY_SEATED']]},
+ reset:{t:'Short yin reset',video:'The 15 Minute Reset Your Body Needs After Pushing Hard',when:'Four long holds. Relax into each pose, do not force it.',steps:[
+  ['Sphinx',180,'Legs wide, elbows under the shoulders. Slow, deep breaths.','POSE','SPHINX'],
+  ["Child's pose",30,'Just a pass through.','POSE','CHILDS'],
+  ['Seated straddle forward fold',240,'Legs wide, walk the hands forward. Depth is not the goal.','POSE','SEATED_WIDE_LEG_FORWARD_BEND'],
+  ['Reclined butterfly',120,'Soles together, let the knees fall open.','POSE','BOUND_ANGLE'],
+  ['Corpse pose',60,'Stay as long as you like.','POSE','CORPSE']]},
+ bedtense:{t:'Before bed: let go of tension',video:'Do This Before Bed When You’re Too Tense to Fall Asleep',when:'Right before bed, even in bed. Neck, sides, spine, hips.',steps:[
+  ['Seated breathing',60,'Shoulders down, let the day go.','POSE','EASY_SEATED'],
+  ...side(['Neck side stretch',30,'Ear to shoulder, hand resting on the head. No pulling.','POSE','EASY_SEATED']),
+  ['Half neck rolls',30,'Slow half circles, chin past the chest.','POSE','EASY_SEATED'],
+  ...side(['Seated side bend',30,'Arm over the head, breathe into the ribs.','POSE','SEATED_EASY_SIDE_BEND']),
+  ['Sphinx',60,'Easy back bend. Feet wider if the back complains.','POSE','SPHINX'],
+  ['Crocodile rest',20,'Forehead on the hands.','MOVE','BELLY_BREATHING'],
+  ...side(['Prone twist',45,'Arm out, other leg bent behind you.','MOVE','SPINAL_TWIST']),
+  ['Knees to chest, knee circles',45,'Both directions.','MOVE','KNEE_CIRCLES'],
+  ['Happy baby',45,'Or just hug the knees. Then go to bed.','MOVE','HIP_STRETCH']]},
+ bedeasy:{t:'Before bed: so tomorrow feels easier',video:'Do This Before Bed So Tomorrow Feels Easier',when:'Evening wind-down, on the carpet or the mat. Keep it loose, not strict.',steps:[
+  ['Downward dog, walk the dog',80,'Move around, breathe deeper.','POSE','DOWNWARD_FACING_DOG'],
+  ['Cat-cow',40,'Slow.','CORE','CAT_COW'],
+  ["Child's pose",60,'Breathe into the lower back.','POSE','CHILDS'],
+  ...side(['90-90, fold over the front knee',75,'Both legs at about 90°. Find the spot that stretches, stay there.','POSE','ONE_LEGGED_PIGEON']),
+  ['Sphinx',60,'Feet wide. Open the front with every inhale.','POSE','SPHINX'],
+  ['Crocodile rest, gratitude',45,'Lie on the belly, slow breaths.','MOVE','BELLY_BREATHING'],
+  ['Seated, eyes closed',30,'','POSE','EASY_SEATED']]},
+ recoverhard:{t:'Recover from hard training',video:'Recover From Hard Training Without Losing Momentum',when:'Right after training or on a rest day. A full-body flow, little strength.',steps:[
+  ['Sphinx',80,'Glutes a little on, collarbones wide.','POSE','SPHINX'],
+  ["Child's pose",30,'','POSE','CHILDS'],
+  ['Tabletop: rock forward and back, then forearm stretch',45,'Fingers turned to the knees, sit back gently.','POSE','TABLE_TOP'],
+  ['Downward dog, walk the dog, heels to each side',70,'Breathe into each side body.','POSE','DOWNWARD_FACING_DOG'],
+  ['Halfway lift, forward fold',15,'','POSE','STANDING_FORWARD_BEND'],
+  ...side(['Low lunge, back knee down',45,'Hands on the front knee, hips forward, tailbone tucked.','POSE','LOW_LUNGE_WITH_KNEE_DOWN'],
+    ['Half split',30,'Front toes up, micro-bend in the knee.','POSE','RUNNERS_LUNGE'],
+    ['Wide-leg forward fold',50,'Heels wider than the toes. Hands behind the back, or a twist.','POSE','STANDING_WIDE_LEG_FORWARD_BEND'],
+    ['Side lunge',15,'Your depth.','POSE','WIDE_SIDE_LUNGE'],
+    ['Plank, lower slowly, sphinx',40,'Control the way down.','POSE','SPHINX'],
+    ["Child's pose to down dog",30,'','POSE','DOWNWARD_FACING_DOG']),
+  ['Sphinx, seal or upward dog',60,'Pick your depth, glutes on.','POSE','UP_DOG'],
+  ['Downward dog, long exhales',40,'Breathe out through the mouth twice.','POSE','DOWNWARD_FACING_DOG'],
+  ['Kneeling arm swings',45,'Sit on the heels, swing the arms back and up like wings.','POSE','THUNDERBOLT_POSE_BOTH_SIDES_ARM_STRETCH'],
+  ['Seated or lying, rest',120,'','POSE','CORPSE']]},
+ bedletgo:{t:'Before bed: when the body will not let go',video:'Do This Before Bed When Your Body Won’t Let Go',when:'After a day of sitting or driving. Gentle, even in bed.',steps:[
+  ['Sphinx',80,'Or seal if it feels good.','POSE','SPHINX'],
+  ...side(['Half frog',40,'On the belly, press the foot down by the hip: quad and front shoulder. Easy on the knee.','POSE','HEROS']),
+  ["Child's pose",30,'','POSE','CHILDS'],
+  ['Butterfly fold, back rounded',80,'Elbows outside the shins, chin to chest.','POSE','BOUND_ANGLE'],
+  ['Bridge',50,'Glutes on, gap between chin and chest.','POSE','BRIDGE'],
+  ...side(['Figure four',45,'Pull the legs in, flexed foot protects the knee.','MOVE','PIRIFORMIS_STRETCH'],
+    ['Supine twist',45,'Legs over to the side, opposite arm out.','POSE','SUPINE_SPINAL_TWIST']),
+  ['Happy baby, one leg straight, then the other',60,'','MOVE','HIP_STRETCH'],
+  ['Plow',20,'Gap between chin and chest.','POSE','PLOW'],
+  ['Knees to chest, then rest',40,'Grab a blanket.','POSE','CORPSE']]},
+ restbetter:{t:'Rest day that makes you better',video:'Your Rest Day Should Make You Better at Training',when:'For athletes on a recovery day. Front of the hips, hamstrings, outer hips, shoulders.',steps:[
+  ["Child's pose",70,'Breathe into the ribs on the thighs.','POSE','CHILDS'],
+  ['Tabletop barrel rolls',60,'Circle the spine 3 times each way, slowly.','POSE','TABLE_TOP'],
+  ['Downward dog',45,'Knees bent first, chest to the thighs.','POSE','DOWNWARD_FACING_DOG'],
+  ['Forward fold, arms crossed',30,'Rock side to side.','POSE','STANDING_FORWARD_BEND'],
+  ...side(['Lizard lunge',30,'Move the hips around.','POSE','LIZARD'],
+    ['Back knee down, quad stretch',50,'Push the foot away, then pull it in.','POSE','LOW_LUNGE_WITH_KNEE_DOWN'],
+    ['Half split',30,'Sit back on the heel.','POSE','RUNNERS_LUNGE'],
+    ['Forearm plank',15,'Tailbone tucked.','POSE','DOLPHIN_PLANK'],
+    ['Sphinx or seal',50,'Lengthen the front, do not crunch the back.','POSE','SPHINX'],
+    ["Child's pose, down dog, forward fold",30,'','POSE','DOWNWARD_FACING_DOG']),
+  ...side(['90-90, fold over the front leg',60,'Feet flexed. Aim for the outer hip.','POSE','ONE_LEGGED_PIGEON'],
+    ['Cow face, fold forward',45,'Unstack the legs if it is too much.','POSE','COW_FACE']),
+  ['Seated forward fold',50,'Whole back line.','POSE','SEATED_LONG_LEG_FORWARD_BEND'],
+  ['Butterfly fold',60,'Let the breath and gravity take you down.','POSE','BOUND_ANGLE'],
+  ['Reverse tabletop',20,'Rock forward and back for the shoulders.','POSE','UPWARD_FACING_PLANK'],
+  ...side(['Seated neck stretch',20,'Hands joined behind, ear to shoulder.','POSE','EASY_SEATED']),
+  ['Seated, five deep breaths',45,'','POSE','EASY_SEATED']]},
+ between:{t:'Between hard training days',video:'Your Body Needs This Between Hard Training Days',when:'Slow and relaxed. Before or after training, or on a rest day.',steps:[
+  ['Seated, notice the breath',60,'Cross-legged, tall.','POSE','EASY_SEATED'],
+  ...side(['Fold over crossed shins',30,'Lower back and outer hips.','POSE','EASY_SEATED']),
+  ['Cat-cow',30,'','CORE','CAT_COW'],
+  ['Downward dog',45,'Knees bent, open the shoulders, then straighten a little.','POSE','DOWNWARD_FACING_DOG'],
+  ['Forward fold, opposite elbows, roll up',30,'','POSE','STANDING_FORWARD_BEND'],
+  ['Arms up, fold down',20,'','POSE','STANDING_ARMS_UP'],
+  ...side(['Low lunge, back knee down',40,'Front heel pulls back, tailbone tucked.','POSE','LOW_LUNGE_WITH_KNEE_DOWN'],
+    ['Half split',30,'Toes up, micro-bend.','POSE','RUNNERS_LUNGE'],
+    ['Revolved side angle, then straighten the front leg',45,'Outer hip and the back of the hip.','POSE','REVOLVED_TRIANGLE'],
+    ['Down dog, forward fold, roll up',40,'','POSE','DOWNWARD_FACING_DOG']),
+  ...side(['Bridge, one leg up',20,'Hips high.','POSE','BRIDGE'],
+    ['Figure four',45,'Both feet flexed.','MOVE','PIRIFORMIS_STRETCH']),
+  ...side(['Supine twist',40,'Legs together, look the other way.','POSE','SUPINE_SPINAL_TWIST']),
+  ['Corpse pose',60,'Let the breath settle.','POSE','CORPSE']]},
+ bjj:{t:'After a wrecking session',video:'Do This After BJJ When Your Whole Body Feels Wrecked',when:'Cool-down after martial arts, lifting or any hard session.',steps:[
+  ['Kneeling, lean back, lift the knees',30,'Tops of the ankles. Only as high as is comfortable.','POSE','THUNDERBOLT'],
+  ...side(['Low lunge, rock the hips',40,'Back toes untucked. Forward, down and back, then stay.','POSE','LOW_LUNGE_WITH_KNEE_DOWN'],
+    ['Half split, foot in and out',40,'Toes up, melt down.','POSE','RUNNERS_LUNGE'],
+    ['Wide-leg forward fold',25,'Chest melts down.','POSE','STANDING_WIDE_LEG_FORWARD_BEND'],
+    ['Side lunge',10,'','POSE','WIDE_SIDE_LUNGE'],
+    ['Twisted lunge, arm up, straighten the front leg',30,'Back leg straight, front toes up.','POSE','LOW_LUNGE_TWIST']),
+  ['Cat-cow',40,'','CORE','CAT_COW'],
+  ["Child's pose",30,'Breathe into the lower back.','POSE','CHILDS'],
+  ['Tabletop to down dog',30,'3 times, short stance.','POSE','DOWNWARD_FACING_DOG'],
+  ['Sphinx',60,'Open the whole front.','POSE','SPHINX'],
+  ['Seated, eyes closed',60,'','POSE','EASY_SEATED']]},
+ athletes:{t:'Gentle flow for athletes',video:'20 Minute Gentle Yoga Flow for Athletes (And Beginners)',when:'An active rest day: gentle movement, then a short sitting.',steps:[
+  ["Child's pose",90,'Arrive, close the eyes.','POSE','CHILDS'],
+  ['Cat-cow',50,'','CORE','CAT_COW'],
+  ['Downward dog',60,'Knees bent, chest to the quads, then straighten a little.','POSE','DOWNWARD_FACING_DOG'],
+  ['Wide-leg fold, halfway lift',35,'5 times with the breath.','POSE','STANDING_WIDE_LEG_FORWARD_BEND'],
+  ['Roll up, arms up',15,'','POSE','STANDING_ARMS_UP'],
+  ['Squat, arms up and down',40,'5 times: high or low squat.','POSE','SQUAT_PALM_PRESS'],
+  ...side(['Lizard lunge',25,'Move the hips around.','POSE','LIZARD'],
+    ['Low lunge, back knee down, thigh stretch optional',55,'Three slow breaths.','POSE','LOW_LUNGE_WITH_KNEE_DOWN'],
+    ['Half split',40,'','POSE','RUNNERS_LUNGE'],
+    ['Back to the squat',15,'','POSE','SQUAT_PALM_PRESS']),
+  ['Butterfly fold',100,'Five breaths, let the breath pull you in.','POSE','BOUND_ANGLE'],
+  ['Seated meditation',300,'Watch the breath. When the mind wanders, come back.','POSE','EASY_SEATED']]},
 };
+/* Video title -> routine, for the PM yoga picks: a recovery day prefers a video that is also on the watch. */
+const VR=Object.fromEntries(Object.entries(ROUTINE).map(([k,R])=>[R.video,k]));
 const routineMin=k=>Math.round(ROUTINE[k].steps.reduce((a,s)=>a+s[1],0)/60);
 
 /* ============ PM yoga: Breathe and Flow library ============ */
@@ -482,24 +605,28 @@ const RESTO=/Restorative|Fascia|Rollout|Recover|After Training|Yin|Pushing Hard|
 const CALM=/Meditation|Breathwork|Breathing|Pranayama|Sleep|Before Bed/i;
 const yPool=(c,re)=>YV.filter(v=>v[1]===c&&(!re||re.test(v[0])));
 const pickV=(pool,n)=>{const pr=pool.filter(v=>v[2]);const use=(pr.length&&n%2===0)?pr:pool;return use[n%use.length]};
+/* Recovery slots pick from the videos that are also watch routines (any colour), matching the slot when any do. */
+const pickR=(re,n)=>{const all=YV.filter(v=>VR[v[0]]),m=re?all.filter(v=>re.test(v[0])):[];const use=m.length?m:all;return use[n%use.length]};
 function yogaPlan(wi,w,d,items){
   const n=wi*7+d;
   const race=items.some(x=>x.race), longDay=items.some(x=>x.long);
   const nextLong=(w.days[d+1]||[]).some(x=>x.long), prevLong=d>0&&w.days[d-1].some(x=>x.long);
   const recov=w.light&&/^Recover/.test(w.title);
   if(race)     return ['g','Restorative, evening after the race','Very gentle. No deep stretching for 3 days.',pickV(yPool('g',RESTO),n),10];
-  if(w.race)   return ['g','Sleep or breathwork only','Race week: no flows.',pickV(yPool('g',CALM),n),15];
-  if(recov)    return ['g','Green, restorative','Recovery week: gentle only.',pickV(yPool('g',RESTO),n),20];
-  if(longDay)  return ['g','Restorative or fascia release, evening','',pickV(yPool('g',RESTO),n),20];
+  if(w.race)   return ['g','Sleep or breathwork only','Race week: no flows.',pickR(CALM,n),15];
+  if(recov)    return ['g','Green, restorative','Recovery week: gentle only.',pickR(RESTO,n),20];
+  if(longDay)  return ['g','Restorative or fascia release, evening','',pickR(RESTO,n),20];
   if(nextLong) return ['g','Green only, light','No deep hip openers before the long run.',pickV(yPool('g'),n),15];
-  if(prevLong) return ['g','Green, 15–25 min','Day after the long run.',pickV(yPool('g',RESTO),n),20];
-  if(w.light)  return ['g','Green, 15–20 min','Lighter week.',pickV(yPool('g'),n),15];
+  if(prevLong) return ['g','Green, 15–25 min','Day after the long run.',pickR(RESTO,n),20];
+  if(w.light)  return ['g','Green, 15–20 min','Lighter week.',pickR(null,n),15];
   if(d===0&&items.some(x=>x.key)&&w.p!=='taper') return ['r','Red allowed, once a week max','Training, not recovery. If it gives you DOMS, it counts as a strength session.',pickV(yPool('r'),n),25];
   if(d===1||d===6) return ['a','Amber, 20–30 min','',pickV(yPool('a'),n),25];
-  return ['g','Green, 15–25 min','',pickV(yPool('g'),n),20];
+  return ['g','Green, 15–25 min','',pickR(null,n),20];
 }
 W.forEach((w,wi)=>w.days.forEach((items,d)=>{
   const [c,t,note,v,m]=yogaPlan(wi,w,d,items);
-  items.push(S('yoga','PM yoga: '+t,(note?note+' ':'')+'Suggested: '+v[0],m,{yc:YC[c],link:ylink(v[0])}));
+  const rt=VR[v[0]];  // this video is also a watch routine
+  items.push(S('yoga','PM yoga: '+t,(note?note+' ':'')+'Suggested: '+v[0],rt?routineMin(rt):m,{yc:YC[c],link:ylink(v[0]),rt}));
+  if(rt)items.forEach(x=>{if(x.then==='rest')delete x.then});  // the day already has its yoga on the watch
 }));
 
