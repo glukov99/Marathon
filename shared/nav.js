@@ -6,6 +6,8 @@
 
    Now each page has <div id="lhn"></div> and loads this file straight after it.
    The bar says where you are; Menu opens every page at once, grouped.
+   Menu floats at the bottom right, where the thumb is; Close sits in the same spot. A spacer at the end of the page
+   keeps it off the last line. A page with its own bottom bar lifts it (invoice: .issue).
    To add a page: one line in GROUPS. */
 (function () {
   const GROUPS = [
@@ -32,7 +34,10 @@
 .lhn a,.lhn button{font-family:inherit;font-size:13px;font-weight:600;line-height:1;color:var(--soft);text-decoration:none;
   background:rgba(127,127,127,.12);border:0;border-radius:16px;padding:8px 13px;cursor:pointer}
 .lhn .lhn-cur{font-size:13px;font-weight:700;color:var(--ink)}
-.lhn .lhn-menu{margin-left:auto;color:var(--ink)}
+.lhn-fab{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:59;
+  font-family:inherit;font-size:15px;font-weight:700;line-height:1;color:var(--paper);background:var(--ink);border:0;border-radius:28px;
+  padding:17px 22px;box-shadow:0 6px 20px rgba(0,0,0,.28);cursor:pointer}
+.lhn-pad{height:calc(84px + env(safe-area-inset-bottom,0px))}
 .lhn-ov{position:fixed;inset:0;z-index:60;background:var(--paper);overflow-y:auto;
   padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 24px)}
 .lhn-ov[hidden]{display:none}
@@ -54,8 +59,11 @@ body.lhn-open{overflow:hidden}`;
   el.setAttribute('aria-label', 'Life hub');
   el.innerHTML = (page
     ? (fam ? '' : `<a href="${home}">Life hub</a>`) + `<span class="lhn-cur">${page[1]}</span>`
-    : `<a href="${home}" aria-current="page" class="lhn-cur" style="background:none;padding-left:0">Life hub</a>`) +
-    `<button class="lhn-menu" aria-expanded="false" aria-controls="lhnOv">Menu</button>`;
+    : `<a href="${home}" aria-current="page" class="lhn-cur" style="background:none;padding-left:0">Life hub</a>`);
+  const btn = document.createElement('button');
+  btn.className = 'lhn-fab'; btn.textContent = 'Menu';
+  btn.setAttribute('aria-expanded', 'false'); btn.setAttribute('aria-controls', 'lhnOv');
+  const pad = document.createElement('div'); pad.className = 'lhn-pad'; pad.setAttribute('aria-hidden', 'true');
 
   const ov = document.createElement('div');
   ov.className = 'lhn-ov'; ov.id = 'lhnOv'; ov.hidden = true;
@@ -64,14 +72,13 @@ body.lhn-open{overflow:hidden}`;
     <button data-x>Close</button></div>` + groups.map(([g, list]) =>
       `<div class="lhn-g"><h4>${g}</h4><div class="lhn-l">${list.map(([p, n]) =>
         `<a href="${root}${p}"${page && page[0] === p ? ' aria-current="page"' : ''}>${n}</a>`).join('')}</div></div>`).join('') +
-    `</div>`;
-  document.body.appendChild(ov);
+    `</div><button class="lhn-fab" data-x>Close</button>`;
+  document.body.append(pad, btn, ov);
 
-  const btn = el.querySelector('.lhn-menu');
   const show = on => {
     ov.hidden = !on; btn.setAttribute('aria-expanded', on);
     document.body.classList.toggle('lhn-open', on);
-    (on ? ov.querySelector('[data-x]') : btn).focus();
+    (on ? ov.querySelector('.lhn-fab') : btn).focus();
   };
   btn.addEventListener('click', () => show(true));
   ov.addEventListener('click', e => { if (e.target.closest('[data-x]')) show(false); });
