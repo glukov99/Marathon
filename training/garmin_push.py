@@ -1,30 +1,37 @@
 #!/usr/bin/env python3
-"""Put the plan's strength sessions on the Garmin calendar, so the watch shows each day's exact version.
+"""Put the plan's strength sessions and yoga routines on the Garmin calendar, so the watch shows each day's exact version.
 
   ~/.venvs/garmin/bin/python training/garmin_push.py login       once: email, password, MFA code
   ~/.venvs/garmin/bin/python training/garmin_push.py push        the next 14 days
   ... push --days 28 --from 2026-11-02 --dry                     --dry prints and touches nothing
-  ~/.venvs/garmin/bin/python training/garmin_push.py check       no network: every exercise is a real Garmin one
+  ~/.venvs/garmin/bin/python training/garmin_push.py check       no network: every exercise and pose is a real Garmin one
 
-Reads training/plan.js through node, the same data the page shows. One Garmin workout per version of a
-session ("LH Gym A · W1"), scheduled on every day that uses it. Running it again changes only what is wrong.
-Exercises done per leg or per side get a Left and a Right step, so the watch counts each leg's set.
-The login lives in ~/.garminconnect, never in this repo. Needs: pip install "garminconnect[workout]".
+Reads training/plan.js through node, the same data the page shows. One Garmin workout per version of a strength
+session ("LH Gym A · W1") and one per yoga routine ("LH Post-training stretch"), scheduled on every day that uses it.
+Running it again changes only what is wrong. Exercises done per leg or per side get a Left and a Right step, so the
+watch counts each leg's set. The login lives in ~/.garminconnect, never in this repo.
+Needs: pip install "garminconnect[workout]". Weekly run: ~/Library/LaunchAgents/com.lifehub.garmin-push.plist.
 Known gap: trips and lighter weeks are decided in the browser, so for those weeks the watch gets the base plan.
 """
-import argparse, datetime as dt, getpass, hashlib, json, re, subprocess, sys
+import argparse, datetime as dt, getpass, hashlib, json, re, subprocess
 from pathlib import Path
 
 TOKENS = '~/.garminconnect'
 PLAN = Path(__file__).with_name('plan.js')
 PREFIX = 'LH '
+YOGA_POSES = Path(__file__).with_name('garmin-yoga-poses.json')  # keys from connect.garmin.com/web-data/exercises/Yoga.json, Oct 2026
 EXPORT = r"""
-const P=new Function(require('fs').readFileSync(process.argv[1],'utf8')+';return {W,EX,START}')();
-const out=[];P.W.forEach((w,wi)=>w.days.forEach((xs,d)=>xs.forEach(x=>{if(!x.ex)return;
+const P=new Function(require('fs').readFileSync(process.argv[1],'utf8')+';return {W,EX,START,ROUTINE}')();
+const out=[];P.W.forEach((w,wi)=>w.days.forEach((xs,d)=>xs.forEach(x=>{if(!x.ex&&!x.then)return;
   const t=new Date(P.START);t.setDate(t.getDate()+wi*7+d);
-  out.push({date:t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'),week:wi+1,t:x.t,d:x.d,ex:x.ex})})));
-process.stdout.write(JSON.stringify({sessions:out,EX:P.EX}));
+  out.push({date:t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'),week:wi+1,t:x.t,d:x.d,ex:x.ex,then:x.then})})));
+process.stdout.write(JSON.stringify({sessions:out,EX:P.EX,ROUTINE:P.ROUTINE}));
 """
+STRENGTH = {'sportTypeId': 5, 'sportTypeKey': 'strength_training', 'displayOrder': 5}
+YOGA = {'sportTypeId': 7, 'sportTypeKey': 'yoga', 'displayOrder': 7}
+LAP = {'conditionTypeId': 1, 'conditionTypeKey': 'lap.button', 'displayOrder': 1, 'displayable': True}
+END = {'reps': {'conditionTypeId': 10, 'conditionTypeKey': 'reps', 'displayOrder': 10, 'displayable': True},
+       'time': {'conditionTypeId': 2, 'conditionTypeKey': 'time', 'displayOrder': 2, 'displayable': True}}
 
 
 def plan():
@@ -41,19 +48,22 @@ def amount(a):
     return 'lap', a
 
 
+def workout(name, desc, sport, steps):
+    from garminconnect.workout import StrengthWorkout, WorkoutSegment
+    w = StrengthWorkout(workoutName=name, description=desc[:1000], estimatedDurationInSecs=0, sportType=sport,
+                        workoutSegments=[WorkoutSegment(segmentOrder=1, sportType=sport, workoutSteps=steps)])
+    return w.to_dict()
+
+
 def build(name, desc, ex, EX):
     """A plan session as a Garmin strength workout. Rest between rounds ends on the lap button."""
-    from garminconnect.workout import StrengthWorkout, WorkoutSegment, ExecutableStep, create_repeat_group, _strength_exercise_step
+    from garminconnect.workout import ExecutableStep, create_repeat_group, _strength_exercise_step
     order = 0
 
     def nxt():
         nonlocal order
         order += 1
         return order
-
-    LAP = {'conditionTypeId': 1, 'conditionTypeKey': 'lap.button', 'displayOrder': 1, 'displayable': True}
-    END = {'reps': {'conditionTypeId': 10, 'conditionTypeKey': 'reps', 'displayOrder': 10, 'displayable': True},
-           'time': {'conditionTypeId': 2, 'conditionTypeKey': 'time', 'displayOrder': 2, 'displayable': True}}
 
     def step(key, a, how, side=''):
         kind, v = amount(a)
@@ -83,22 +93,41 @@ def build(name, desc, ex, EX):
             steps.append(g)
         else:
             steps += inner
-    w = StrengthWorkout(workoutName=name, description=desc[:1000], estimatedDurationInSecs=0,
-                        workoutSegments=[WorkoutSegment(segmentOrder=1, sportType={'sportTypeId': 5, 'sportTypeKey': 'strength_training'}, workoutSteps=steps)])
-    return w.to_dict()
+    return workout(name, desc, STRENGTH, steps)
 
 
-def versions(sessions, EX):
-    """Group the plan's sessions into versions: same exercises and sets = one Garmin workout, named after its first week."""
+def build_yoga(name, desc, R):
+    """A yoga routine as a Garmin yoga workout: one timed step per pose, the side and the cue in the step note."""
+    from garminconnect.workout import _strength_exercise_step
+    steps = []
+    for i, s in enumerate(R['steps']):
+        what, secs, how, cat, pose = s[:5]
+        note = ', '.join(x for x in ((s[5] if len(s) > 5 else ''), what, how) if x)
+        steps.append(_strength_exercise_step(cat, i + 1, END['time'], float(secs), pose, None, note[:500]))
+    return workout(name, desc, YOGA, steps)
+
+
+def versions(sessions, EX, ROUTINE):
+    """Group what the plan asks for into Garmin workouts. Strength: same exercises and sets = one workout, named after
+    its first week. Yoga: one workout per routine. Each version lists the dates that use it."""
     out = {}
-    for s in sessions:
-        sig = hashlib.sha1(json.dumps([s['t'], s['ex']]).encode()).hexdigest()[:8]
+
+    def add(sig, name, desc, make, date):
         if sig not in out:
-            short = s['t'].split(':')[0]
-            out[sig] = {'sig': sig, 'name': f"{PREFIX}{short} · W{s['week']}", 'desc': f"{s['d']} [lh:{sig}]", 'ex': s['ex'], 'dates': []}
-        out[sig]['dates'].append(s['date'])
+            out[sig] = {'sig': sig, 'name': name, 'desc': f'{desc} [lh:{sig}]', 'make': make, 'dates': []}
+        if date not in out[sig]['dates']:
+            out[sig]['dates'].append(date)
+
+    for s in sessions:
+        if s.get('ex'):
+            sig = hashlib.sha1(json.dumps([s['t'], s['ex']]).encode()).hexdigest()[:8]
+            add(sig, f"{PREFIX}{s['t'].split(':')[0]} · W{s['week']}", s['d'], lambda n, d, s=s: build(n, d, s['ex'], EX), s['date'])
+        if s.get('then'):
+            R = ROUTINE[s['then']]
+            sig = hashlib.sha1(json.dumps(R).encode()).hexdigest()[:8]
+            add(sig, f"{PREFIX}{R['t']}", R['when'], lambda n, d, R=R: build_yoga(n, d, R), s['date'])
     for v in out.values():
-        v['json'] = build(v['name'], v['desc'], v['ex'], EX)
+        v['json'] = v.pop('make')(v['name'], v['desc'])
     return out
 
 
@@ -119,21 +148,23 @@ def login():
 def push(start, days, dry):
     p = plan()
     end = (dt.date.fromisoformat(start) + dt.timedelta(days=days - 1)).isoformat()
-    vs = versions(p['sessions'], p['EX'])
-    todo = {d: v for v in vs.values() for d in v['dates'] if start <= d <= end}
-    for d in sorted(todo):
-        print(d, todo[d]['name'])
+    vs = versions(p['sessions'], p['EX'], p['ROUTINE'])
+    want = {}  # date -> [version]
+    for v in vs.values():
+        for d in v['dates']:
+            if start <= d <= end:
+                want.setdefault(d, []).append(v)
+    for d in sorted(want):
+        print(d, ' + '.join(v['name'] for v in want[d]))
     if dry:
-        print(json.dumps(next(iter(todo.values()))['json'], ensure_ascii=False, indent=1) if todo else 'nothing in range')
         return
     g = api()
-    mine = {}
-    page = 0
+    mine, page = {}, 0
     while batch := g.get_workouts(page, 100):
         mine.update({w['workoutName']: w for w in batch if w.get('workoutName', '').startswith(PREFIX)})
         page += 100
     ids = {}
-    for v in {id(v): v for v in todo.values()}.values():
+    for v in {v['sig']: v for vl in want.values() for v in vl}.values():
         old = mine.get(v['name'])
         if old and f"[lh:{v['sig']}]" in (old.get('description') or ''):
             ids[v['sig']] = old['workoutId']
@@ -144,19 +175,22 @@ def push(start, days, dry):
         else:
             ids[v['sig']] = g.upload_workout(v['json'])['workoutId']
             print('created', v['name'])
-    on = {}  # what our calendar already holds: date -> [(scheduled id, workout id)]
-    for y, m in sorted({(int(d[:4]), int(d[5:7])) for d in todo}):
+    on = {}  # what our calendar already holds: date -> {scheduled id: workout id}
+    for y, m in sorted({(int(d[:4]), int(d[5:7])) for d in want}):
         for it in g.get_scheduled_workouts(y, m).get('calendarItems', []):
             if it.get('itemType') == 'workout' and (it.get('title') or '').startswith(PREFIX):
-                on.setdefault(it['date'], []).append((it['id'], it.get('workoutId')))
-    for d, v in sorted(todo.items()):
-        have = on.get(d, [])
-        if any(w == ids[v['sig']] for _, w in have):
-            continue
-        for sid, _ in have:  # an older version of ours on that day
-            g.unschedule_workout(sid)
-        g.schedule_workout(ids[v['sig']], d)
-        print('scheduled', d, v['name'])
+                on.setdefault(it['date'], {})[it['id']] = it.get('workoutId')
+    for d in sorted(want):
+        need = {ids[v['sig']] for v in want[d]}
+        have = on.get(d, {})
+        for sid, wid in have.items():
+            if wid not in need:  # an older version of ours on that day
+                g.unschedule_workout(sid)
+                print('unscheduled', d, wid)
+        for v in want[d]:
+            if ids[v['sig']] not in have.values():
+                g.schedule_workout(ids[v['sig']], d)
+                print('scheduled', d, v['name'])
     print('done')
 
 
@@ -166,9 +200,13 @@ def check():
     p = plan()
     bad = [k for k, e in p['EX'].items() if (e[1], e[2]) not in real]
     assert not bad, f'not in the Garmin catalog: {bad}'
-    vs = versions(p['sessions'], p['EX'])  # builds every version, so a bad amount fails here
+    poses = {(c, n) for c, v in json.loads(YOGA_POSES.read_text()).items() for n in v}
+    bad = [(k, s[3], s[4]) for k, R in p['ROUTINE'].items() for s in R['steps'] if (s[3], s[4]) not in poses]
+    assert not bad, f'not in the Garmin yoga catalog: {bad}'
+    vs = versions(p['sessions'], p['EX'], p['ROUTINE'])  # builds every workout, so a bad amount fails here
     assert all(v['json']['workoutSegments'][0]['workoutSteps'] for v in vs.values())
-    print(f"garmin check ok: {len(p['EX'])} exercises, {len(vs)} workouts, {sum(len(v['dates']) for v in vs.values())} days")
+    print(f"garmin check ok: {len(p['EX'])} exercises, {len(p['ROUTINE'])} routines, {len(vs)} workouts, "
+          f"{sum(len(v['dates']) for v in vs.values())} workout days")
 
 
 if __name__ == '__main__':
