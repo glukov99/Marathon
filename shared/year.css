@@ -66,20 +66,28 @@
 .tc.mine{color:var(--acc)}
 
 /* The charts (shared/charts.js). */
-.bars{padding:4px 0}
+/* 14px each side, the same inset as the rows (.arow) around them: at 0
+   the labels touched the card's edge and the last figure was cut off. */
+.bars{padding:4px 14px}
 .bar{display:grid;grid-template-columns:minmax(0,96px) 1fr 62px;gap:8px;align-items:center;padding:4px 0}
 .bars.two .bar{grid-template-columns:minmax(0,78px) 1fr 58px 58px;gap:6px}
 .bv.b2{color:var(--faint)}
 .barh{display:grid;grid-template-columns:minmax(0,78px) 1fr 58px 58px;gap:6px;font-size:10.5px;
-  color:var(--faint);text-align:right;padding:2px 0 3px}
+  color:var(--faint);text-align:right;padding:2px 14px 3px}
 .barh span:first-child,.barh span:nth-child(2){text-align:left}
 .bl{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bt{display:block;height:14px;background:var(--rule);border-radius:3px;overflow:hidden}
 .bt i{display:block;height:100%;border-radius:3px}
 .bv{font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums;color:var(--soft)}
+/* On a phone a two-figure chart has no room for a type or client name beside
+   its bar: "Продуктова фотография" came out as "Продуктова…". So the name
+   takes its own line and the bar and the two figures share the next. */
+@media(max-width:559px){.bars.two .bar{grid-template-columns:1fr 58px 58px;row-gap:3px}
+  .bars.two .bl{grid-column:1/-1}
+  .barh{grid-template-columns:1fr 58px 58px}.barh span:first-child{display:none}}
 @media(min-width:560px){.bar{grid-template-columns:minmax(0,180px) 1fr 76px}
   .bars.two .bar,.barh{grid-template-columns:minmax(0,180px) 1fr 76px 76px;gap:8px}}
-.grp{display:flex;gap:10px;padding:6px 0 0;align-items:flex-end}
+.grp{display:flex;gap:10px;padding:6px 14px 0;align-items:flex-end}
 .gr{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:5px}
 .gb{display:flex;align-items:flex-end;gap:3px;height:96px}
 .gb i{display:block;width:12px;border-radius:2px 2px 0 0;min-height:2px}
@@ -92,7 +100,7 @@
 .donut{display:block;width:190px;height:190px;margin:16px auto 8px}
 
 /* Twelve months of in and out, one row each (Charts.inOut). */
-.io{padding:4px 0}
+.io{padding:4px 14px}
 .ior{display:grid;grid-template-columns:34px 1fr 62px;gap:8px;align-items:center;padding:3px 0}
 .iol{font-size:12px;color:var(--soft)}
 .iob{display:flex;flex-direction:column;gap:2px}
