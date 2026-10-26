@@ -25,4 +25,6 @@ assert(legs.shin > 0, 'tib raises light the shin');
 assert(!B.quads && B.lats > .5 && B.chest > 0 && B.biceps > 0, 'Gym B is upper body: back, chest, arms');
 assert(core.adductors > 0 && core.shin > 0 && core.abs > 0, 'Core + hips: groin, shin and abs');
 assert.deepStrictEqual(Object.keys(bhMuscles({ z: 'yoga', t: 'PM yoga' })), [], 'yoga lights nothing');
+const run = z => bhMuscles({ z, t: 'run' }).hamstrings;
+assert(run('rec') < run('easy') && run('easy') < run('st') && run('st') < run('hard'), 'harder runs glow brighter');
 console.log('training check ok');

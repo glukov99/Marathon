@@ -2,6 +2,8 @@
    Reads: W, START, dayDate, today0, id(), state (from the page) and HubSync config. */
 const BH={view:'front',sel:null,well:null};
 const BH_RUN=['easy','rec','st','hard','mp','race'];
+/* * How hard a run works the legs per minute, by type. Our own estimate: Garmin has one row for running. */
+const BH_PACE={rec:.6,easy:1,mp:1.2,st:1.3,hard:1.5,race:1.5,test:1.5};
 /* Muscles per exercise: "primary|secondary" (1 and .5), copied from Garmin Connect's exercise list:
    github.com/mrnabilnoh/workout-plan-garmin-connect/blob/main/garmin_connect_exercise_list.md
    Rows marked * are not in that list and are our own estimate. Each regex finds the exercise in a session's text. */
@@ -42,10 +44,10 @@ const BH_SESS={A:'boxjump kbswing trapbar split slrdl step calf',B:'pullup pushu
 const BH_FOLD={hips:null,abductors:['glutes',1],obliques:['abs',.5],lower_back:['lats',.5]};
 function bhRow(r,o,k){const[p,s='']=r.split('|');[[p,1],[s,.5]].forEach(([l,v])=>l.split(' ').filter(Boolean).forEach(m=>{
   const f=m in BH_FOLD?BH_FOLD[m]:[m,1];if(f)o[f[0]]=(o[f[0]]||0)+v*f[1]*k}));return o}
-/* What a session works, per muscle, strongest = 1 (vert 1.3). */
+/* What a session works, per muscle, strongest = 1 (vert 1.3, runs by BH_PACE). */
 function bhMuscles(x){
   const t=(x.t||'')+' '+(x.d||''),o={};
-  if(BH_RUN.includes(x.z)||(x.z==='test'&&/10k|time trial/i.test(x.t)))return bhRow('quads hips hamstrings glutes calves|abs',o,1);
+  if(BH_RUN.includes(x.z)||(x.z==='test'&&/10k|time trial/i.test(x.t)))return bhRow('quads hips hamstrings glutes calves|abs',o,BH_PACE[x.z]);
   if(x.z==='vert')return bhRow('quads glutes calves|hamstrings lower_back',o,1.3);   // * uphill hiking
   if(x.z==='swim')return bhRow('lats shoulders|triceps chest traps abs',o,1);         // *
   if(x.z!=='gym'&&x.z!=='test')return o;
@@ -63,7 +65,7 @@ function bhLoad(){
     const n=Math.floor((day-START)/864e5);if(n<0)continue;
     const w=Math.floor(n/7),d=n%7;if(!W[w])continue;
     W[w].days[d].forEach((x,i)=>{if(!state.checks[id(w,d,i)])return;
-      const k=Math.min(2,Math.max(.5,(x.m||40)/45))*(1-back/7);
+      const k=Math.min(2,Math.max(.5,(x.race?90:x.m||40)/45))*(1-back/7);   // a race has no minutes in the plan
       Object.entries(bhMuscles(x)).forEach(([m,v])=>L[m]=(L[m]||0)+v*k)});
   }
   return L;
