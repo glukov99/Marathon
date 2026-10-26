@@ -78,6 +78,14 @@ function bhReady(){
   const fr=w.filter(x=>x.form!=null),form=fr.length?fr[fr.length-1].form:null;
   return {score,last,H,R,sleep7,date:last.date,age,rhrFlag,form};
 }
+/* Acute load (about 7 days) and chronic load (about 6 weeks) from Intervals.icu, and acute ÷ chronic.
+   Above 1.3 the load rose faster than the body is used to: make the next 2 days easy.
+   ponytail: no warning while chronic load is under 10 (after a long break any session doubles the ratio). */
+function bhAcwr(){
+  const w=(BH.well||[]).filter(x=>x&&x.atl!=null&&x.ctl!=null).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!w.length)return null;const l=w[w.length-1],ld=new Date(l.date+'T12:00');ld.setHours(0,0,0,0);
+  return {atl:l.atl,ctl:l.ctl,ratio:l.ctl>0?l.atl/l.ctl:null,date:l.date,age:Math.round((today0()-ld)/864e5)};
+}
 async function bhFetch(){
   try{const c=window.HubSync&&HubSync.cfg();if(!c||!c.url)return;
     const r=await fetch(c.url+(c.url.includes('?')?'&':'?')+'t='+encodeURIComponent(c.tok)+'&action=wellness&days=70');
@@ -104,7 +112,7 @@ function bhBodySVG(load,view){
 }
 function renderBody(){
   const el=document.getElementById('bodyhub');if(!el)return;
-  const load=bhLoad(),{c,items}=bhWeek(),R=bhReady(),t0=today0(),h=new Date().getHours();
+  const load=bhLoad(),{c,items}=bhWeek(),R=bhReady(),A=bhAcwr(),t0=today0(),h=new Date().getHours();
   const hello=(h<12?'Good morning':h<18?'Good afternoon':'Good evening')+', Georgi';
   let head='No readiness data yet.',sub='Connect wellness data to see your readiness.';
   if(R){head=R.score>=80?'Your numbers look strong today.':R.score>=65?'Your numbers look normal today.':R.score>=50?'Your numbers are a bit low today.':'Your numbers are low today.';
@@ -139,7 +147,7 @@ function renderBody(){
   </svg>`;
   let pop='';
   if(BH.sel){const s=BH.sel,DN=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-    if(s==='rec'){const f=R&&R.form;pop=`<div class="bh-pop"><b>Form: ${f==null?'no data':(f>0?'+':'')+f}</b><div class="on">${f==null?'Needs the Apps Script update.':f>5?'Fresh. Good before a race or a key session.':f>=-10?'Neutral. Normal training.':f>=-30?'Tired from training: the productive zone. Keep easy days easy.':'Very tired. High risk of injury or illness: take an easy day.'}</div><div>Form is fitness minus fatigue, from Intervals.icu. It comes from your training load, not from Garmin.</div>${R&&R.sleep7?`<div>Sleep, last 7 nights: ${R.sleep7.toFixed(1)} h on average.</div>`:''}</div>`}
+    if(s==='rec'){const f=R&&R.form;pop=`<div class="bh-pop"><b>Form: ${f==null?'no data':(f>0?'+':'')+f}</b><div class="on">${f==null?'Needs the Apps Script update.':f>5?'Fresh. Good before a race or a key session.':f>=-10?'Neutral. Normal training.':f>=-30?'Tired from training: the productive zone. Keep easy days easy.':'Very tired. High risk of injury or illness: take an easy day.'}</div><div>Form is fitness minus fatigue, from Intervals.icu. It comes from your training load, not from Garmin.</div>${A?`<div>Acute load ${Math.round(A.atl)} (last 7 days), chronic ${Math.round(A.ctl)} (6 weeks), ratio ${A.ratio==null?'—':A.ratio.toFixed(2)}. Above 1.3: make the next 2 days easy.</div>`:''}${R&&R.sleep7?`<div>Sleep, last 7 nights: ${R.sleep7.toFixed(1)} h on average.</div>`:''}</div>`}
     else{const it=items[s]||[];pop=`<div class="bh-pop"><b>${nodes.find(n=>n.k===s).n[0]+nodes.find(n=>n.k===s).n.slice(1).toLowerCase()} this week</b>${it.length?it.map(x=>`<div class="${x.on?'on':''}">${x.on?'✓':'○'} ${DN[x.d]} · ${x.t}</div>`).join(''):'<div>Nothing planned this week.</div>'}</div>`}}
   // Today card
   let today='';
@@ -156,6 +164,8 @@ function renderBody(){
       ${xs.length>1?`<div class="also">Also: ${xs.filter(x=>x!==main&&x.z!=='rest').map(x=>x.t.replace(/: .*$/,'').replace(/^PM yoga/,'Yoga')).join(', ')}</div>`:''}</div></div>`;}
   else if(n<0)today=`<div class="today-card"><div><div class="k">Today</div><div class="t">Rest until Sun 25 Oct</div><div class="d">Yoga and easy swims only. Base starts Mon 26 Oct.</div></div></div>`;
   // Red flag: resting HR 7+ above normal for 3 days
+  const loadLine=A?`<div class="bh-load">Load: acute <b>${Math.round(A.atl)}</b> · chronic <b>${Math.round(A.ctl)}</b> · ratio <b class="${A.ratio>1.3?'hi':''}">${A.ratio==null?'—':A.ratio.toFixed(2)}</b></div>`:'';
+  const loadFlag=A&&A.ratio>1.3&&A.ctl>=10&&A.age<2?`<div class="bh-flag soft">Acute load is ${A.ratio.toFixed(2)}× your chronic load, above 1.3: it rose faster than your body is used to. Make the next 2 days easy.</div>`:'';
   const flag=R&&R.rhrFlag&&R.age<2?`<div class="bh-flag">Resting HR has been 7+ above your normal for 3 days. Skip strength today: easy run or rest.</div>`:'';
   // Big load in the last 3 days: Gym A becomes isometrics only
   let big='';
@@ -185,7 +195,7 @@ function renderBody(){
   }
   el.innerHTML=`<div class="bh-hello">${hello}</div><div class="bh-head">${head}</div><div class="bh-sub">${sub}</div>
     <div class="bh-stage">${svg}<button class="bh-flip" id="bhFlip">${BH.view==='front'?'Show back':'Show front'}</button></div>
-    <div class="bh-score"><div class="n">${R?R.score:'—'}</div><div class="l">Readiness</div><div class="x">${R?'Garmin data for '+R.date.split('-').reverse().slice(0,2).join('.')+'. How you feel comes first.':'Needs the wellness update in Apps Script'}</div></div>${flag}${pop}${big}${today}${wt}`;
+    <div class="bh-score"><div class="n">${R?R.score:'—'}</div><div class="l">Readiness</div><div class="x">${R?'Garmin data for '+R.date.split('-').reverse().slice(0,2).join('.')+'. How you feel comes first.':'Needs the wellness update in Apps Script'}</div>${loadLine}</div>${flag}${loadFlag}${pop}${big}${today}${wt}`;
 }
 document.addEventListener('click',e=>{
   if(e.target.closest('#bhFlip')){BH.view=BH.view==='front'?'back':'front';renderBody();return}
