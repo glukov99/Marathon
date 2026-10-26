@@ -67,12 +67,26 @@ const here = t => (HERE.find(([re]) => re.test((t.who || '') + ' ' + (t.desc || 
 const cancelled = i => Invoices.cancelled(i);
 const shortType = t => String(t).split(' (')[0];
 
+/* Тетсуджин shares the studio and pays his part of the rent through the
+   company: 250 лв (€127.82) a month, invoiced as "Фотографски услуги". So it is
+   rent coming back, not photography (Georgi, 26 Oct 2026: "I share the rent
+   with tetsudjin, that's why he is a regular"). Those invoices stay in the
+   register and the matching; they leave every photography figure (`photo`),
+   and the money they bring in is filed under Rent, where it brings the cost of
+   the studio down instead of reading as income. */
+const RENT_SHARE = [/тетсуджин/i];
+const rentShare = i => RENT_SHARE.some(re => re.test(String(i.client || '')));
+
 function prep(j) {
   j.time = j.time || [];
   pairTransfers(j.tx);
   (j.tx || []).forEach(t => { const k = classify(t); t._k = k.k; t._cat = k.cat; });
   const r = Invoices.reconcile(j.invoices, j.tx);
   j.invoices = r.invoices; j.live = r.live; j.credits = r.credits; j.unbilled = r.unbilled;
+  j.live.filter(rentShare).forEach(i => (i._parts || []).forEach(p => {
+    p.row._k = 'exp'; p.row._cat = 'Rent'; p.row._rent = true;
+  }));
+  j.photo = j.live.filter(i => !rentShare(i));
   return j;
 }
 
@@ -227,9 +241,9 @@ function byYear() {
   (data.tx || []).filter(t => t.c === 'EUR' && t._k !== 'move').forEach(t => {
     const k = t.d.slice(0, 4);
     (y[k] = y[k] || { inn: 0, out: 0, billed: 0 });
-    if (t.a > 0) y[k].inn += t.a; else y[k].out += -t.a;
+    if (t._k === 'inc') y[k].inn += t.a; else y[k].out += -t.a;
   });
-  data.live.forEach(i => {
+  data.photo.forEach(i => {
     const k = (i.issued || '').slice(0, 4); if (!k) return;
     (y[k] = y[k] || { inn: 0, out: 0, billed: 0 }).billed += i.amount_eur;
   });
@@ -657,7 +671,7 @@ async function delJob(id) {
      the money it covers rather than implying it covers all of it. */
 function chartRows(year) {
   const tx = (data.tx || []).filter(t => t.c === 'EUR' && (year === 'all' || t.d.startsWith(year)));
-  const inv = data.live.filter(i => year === 'all' || String(i.issued || '').startsWith(year));
+  const inv = data.photo.filter(i => year === 'all' || String(i.issued || '').startsWith(year));
   return { tx, inv };
 }
 
@@ -828,11 +842,12 @@ function standing(now) {
   tx.filter(t => t._k === 'exp' && inWin(t) && FIXED.indexOf(t._cat) >= 0)
     .forEach(t => { fixedBy[t._cat] = (fixedBy[t._cat] || 0) - t.a / months; });
   const floor = Object.values(fixedBy).reduce((a, v) => a + v, 0);
+  const rentBack = tx.filter(t => t._rent && inWin(t)).reduce((a, t) => a + t.a, 0) / months;
   const n3 = Math.min(3, months), from3 = ymAdd(cur, -n3);
   const run3 = tx.filter(t => t._k === 'inc' && t.d.slice(0, 7) >= from3 && t.d.slice(0, 7) < cur)
     .reduce((a, t) => a + t.a, 0) / n3;
   const inThis = tx.filter(t => t._k === 'inc' && t.d.startsWith(cur)).reduce((a, t) => a + t.a, 0);
-  const live = data.live || [];
+  const live = data.photo || [];
   const thisYr = live.filter(i => String(i.issued || '').startsWith(yr));
   const avgInv = thisYr.length ? thisYr.reduce((a, i) => a + i.amount_eur, 0) / thisYr.length : 0;
   const perMonth = live.filter(i => { const m = String(i.issued || '').slice(0, 7); return m >= from && m < cur; }).length / months;
@@ -840,7 +855,7 @@ function standing(now) {
   const taken = draws.filter(t => t.d.startsWith(yr)).reduce((a, t) => a - t.a, 0);
   const lastDraw = draws.map(t => t.d).sort().pop() || '';
   const end = new Date(+cur.slice(0, 4), +cur.slice(5, 7), 0).getDate();
-  return { cur, yr, months, floor, fixedBy, run3, n3, inThis, avgInv, perMonth,
+  return { cur, yr, months, floor, fixedBy, rentBack, run3, n3, inThis, avgInv, perMonth,
     minInv: perMonth ? floor / perMonth : 0, taken, lastDraw, daysLeft: end - +now.slice(8, 10) };
 }
 
@@ -849,7 +864,7 @@ function standing(now) {
    from €627 an invoice in 2024 to €446 in 2026. */
 function rateTrend() {
   const by = {};
-  (data.live || []).forEach(i => {
+  (data.photo || []).forEach(i => {
     const t = String(i.category || '').trim(), y = String(i.issued || '').slice(0, 4);
     if (!t || !y) return;
     const c = ((by[t] = by[t] || {})[y] = by[t][y] || { n: 0, sum: 0 });
@@ -869,7 +884,7 @@ function rateTrend() {
 function clientMix(now) {
   now = now || today();
   const by = {};
-  (data.live || []).forEach(i => {
+  (data.photo || []).forEach(i => {
     const k = i.client || '—';
     const c = (by[k] = by[k] || { name: k, n: 0, sum: 0, first: i.issued, last: i.issued });
     c.n++; c.sum += i.amount_eur;
@@ -894,7 +909,7 @@ function clientMix(now) {
    the records. Jan, Feb and Sep fall below the floor every year. */
 function monthAvg(now) {
   now = now || today();
-  const live = (data.live || []).filter(i => i.issued);
+  const live = (data.photo || []).filter(i => i.issued);
   const first = live.map(i => i.issued).sort()[0];
   if (!first) return [];
   const sums = new Array(12).fill(0), yrs = new Array(12).fill(0);
@@ -957,7 +972,7 @@ function nextSteps(st, now) {
       It was ${fmt0(best.avg)} an invoice then and is ${fmt0(cur.avg)} this year, over ${cur.n} invoices.` });
   });
   if (st && st.minInv) {
-    const small = (data.live || []).filter(i => String(i.issued || '').startsWith(yr) && i.amount_eur < st.minInv);
+    const small = (data.photo || []).filter(i => String(i.issued || '').startsWith(yr) && i.amount_eur < st.minInv);
     if (small.length) out.push({ eur: small.reduce((a, i) => a + st.minInv - i.amount_eur, 0),
       text: `<b>Bundle or re-price work under ${fmt0(st.minInv)}.</b> That is the share of the floor one invoice has to
         carry at ${st.perMonth.toFixed(1)} invoices a month. ${small.length} invoice${small.length === 1 ? ' was' : 's were'} under it
@@ -974,7 +989,7 @@ function nextSteps(st, now) {
   if (mix.quiet.length) out.push({ eur: mix.quiet.reduce((a, c) => a + c.perYear, 0),
     text: `<b>Call ${mix.quiet.map(c => esc(c.name)).join(', ')}.</b> Regular${mix.quiet.length === 1 ? '' : 's'}
       with nothing booked for six months; that is roughly what they bill in a year.` });
-  const yrInv = (data.live || []).filter(i => String(i.issued || '').startsWith(yr));
+  const yrInv = (data.photo || []).filter(i => String(i.issued || '').startsWith(yr));
   const yrSum = yrInv.reduce((a, i) => a + i.amount_eur, 0), byC = {};
   yrInv.forEach(i => { byC[i.client] = (byC[i.client] || 0) + i.amount_eur; });
   const top = Object.entries(byC).sort((a, b) => b[1] - a[1])[0];
@@ -994,7 +1009,8 @@ function standCard(st) {
   if (!st) return '';
   const name = fullMonths[+st.cur.slice(5, 7) - 1];
   const over = st.inThis - st.floor, r3 = st.run3 - st.floor;
-  const fb = FIXED.filter(k => st.fixedBy[k]).map(k => k.toLowerCase() + ' ' + fmt0(st.fixedBy[k])).join(' · ');
+  const fb = FIXED.filter(k => st.fixedBy[k]).map(k => k.toLowerCase() + ' ' + fmt0(st.fixedBy[k]) +
+    (k === 'Rent' && st.rentBack ? ` (${fmt0(st.fixedBy[k] + st.rentBack)} less ${fmt0(st.rentBack)} shared)` : '')).join(' \u00b7 ');
   return `<div class="card stand">
     <div class="verdict">${over >= 0
       ? `<b>${name} has cleared the floor</b>, with ${fmt0(over)} to spare.`

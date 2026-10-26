@@ -235,7 +235,23 @@ assert.equal(st({ shoot: old, invoice: '7' }, { 7: { no: '7', _paid: {} } }).k, 
   assert.ok(/id="tfJob"/.test(out.html) && /Add the time/.test(out.html), 'time can be typed by hand');
   ctx.tedit('s1'); ctx.render();
   assert.ok(/id="tfStart" type="datetime-local" value="2026-10-01T/.test(out.html), 'and an old session edited');
-  ctx.tedit(null); ctx.setData(j);
+  ctx.tedit(null);
+
+  // The rent share: Тетсуджин pays part of the studio's rent, invoiced as
+  // photography. It must lower the rent and never count as work.
+  const shared = prep_({ tx: rows.concat([tx('2026-08-02', 100, 'Плащане по фактура 0000000020')]), types: [P],
+    invoices: books.invoices.concat([inv('20', '2026-08-01', 100, '', 'Тетсуджин ЕООД')]) });
+  ctx.setData(shared);
+  const st2 = ctx.standing('2026-10-15');
+  near(st2.rentBack, 100 / 12, 'the share paid back, a month');
+  near(st2.floor, 400 - 100 / 12, 'brings the floor down');
+  near(st2.inThis, 500, 'and is not income');
+  assert.ok(shared.live.some(i => i.no === '20') && !shared.photo.some(i => i.no === '20'),
+    'the invoice stays in the register, out of the photography figures');
+  assert.ok(!ctx.nextSteps(st2, '2026-10-15').steps.some(x => /Тетсуджин/.test(x.text)), 'and out of the steps');
+  ctx.tabs('overview'); ctx.render();
+  assert.ok(/less €8 shared/.test(out.html), 'the floor says so');
+  ctx.setData(j);
 }
 
 console.log('render ok: every tab builds, due dates land on working days, the floor, steps and clock add up');
