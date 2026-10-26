@@ -66,6 +66,13 @@ const here = t => (HERE.find(([re]) => re.test((t.who || '') + ' ' + (t.desc || 
 // pulled out at load: see the boot guard at the foot of this file.
 const cancelled = i => Invoices.cancelled(i);
 const shortType = t => String(t).split(' (')[0];
+/* The middle value. What one invoice is worth is told by the median, not the
+   average: one big order would otherwise speak for all the small ones (his
+   call, 26 Oct 2026). */
+const median = list => {
+  const v = list.slice().sort((a, b) => a - b), k = v.length >> 1;
+  return v.length ? (v.length % 2 ? v[k] : (v[k - 1] + v[k]) / 2) : 0;
+};
 
 /* Тетсуджин rents half the studio and pays through the company: 250 лв
    (€127.82) a month, invoiced as "Фотографски услуги". It is income, his
@@ -722,8 +729,8 @@ function charts(st) {
   const perClient = {};
   inv.forEach(i => {
     const k = i.client || '—';
-    (perClient[k] = perClient[k] || { sum: 0, n: 0 });
-    perClient[k].sum += i.amount_eur; perClient[k].n++;
+    (perClient[k] = perClient[k] || { sum: 0, n: 0, a: [] });
+    perClient[k].sum += i.amount_eur; perClient[k].n++; perClient[k].a.push(i.amount_eur);
   });
   const clients = Object.entries(perClient).sort((a, b) => b[1].sum - a[1].sum);
 
@@ -735,8 +742,8 @@ function charts(st) {
     const t = String(i.category || '').trim();
     if (!t) return;
     tagged += i.amount_eur;
-    (perType[t] = perType[t] || { sum: 0, n: 0 });
-    perType[t].sum += i.amount_eur; perType[t].n++;
+    (perType[t] = perType[t] || { sum: 0, n: 0, a: [] });
+    perType[t].sum += i.amount_eur; perType[t].n++; perType[t].a.push(i.amount_eur);
   });
   const types = Object.entries(perType).sort((a, b) => b[1].sum - a[1].sum);
   const pcTagged = billed ? Math.round(tagged / billed * 100) : 0;
@@ -784,14 +791,14 @@ function charts(st) {
     </div>
     <div class="card">
       <div class="chh">By type of shoot</div>
-      <div class="barh"><span></span><span></span><span>billed</span><span>each</span></div>
+      <div class="barh"><span></span><span></span><span>billed</span><span>median</span></div>
       ${types.length ? Charts.bars(types.map(([k, v]) =>
-        [shortType(k) + ' \u00b7 ' + v.n, v.sum, v.sum / v.n]), fmt0)
+        [shortType(k) + ' \u00b7 ' + v.n, v.sum, median(v.a)]), fmt0)
         : '<div class="empty">Nothing tagged yet.</div>'}
       ${trend.length ? `<div class="rt">${trend.map(r => `<div class="arow"><span>${esc(shortType(r.type))}</span><b>${
-        r.years.map(x => `<span class="${st && st.minInv && x.y === yr && x.avg < st.minInv ? 'exp' : ''}">\u2019${x.y.slice(2)} ${fmt0(x.avg)}</span>`).join(' \u00b7 ')}${
+        r.years.map(x => `<span class="${st && st.minInv && x.y === yr && x.med < st.minInv ? 'exp' : ''}">\u2019${x.y.slice(2)} ${fmt0(x.med)}</span>`).join(' \u00b7 ')}${
         r.change != null ? ` <i>${r.change < 0 ? '\u2212' : '+'}${Math.round(Math.abs(r.change) * 100)}%</i>` : ''}</b></div>`).join('')}</div>` : ''}
-      <div class="note2">${trend.length ? `<b>Each, year by year</b>: the size of an order, not your rate, since you charge per photo.
+      <div class="note2">${trend.length ? `<b>The median invoice, year by year</b>: the size of an order, not your rate, since you charge per photo.
         The percentage compares the first and last years with two or more invoices.
         ${st && st.minInv ? `Red is under ${fmt0(st.minInv)}, what one invoice has to carry.` : ''}<br>` : ''}
         <b>${fmt0(tagged)} of ${fmt0(billed)} billed carries a type</b>
@@ -800,13 +807,13 @@ function charts(st) {
     </div>
     <div class="card">
       <div class="chh">By client</div>
-      <div class="barh"><span></span><span></span><span>billed</span><span>each</span></div>
-      ${Charts.bars(clients.slice(0, 10).map(([k, v]) => [k + ' \u00b7 ' + v.n, v.sum, v.sum / v.n]), fmt0)}
-      ${mix.rep.length ? `<div class="arow tot"><span>Came back, ${mix.rep.length} client${mix.rep.length === 1 ? '' : 's'}</span><b>${Math.round(mix.repShare * 100)}% \u00b7 ${fmt0(mix.repAvg)} each</b></div>
-        <div class="arow"><span>Came once, ${mix.one.length}</span><b>${Math.round((1 - mix.repShare) * 100)}% \u00b7 ${fmt0(mix.oneAvg)} each</b></div>` : ''}
-      <div class="note2">${cashNote ? cashNote.replace('<br>', '') + '<br>' : ''}${mix.rep.length ? 'Came back and came once are every year together: what a client is worth over time. ' : ''}<b>Billed per client, and what one of its invoices is worth.</b>
-        The number after the name is how many invoices that is. One invoice can cover several
-        shoots, mostly for Фешън Лаб, so a big client's "each" is a run of work rather than a day.
+      <div class="barh"><span></span><span></span><span>billed</span><span>median</span></div>
+      ${Charts.bars(clients.slice(0, 10).map(([k, v]) => [k + ' \u00b7 ' + v.n, v.sum, median(v.a)]), fmt0)}
+      ${mix.rep.length ? `<div class="arow tot"><span>Came back, ${mix.rep.length} client${mix.rep.length === 1 ? '' : 's'}</span><b>${Math.round(mix.repShare * 100)}% \u00b7 ${fmt0(mix.repMed)} typical</b></div>
+        <div class="arow"><span>Came once, ${mix.one.length}</span><b>${Math.round((1 - mix.repShare) * 100)}% \u00b7 ${fmt0(mix.oneMed)} typical</b></div>` : ''}
+      <div class="note2">${cashNote ? cashNote.replace('<br>', '') + '<br>' : ''}${mix.rep.length ? 'Came back and came once are every year together: what a client is worth over time. ' : ''}<b>Billed per client, and its median invoice:</b> the middle one, so one big order does not
+        speak for the rest. The number after the name is how many invoices that is. One invoice can cover several
+        shoots, mostly for Фешън Лаб, so a big client's median is a run of work rather than a day.
         Cancelled invoices are left out.</div>
     </div>
     <div class="card">
@@ -865,23 +872,23 @@ function standing(now) {
     minInv: perMonth ? need / perMonth : 0, taken, lastDraw, daysLeft: end - +now.slice(8, 10) };
 }
 
-/* What one invoice of each type is worth, year by year. The all-years
-   average on the chart hid the one thing worth knowing: product work fell
-   from €627 an invoice in 2024 to €446 in 2026. */
+/* The median invoice of each type, year by year. The all-years figure on the
+   chart hid the change: the middle product invoice went from €635 in 2024 to
+   €271 in 2026. He charges per photo, so this is order size, not price. */
 function rateTrend() {
   const by = {};
   (data.photo || []).forEach(i => {
     const t = String(i.category || '').trim(), y = String(i.issued || '').slice(0, 4);
     if (!t || !y) return;
-    const c = ((by[t] = by[t] || {})[y] = by[t][y] || { n: 0, sum: 0 });
-    c.n++; c.sum += i.amount_eur;
+    const c = ((by[t] = by[t] || {})[y] = by[t][y] || { n: 0, sum: 0, a: [] });
+    c.n++; c.sum += i.amount_eur; c.a.push(i.amount_eur);
   });
   return Object.keys(by).map(t => {
-    const years = Object.keys(by[t]).sort().map(y => ({ y, n: by[t][y].n, avg: by[t][y].sum / by[t][y].n }));
+    const years = Object.keys(by[t]).sort().map(y => ({ y, n: by[t][y].n, med: median(by[t][y].a) }));
     const solid = years.filter(x => x.n >= 2);
     const a = solid[0], b = solid[solid.length - 1];
     return { type: t, years, n: years.reduce((s, x) => s + x.n, 0),
-      change: a && b && a !== b ? (b.avg - a.avg) / a.avg : null };
+      change: a && b && a !== b ? (b.med - a.med) / a.med : null };
   }).sort((a, b) => b.n - a.n);
 }
 
@@ -902,8 +909,7 @@ function clientMix(now) {
   const avg = l => (l.length ? l.reduce((a, c) => a + c.sum, 0) / l.length : 0);
   // The middle client, for the step's figure: one big regular (Фешън Лаб,
   // €12,645 of four regulars' €15,421) would otherwise speak for all four.
-  const med = l => { const v = l.map(c => c.sum).sort((a, b) => a - b), k = v.length >> 1;
-    return v.length ? (v.length % 2 ? v[k] : (v[k - 1] + v[k]) / 2) : 0; };
+  const med = l => median(l.map(c => c.sum));
   const cut = new Date(new Date(now + 'T12:00') - 180 * 864e5).toISOString().slice(0, 10);
   const quiet = rep.filter(c => c.last < cut).map(c => Object.assign({}, c, {
     perYear: c.sum / Math.max(1, (new Date(c.last) - new Date(c.first)) / 365 / 864e5) }));

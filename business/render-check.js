@@ -129,6 +129,11 @@ ctx.setData(j);
 ctx.tabs('jobs'); ctx.render();
 assert.ok(/data-act="jadd"/.test(out.html), 'the Jobs tab has a way to add a booking');
 assert.ok(/<details class="card addj" open>/.test(out.html), 'and it starts open while there are none');
+// The page once carried a .bar rule of its own (a flex toolbar row from the
+// Money page). It loaded after shared/year.css and turned every chart row into
+// a wrapped line with no bar track. The charts own .bar.
+assert.ok(!/(^|[}\s])\.bar\s*\{/.test(fs.readFileSync(path.join(dir, 'index.html'), 'utf8')),
+  'the Business page does not restyle the chart rows');
 // .bk is the round bank badge. A booking card wearing it came out as an 18px
 // circle with the text clipped, and the markup looked perfectly fine.
 assert.ok(!/class="[^"]*\bbk\b/.test(out.html), 'the booking card does not borrow the badge class');
@@ -199,6 +204,12 @@ assert.equal(st({ shoot: old, invoice: '7' }, { 7: { no: '7', _paid: {} } }).k, 
   const pr = ctx.rateTrend().find(r => r.type === P);
   near(pr.change, -1 / 3, 'product fell from 600 to 400 an invoice');
   const n = ctx.nextSteps(st, '2026-10-15');
+  // The median invoice, not the mean: 600, 600, 600 then 400, 400, 400 here,
+  // so each year's middle invoice is exact; one outlier must not move it.
+  assert.deepEqual(pr.years.map(x => x.med), [600, 400], 'the median invoice per year');
+  ctx.setData(prep_(Object.assign({}, books, { tx: rows, invoices: books.invoices.concat([inv('7', '2026-04-01', 5000, P)]) })));
+  assert.equal(ctx.rateTrend().find(r => r.type === P).years[1].med, 400, 'one big order does not move it');
+  ctx.setData(books);
   // He charges per photo: a smaller invoice is a smaller order, not a cut in price.
   assert.ok(!n.steps.some(x => /rate/.test(x.text)), 'no "charge your old rate" step');
   assert.deepEqual(n.steps.map(x => x.eur), n.steps.map(x => x.eur).slice().sort((a, b) => b - a), 'biggest first');
