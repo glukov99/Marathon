@@ -81,13 +81,13 @@ const GS=(t,d,m,k)=>S('gym',t,d,m,{ex:gym(k)});
 /* ============ session builders ============ */
 const S=(z,t,d,m,x)=>Object.assign({z,t,d,m},x||{});
 const EZ='HR 148–160. You can talk in full sentences.';
-const E=(m,x)=>S('easy',`Easy run ${m} min`,x||EZ,m);
+const E=(m,x,run)=>S('easy',`Easy run ${m} min`,x||EZ,m,run&&{run});
 const R=(m,x)=>S('rec',`Recovery run ${m} min`,x||'HR under 148. As easy as it gets. Do it, then go home.',m);
-const L=(t,d,m)=>S('easy',t,d,m,{long:1});
+const L=(t,d,m,run)=>S('easy',t,d,m,{long:1,run});
 const V=(vert,m,x)=>S('vert',`Mladezhki Halm vert, ~${vert} m`,x||'Hike up hard but controlled, jog down easy. Hiking is training, not failure.',m);
-const ST=(t,d,m)=>S('st',t,d,m,{key:1,then:'stretch'});
-const HD=(t,d,m)=>S('hard',t,d,m,{key:1,then:'stretch'});
-const MPS=(t,d,m)=>S('mp',t,d,m,{key:1,then:'stretch'});
+const ST=(t,d,m,run)=>S('st',t,d,m,{key:1,then:'stretch',run});
+const HD=(t,d,m,run)=>S('hard',t,d,m,{key:1,then:'stretch',run});
+const MPS=(t,d,m,run)=>S('mp',t,d,m,{key:1,then:'stretch',run});
 const GA=(x,o)=>S('gym','Gym A: lower body and power',x||'45 min, after the run. Slow lowering on every lift.',45,{g:'A',ex:gym('A',o),then:'stretch'});
 const GB=(x,o)=>S('gym','Gym B: upper body',x||'30 min, home or gym.',30,{g:'B',ex:gym('B',o)});
 const GC=(v)=>S('gym','Hybrid session '+v,'25–30 min, low leg load. RPE 6–7.',28,{g:'C',ex:gym(v)});
@@ -97,9 +97,19 @@ const REST=()=>S('rest','Rest','Yoga and stretching only.',0);
 const T=(t,d,m)=>S('test',t,d,m||25,{test:1});
 const RACE=(t,d)=>S('race',t,d,0,{race:1});
 const WU=m=>`Warm up 15 min easy with 4 strides. ${m} Cool down 10 min.`;
-const float=(n,f)=>MPS(`${n}×800 m with floats`,WU(`${n}×800 m at 5:15/km (4:12 each). Between reps, no stopping: 400 m float at ${f}/km. Goal: hold marathon pace on tired legs.`),70);
-const subT=(t,m)=>ST(`Sub-threshold ${t}`,WU(`${t} at HR 170–176. Controlled. You could do one more rep at the end.`),m);
-const fourx4=()=>HD('Norwegian 4×4',WU(`4×4 min at HR 188–200, 3 min easy jog between. Hard, but rep 4 is the same pace as rep 1.`),55);
+/* Run steps for the watch (garmin_push.py): [kind, end, target, note]. end = seconds, 'N m' or 'lap'; target =
+   'hr:lo-hi', 'pace:m:ss' (±5 s/km) or 'pace:slow-fast'; ['repeat', n, [steps]] repeats. Easy and recovery runs
+   without steps get them from their text: "HR a–b" or "HR under N", and "N strides". */
+const RW=(...main)=>[['warmup',900,'hr:130-150','Easy, 4 strides at the end'],...main,['cooldown',600,'hr:120-150','Easy']];
+const jogSec=t=>t.includes(':')?+t.split(':')[0]*60+ +t.split(':')[1]:+t*60;
+const float=(n,f)=>MPS(`${n}×800 m with floats`,WU(`${n}×800 m at 5:15/km (4:12 each). Between reps, no stopping: 400 m float at ${f}/km. Goal: hold marathon pace on tired legs.`),70,
+  RW(['repeat',n,[['run','800 m','pace:5:15','4:12 each'],['recovery','400 m','pace:'+f,'Float, no stopping']]]));
+const subT=(t,m)=>{const [,n,rep,jog]=t.match(/(\d+)×(\d+) min, ([\d:]+)(?: min)? jog/);
+  return ST(`Sub-threshold ${t}`,WU(`${t} at HR 170–176. Controlled. You could do one more rep at the end.`),m,
+    RW(['repeat',+n,[['run',+rep*60,'hr:170-176','Controlled'],['recovery',jogSec(jog),'hr:120-155','Easy jog']]]))};
+const fourx4=()=>HD('Norwegian 4×4',WU(`4×4 min at HR 188–200, 3 min easy jog between. Hard, but rep 4 is the same pace as rep 1.`),55,
+  RW(['repeat',4,[['run',240,'hr:188-200','Hard, rep 4 as fast as rep 1'],['recovery',180,'hr:120-160','Easy jog']]]));
+const EASY='hr:125-155', MP='pace:6:24';
 
 /* ============ phases ============ */
 const PH={base:['Base','var(--base)'],build:['Build 1','var(--build)'],mara:['Marathon block','var(--mara)'],taper:['Taper','var(--taper)'],bairi:['Bairi','var(--bairi)'],vit:['Vitosha','var(--vit)']};
@@ -252,7 +262,7 @@ wk('build','Last Build 1 week','56 km','~1,000 m','First marathon-pace work in t
  [E(50),GB()],
  [V(1000,105)],
  [E(55),CORE()],
- [L('Long run 24 km, last 5 at marathon pace','19 km easy, then 5 km at 6:24/km. About 2:45.',165)],
+ [L('Long run 24 km, last 5 at marathon pace','19 km easy, then 5 km at 6:24/km. About 2:45.',165,[['run','19000 m',EASY,'Easy'],['run','5000 m',MP,'Marathon pace']])],
  [SWIM()],
  [GC('C2')]
 ]);
@@ -277,11 +287,12 @@ wk('mara','Marathon block','60 km','~800 m','Floats get faster. The 800s stay at
  [R(30)]
 ]);
 wk('mara','10k test week (lighter)','45 km','~500 m','<b>10k time trial on Friday.</b> Goal: sub-50. Also an upper body retest.',[
- [MPS('4×1 km at 10k pace',WU(`4×1 km at 5:00/km, 2 min jog between. A sharpener, not a test.`),50),GA('Light: 2 sets each, no heavy deadlifts.',{sets:2,drop:['stepdown'],set:{trapbar:[5,'light, about 60%']}})],
+ [MPS('4×1 km at 10k pace',WU(`4×1 km at 5:00/km, 2 min jog between. A sharpener, not a test.`),50,RW(['repeat',4,[['run','1000 m','pace:5:00','A sharpener, not a test'],['recovery',120,'hr:120-160','Jog']]])),GA('Light: 2 sets each, no heavy deadlifts.',{sets:2,drop:['stepdown'],set:{trapbar:[5,'light, about 60%']}})],
  [R(40),T('Retest: dead hang, max pull-ups, Bring Sally Up','Replaces Gym B.',25)],
  [V(500,60,'Easy.')],
  [E(40,EZ+' Add 4×20 s strides.'),CORE()],
- [HD('10k time trial','Warm up 20 min with 4 strides. Flat route. Start at 5:05/km, settle at 5:00, finish fast. Cool down 10 min. Goal: under 50:00.',85)],
+ [HD('10k time trial','Warm up 20 min with 4 strides. Flat route. Start at 5:05/km, settle at 5:00, finish fast. Cool down 10 min. Goal: under 50:00.',85,
+  [['warmup',1200,'hr:130-150','Easy, 4 strides at the end'],['run','10000 m','pace:5:05-4:55','Start 5:05, settle 5:00, finish fast'],['cooldown',600,null,'Easy']])],
  [SWIM()],
  [R(30)]
 ],{light:1});
@@ -290,7 +301,8 @@ wk('mara','Marathon block','62 km','~700 m','Marathon-pace blocks in the long ru
  [R(40),GB()],
  [V(700,80)],
  [E(50),CORE()],
- [L('Long run 28 km with 2×5 km at marathon pace','Easy, then 2×5 km at 6:24/km in the second half, 1 km easy between. Race fuel.',195)],
+ [L('Long run 28 km with 2×5 km at marathon pace','Easy, then 2×5 km at 6:24/km in the second half, 1 km easy between. Race fuel.',195,
+  [['run','17000 m',EASY,'Easy. Race fuel.'],['run','5000 m',MP,'Marathon pace'],['recovery','1000 m',EASY,'Easy'],['run','5000 m',MP,'Marathon pace']])],
  [SWIM()],
  [R(30)]
 ]);
@@ -299,7 +311,7 @@ wk('mara','Peak week','65 km','~600 m','<b>Biggest week of the marathon build.</
  [R(40),GB()],
  [V(600,70)],
  [E(50),CORE()],
- [L('Long run 30 km, last 8 at marathon pace','Stop at 3:30 even if short. Last 8 km at 6:24/km. Race fuel.',210)],
+ [L('Long run 30 km, last 8 at marathon pace','Stop at 3:30 even if short. Last 8 km at 6:24/km. Race fuel.',210,[['run','22000 m',EASY,'Easy. Stop at 3:30 in total, even if short.'],['run','8000 m',MP,'Marathon pace']])],
  [SWIM()],
  [R(30)]
 ]);
@@ -308,7 +320,7 @@ wk('mara','Dress rehearsal','60 km','~500 m','<b>Friday is the dress rehearsal:<
  [R(40),GB()],
  [V(500,60)],
  [E(50),CORE()],
- [MPS('Dress rehearsal 26 km','5 km easy, 18 km at 6:24/km, 3 km easy. Everything as on race day.',175)],
+ [MPS('Dress rehearsal 26 km','5 km easy, 18 km at 6:24/km, 3 km easy. Everything as on race day.',175,[['warmup','5000 m',EASY,'Easy'],['run','18000 m',MP,'Marathon pace, race kit and fuel'],['cooldown','3000 m',null,'Easy']])],
  [SWIM()],
  [R(30)]
 ]);
@@ -319,21 +331,21 @@ wk('taper','Taper 1','52 km','~300 m','Volume drops, intensity stays. <b>Last fu
  [R(40),GB()],
  [V(300,40,'2–3 laps, easy.')],
  [E(45),CORE()],
- [L('Long run 22 km with 10 at marathon pace','12 km easy, 10 km at 6:24/km.',150)],
+ [L('Long run 22 km with 10 at marathon pace','12 km easy, 10 km at 6:24/km.',150,[['run','12000 m',EASY,'Easy'],['run','10000 m',MP,'Marathon pace']])],
  [SWIM()],
  [R(30)]
 ],{light:1});
 wk('taper','Taper 2','43 km','—','<b>No heavy legs from now.</b> 10 days to race.',[
- [MPS('3×2 km at marathon pace',WU(`3×2 km at 6:24/km, 3 min easy between.`),60),GS('Activation only','Box jumps, then mobility. 10 min.',15,'activation')],
+ [MPS('3×2 km at marathon pace',WU(`3×2 km at 6:24/km, 3 min easy between.`),60,RW(['repeat',3,[['run','2000 m',MP,'Marathon pace'],['recovery',180,'hr:120-155','Easy']]])),GS('Activation only','Box jumps, then mobility. 10 min.',15,'activation')],
  [R(35),GB('Light: 2 sets each.',{sets:2})],
  [E(40,'Flat. No vert.')],
  [E(35,EZ+' Add 4×20 s strides.'),CORE()],
- [L('Long run 15 km with 6 at marathon pace','9 km easy, 6 km at 6:24/km.',100)],
+ [L('Long run 15 km with 6 at marathon pace','9 km easy, 6 km at 6:24/km.',100,[['run','9000 m',EASY,'Easy'],['run','6000 m',MP,'Marathon pace']])],
  [SWIM()],
  [R(25)]
 ],{light:1});
 wk('taper','Race week: Plovdiv','42.2 km race','—','<b>Race Sunday.</b> Nothing new. Sleep Friday night counts most.',[
- [E(35,'Include 3×1 km at 6:24/km.')],
+ [E(35,'Include 3×1 km at 6:24/km.',[['warmup',600,'hr:130-155','Easy'],['repeat',3,[['run','1000 m',MP,'Marathon pace'],['recovery',120,'hr:120-155','Easy']]],['cooldown','lap',null,'Easy to 35 min in total']])],
  [R(30),GS('Upper body, optional','Skip it if in doubt.',15,'upper')],
  [E(30,EZ+' Add 4 strides.')],
  [R(20)],
