@@ -790,8 +790,9 @@ function charts(st) {
         : '<div class="empty">Nothing tagged yet.</div>'}
       ${trend.length ? `<div class="rt">${trend.map(r => `<div class="arow"><span>${esc(shortType(r.type))}</span><b>${
         r.years.map(x => `<span class="${st && st.minInv && x.y === yr && x.avg < st.minInv ? 'exp' : ''}">\u2019${x.y.slice(2)} ${fmt0(x.avg)}</span>`).join(' \u00b7 ')}${
-        r.change != null ? ` <i class="${r.change < 0 ? 'exp' : 'inc'}">${r.change < 0 ? '\u2212' : '+'}${Math.round(Math.abs(r.change) * 100)}%</i>` : ''}</b></div>`).join('')}</div>` : ''}
-      <div class="note2">${trend.length ? `<b>Each, year by year</b>, for every year: the percentage compares the first and last years with two or more invoices.
+        r.change != null ? ` <i>${r.change < 0 ? '\u2212' : '+'}${Math.round(Math.abs(r.change) * 100)}%</i>` : ''}</b></div>`).join('')}</div>` : ''}
+      <div class="note2">${trend.length ? `<b>Each, year by year</b>: the size of an order, not your rate, since you charge per photo.
+        The percentage compares the first and last years with two or more invoices.
         ${st && st.minInv ? `Red is under ${fmt0(st.minInv)}, what one invoice has to carry.` : ''}<br>` : ''}
         <b>${fmt0(tagged)} of ${fmt0(billed)} billed carries a type</b>
         (${pcTagged}%), so the shape is sound and the totals are still a little low.
@@ -965,17 +966,13 @@ function hourRates(st) {
   return { rows, waiting, cashN, perHour, avgHrs };
 }
 
-/* What to do next, each with what it is worth in euro, biggest first. */
+/* What to do next, each with what it is worth in euro, biggest first.
+   There is no "charge your old rate" step: he charges per photo, so a
+   smaller invoice is a smaller order, not a lower price (26 Oct 2026). A
+   per-photo rate needs the count on the invoice, which he now writes. */
 function nextSteps(st, now) {
   now = now || today();
   const yr = now.slice(0, 4), out = [], watch = [];
-  rateTrend().forEach(r => {
-    const cur = r.years.find(x => x.y === yr);
-    const best = r.years.filter(x => x.y < yr && x.n >= 3).sort((a, b) => b.avg - a.avg)[0];
-    if (!cur || cur.n < 3 || !best || best.avg <= cur.avg) return;
-    out.push({ eur: (best.avg - cur.avg) * cur.n, text: `<b>Charge ${esc(shortType(r.type).toLowerCase())} at your ${best.y} rate.</b>
-      It was ${fmt0(best.avg)} an invoice then and is ${fmt0(cur.avg)} this year, over ${cur.n} invoices.` });
-  });
   if (st && st.minInv) {
     const small = (data.photo || []).filter(i => String(i.issued || '').startsWith(yr) && i.amount_eur < st.minInv);
     if (small.length) out.push({ eur: small.reduce((a, i) => a + st.minInv - i.amount_eur, 0),
@@ -1126,19 +1123,56 @@ function renderInvoices() {
     (rows.length ? `<div class="card">${rows.map(invRow).join('')}</div>` : '<div class="empty">Nothing here.</div>');
 }
 
+/* Who to call: contact name, phone and email per client (Biz_Clients),
+   keyed on the client's name exactly as the invoices spell it. */
+let clientEdit = null;
+const clientInfo = name => (data.clients || []).find(c => c.name.toLowerCase() === String(name).trim().toLowerCase());
+
 function renderClients() {
   const by = {};
   data.live.forEach(i => {
-    const k = i.client || '—';
-    (by[k] = by[k] || { n: 0, sum: 0, open: 0, last: '' });
+    const k = i.client || '\u2014';
+    (by[k] = by[k] || { n: 0, sum: 0, open: 0, last: '', rent: rentShare(i) });
     by[k].n++; by[k].sum += i.amount_eur;
     if (!i._paid) by[k].open += i.amount_eur;
     if (i.issued > by[k].last) by[k].last = i.issued;
   });
   $('#view').innerHTML = `<div class="card">${Object.entries(by).sort((a, b) => b[1].sum - a[1].sum)
-    .map(([name, v]) => `<div class="inv"><b>${esc(name)}</b><span class="amt">${fmt(v.sum)}</span>
-      <span class="svc">${v.n} invoice${v.n > 1 ? 's' : ''} · last ${dshort(v.last)}</span>
-      ${v.open > 0.01 ? `<span class="st"><span class="tag owed">${fmt(v.open)} unmatched</span></span>` : ''}</div>`).join('')}</div>`;
+    .map(([name, v]) => {
+      const c = clientInfo(name) || {};
+      const reach = [c.contact ? esc(c.contact) : '',
+        c.phone ? `<a href="tel:${esc(c.phone.replace(/[^\d+]/g, ''))}">${esc(c.phone)}</a>` : '',
+        c.email ? `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>` : ''].filter(Boolean).join(' \u00b7 ');
+      return `<div class="inv"><b>${esc(name)}</b><span class="amt">${fmt(v.sum)}</span>
+      <span class="svc">${v.n} invoice${v.n > 1 ? 's' : ''} \u00b7 last ${dshort(v.last)}${reach ? '<br>' + reach : ''}${c.note ? '<br>' + esc(c.note) : ''}</span>
+      <span class="st">${v.rent ? '<span class="tag">studio rent</span> ' : ''}${v.open > 0.01 ? `<span class="tag owed">${fmt(v.open)} unmatched</span> ` : ''}<button
+        class="mk" data-act="cedit" data-n="${esc(name)}">${reach || c.note ? 'Edit contact' : 'Add contact'}</button></span>
+      ${clientEdit === name ? clientForm(name, c) : ''}</div>`;
+    }).join('')}</div>`;
+}
+
+function clientForm(name, c) {
+  const v = k => esc(c[k] || '');
+  return `<div class="bkf cf">
+    <label class="wide">Point of contact<input id="cContact" autocomplete="off" value="${v('contact')}"></label>
+    <label>Phone<input id="cPhone" type="tel" autocomplete="off" value="${v('phone')}"></label>
+    <label>Email<input id="cEmail" type="email" autocomplete="off" value="${v('email')}"></label>
+    <label class="wide">Note<input id="cNote" autocomplete="off" value="${v('note')}"></label>
+    <button class="go" data-act="csave">Save</button>
+    <button class="go ghost" data-act="ccancel">Leave it</button>
+    <div class="note2" id="cMsg"></div></div>`;
+}
+
+async function saveClient() {
+  const v = id => (($('#' + id) || {}).value || '').trim();
+  const q = { name: clientEdit, contact: v('cContact'), phone: v('cPhone'), email: v('cEmail'), note: v('cNote') };
+  $('#cMsg').textContent = 'Saving…';
+  try {
+    const j = await api('&biz=setclient&' + Object.keys(q).map(k => k + '=' + encodeURIComponent(q[k])).join('&'));
+    if (!j.ok) throw new Error(j.error || 'failed');
+    data.clients = (data.clients || []).filter(c => c.name.toLowerCase() !== q.name.toLowerCase()).concat([j.client]);
+    clientEdit = null; keep(); render();
+  } catch (e) { $('#cMsg').textContent = 'Could not save: ' + e.message; }
 }
 
 function renderSpend() {
@@ -1171,6 +1205,9 @@ $('#view').addEventListener('click', e => {
   if (a === 'tcancel') { timeEdit = null; render(); return; }
   if (a === 'tsave') { timeSave(); return; }
   if (a === 'tdel') { timeDel(b.dataset.id); return; }
+  if (a === 'cedit') { clientEdit = clientEdit === b.dataset.n ? null : b.dataset.n; render(); return; }
+  if (a === 'ccancel') { clientEdit = null; render(); return; }
+  if (a === 'csave') { saveClient(); return; }
   if (a === 'jedit') { jobEdit = b.dataset.id; render(); window.scrollTo(0, 0); return; }
   if (a === 'jcancel') { jobEdit = null; render(); return; }
   if (a === 'jdone') { setJob(b.dataset.id, 'delivered', today()); return; }

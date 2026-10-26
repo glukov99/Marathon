@@ -19,7 +19,7 @@ new Function('ctx', 'Year', 'Charts', 'Invoices', '$', 'document', 'localStorage
   'ctx.workingDue=workingDue;ctx.jobState=jobState;ctx.jobGaps=jobGaps;ctx.edit=i=>{jobEdit=i};' +
   'ctx.subsetFor=subsetFor;ctx.cashMatches=cashMatches;' +
   'ctx.standing=standing;ctx.nextSteps=nextSteps;ctx.rateTrend=rateTrend;ctx.monthAvg=monthAvg;' +
-  'ctx.hourRates=hourRates;ctx.tedit=i=>{timeEdit=i};')
+  'ctx.hourRates=hourRates;ctx.tedit=i=>{timeEdit=i};ctx.cedit=n=>{clientEdit=n};')
   (ctx, Year, Charts, Invoices, $, { querySelectorAll: () => [] }, { getItem: () => null, setItem() {} },
    () => Promise.reject(new Error('no network in the check')), { open() {} });
 
@@ -199,9 +199,8 @@ assert.equal(st({ shoot: old, invoice: '7' }, { 7: { no: '7', _paid: {} } }).k, 
   const pr = ctx.rateTrend().find(r => r.type === P);
   near(pr.change, -1 / 3, 'product fell from 600 to 400 an invoice');
   const n = ctx.nextSteps(st, '2026-10-15');
-  const rate = n.steps.find(x => /2025 rate/.test(x.text));
-  assert.ok(rate, 'the falling rate is a step');
-  near(rate.eur, 600, 'three invoices at 200 under the 2025 rate');
+  // He charges per photo: a smaller invoice is a smaller order, not a cut in price.
+  assert.ok(!n.steps.some(x => /rate/.test(x.text)), 'no "charge your old rate" step');
   assert.deepEqual(n.steps.map(x => x.eur), n.steps.map(x => x.eur).slice().sort((a, b) => b - a), 'biggest first');
   // Hours: invoice 10 (300) is split over b1 and b2; b3 is cash at its booking
   // price; b4 is timed but not billed, so it waits, though its half hour still
@@ -254,6 +253,18 @@ assert.equal(st({ shoot: old, invoice: '7' }, { 7: { no: '7', _paid: {} } }).k, 
   assert.ok(!ctx.nextSteps(st2, '2026-10-15').steps.some(x => /Тетсуджин/.test(x.text)), 'and out of the steps');
   ctx.tabs('overview'); ctx.render();
   assert.ok(/Studio rent coming in/.test(out.html) && /Left for photography to cover/.test(out.html), 'the floor says so');
+
+  // Contacts on the Clients tab.
+  ctx.setData(Object.assign({}, shared, { clients: [
+    { name: 'reg', contact: 'Мария', phone: '+359 88 123', email: 'm@reg.bg', note: '' }] }));
+  ctx.tabs('clients'); ctx.render();
+  assert.ok(/href="tel:\+35988123"/.test(out.html) && /mailto:m@reg\.bg/.test(out.html) && /Мария/.test(out.html),
+    'a client shows who to call, matched on the name in any case');
+  assert.ok(/studio rent/.test(out.html), 'the studio tenant is marked, not taken for a client');
+  assert.ok(/Add contact/.test(out.html) && /Edit contact/.test(out.html), 'every client can get one');
+  ctx.cedit('C3'); ctx.render();
+  assert.ok(/id="cPhone" type="tel"/.test(out.html) && /data-act="csave"/.test(out.html), 'and the form opens in its row');
+  ctx.cedit(null);
   ctx.setData(j);
 }
 
