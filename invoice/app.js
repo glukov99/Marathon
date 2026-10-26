@@ -106,6 +106,13 @@
     } catch (e) { if (!quiet) say('Offline'); } finally { $('vies').disabled = false; }
   }
 
+  /* ---------- reset: drop the draft and start the form again from its defaults ---------- */
+  $('reset').onclick = () => {
+    if (!confirm('Clear the form? Client, lines and notes are removed.')) return;
+    try { localStorage.removeItem(DRAFT); } catch (e) {}
+    location.reload();
+  };
+
   /* ---------- issue ---------- */
   $('issue').onclick = async () => {
     if (!okPreview || busy) return;
