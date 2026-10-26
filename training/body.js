@@ -8,7 +8,7 @@ const BH_PACE={rec:.6,easy:1,mp:1.2,st:1.3,hard:1.5,race:1.5,test:1.5};
    github.com/mrnabilnoh/workout-plan-garmin-connect/blob/main/garmin_connect_exercise_list.md
    Rows marked * are not in that list and are our own estimate. Each regex finds the exercise in a session's text. */
 const BH_EX=[
-  ['run',/\d+ m run/i,'quads hips hamstrings glutes calves|abs'],                                   // Indoor Track Run
+  ['run',/\d+ m run/i,'quads hips hamstrings glutes calves|abs shin'],                              // Indoor Track Run, + shin *
   ['boxjump',/box jump|broad jump/i,'quads calves|hips glutes hamstrings'],                          // Box Jump
   ['kbswing',/kettlebell swing/i,'glutes hips|quads lats abs hamstrings shoulders'],                 // Kettlebell Swing
   ['trapbar',/deadlift/i,'hamstrings quads glutes lower_back|lats traps forearm adductors'],          // Trap Bar Deadlift
@@ -47,8 +47,8 @@ function bhRow(r,o,k){const[p,s='']=r.split('|');[[p,1],[s,.5]].forEach(([l,v])=
 /* What a session works, per muscle, strongest = 1 (vert 1.3, runs by BH_PACE). */
 function bhMuscles(x){
   const t=(x.t||'')+' '+(x.d||''),o={};
-  if(BH_RUN.includes(x.z)||(x.z==='test'&&/10k|time trial/i.test(x.t)))return bhRow('quads hips hamstrings glutes calves|abs',o,BH_PACE[x.z]);
-  if(x.z==='vert')return bhRow('quads glutes calves|hamstrings lower_back',o,1.3);   // * uphill hiking
+  if(BH_RUN.includes(x.z)||(x.z==='test'&&/10k|time trial/i.test(x.t)))return bhRow('quads hips hamstrings glutes calves|abs shin',o,BH_PACE[x.z]); // * shin: lifts and lowers the foot every stride
+  if(x.z==='vert')return bhRow('quads glutes calves shin|hamstrings lower_back',o,1.3);   // * uphill hiking, shin brakes the jog down
   if(x.z==='swim')return bhRow('lats shoulders|triceps chest traps abs',o,1);         // *
   if(x.z!=='gym'&&x.z!=='test')return o;
   const fixed=BH_SESS[x.g==='C'?x.t.slice(-2):x.g]||BH_SESS[((x.t.match(/cindy|fran|murph/i)||[''])[0]).toLowerCase()]||(/upper/i.test(x.t)&&!BH_EX.some(e=>e[1].test(t))?BH_SESS.B:'');
