@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<script src="../shared/auth.js?v=202610261056"></script>
+<script src="../shared/auth.js?v=202610261059"></script>
 <title>Season 2027 — Plovdiv, Bairi, Vitosha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -179,11 +179,11 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610261056">
-<link rel="stylesheet" href="body.css?v=202610261056">
+<link rel="stylesheet" href="../shared/theme.css?v=202610261059">
+<link rel="stylesheet" href="body.css?v=202610261059">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610261056"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610261059"></script>
 <div class="wrap">
   <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
@@ -230,12 +230,12 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="plan.js?v=202610261056"></script>
-<script src="../shared/sync.js?v=202610261056"></script>
-<script src="../holidays/holidays-data.js?v=202610261056"></script>
-<script src="../shared/travel.js?v=202610261056"></script>
-<script src="body-shapes.js?v=202610261056"></script>
-<script src="body.js?v=202610261056"></script>
+<script src="plan.js?v=202610261059"></script>
+<script src="../shared/sync.js?v=202610261059"></script>
+<script src="../holidays/holidays-data.js?v=202610261059"></script>
+<script src="../shared/travel.js?v=202610261059"></script>
+<script src="body-shapes.js?v=202610261059"></script>
+<script src="body.js?v=202610261059"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -305,7 +305,8 @@ function renderWeek(){
     const rows=items.map((x0,i)=>{ const x=Travel.adapt(x0,trip,lt);
       const k=id(wsel,d,i); const on=!!state.checks[k]; tot++; if(on)done++; if(x.z==='yoga'){if(on)yd++}else pm+=x.m||0;
       const lg=state.logs[k]; const canLog=x.z!=='rest'&&x.z!=='yoga';
-      const lgTxt=lg?[lg.t&&lg.t+' min',lg.km&&lg.km+' km',lg.hr&&'HR '+lg.hr,lg.n&&'“'+lg.n+'”'].filter(Boolean).join(', '):'';
+      const str=x.z==='gym'||(x.z==='test'&&!/10k|5k|time trial/i.test(x.t)); // strength: effort and loads, not distance
+      const lgTxt=lg?[lg.t&&lg.t+' min',lg.km&&lg.km+' km',lg.hr&&'HR '+lg.hr,lg.rpe&&'RPE '+lg.rpe,lg.n&&'“'+lg.n+'”'].filter(Boolean).join(', '):'';
       return `<div class="it ${on?'on':''}">
         <button class="box" data-k="${k}" aria-pressed="${on}" aria-label="Mark ${esc(x.t)} done">${CHECK}</button>
         <span class="zbar" style="--zc:${x.yc||'var(--'+x.z+')'}"></span>
@@ -316,9 +317,10 @@ function renderWeek(){
         ${canLog?`<button class="lg-t" data-lg="${k}">${openLog===k?'Close':(lg?'Edit log':'Log it')}</button>`:''}
         ${openLog===k?`<div class="lg">
           <div><label for="t-${k}">Time (min)</label><input id="t-${k}" inputmode="decimal" data-f="t" data-lk="${k}" value="${esc(lg?.t||'')}"></div>
-          <div><label for="km-${k}">Distance (km)</label><input id="km-${k}" inputmode="decimal" data-f="km" data-lk="${k}" value="${esc(lg?.km||'')}"></div>
-          <div><label for="hr-${k}">Avg HR</label><input id="hr-${k}" inputmode="numeric" data-f="hr" data-lk="${k}" value="${esc(lg?.hr||'')}"></div>
-          <textarea aria-label="Note" placeholder="How did it feel? Anything hurt?" data-f="n" data-lk="${k}">${esc(lg?.n||'')}</textarea></div>`:''}
+          ${str?`<div><label for="rpe-${k}">Effort (RPE 1–10)</label><input id="rpe-${k}" inputmode="numeric" data-f="rpe" data-lk="${k}" value="${esc(lg?.rpe||'')}"></div>`
+          :`<div><label for="km-${k}">Distance (km)</label><input id="km-${k}" inputmode="decimal" data-f="km" data-lk="${k}" value="${esc(lg?.km||'')}"></div>
+          <div><label for="hr-${k}">Avg HR</label><input id="hr-${k}" inputmode="numeric" data-f="hr" data-lk="${k}" value="${esc(lg?.hr||'')}"></div>`}
+          <textarea aria-label="Note" placeholder="${str?'Loads used, e.g. deadlift 4×5 at 80 kg. Anything hurt?':'How did it feel? Anything hurt?'}" data-f="n" data-lk="${k}">${esc(lg?.n||'')}</textarea></div>`:''}
         </div></div>`}).join('');
     return `<div class="day ${isT?'today':''}"><div class="day-h">${DN[d]}<span class="dt">${fd(dt)}${isT?', today':''}</span>${hard?'<span class="hd">Hard day</span>':''}${trip?`<span class="away">Away: ${esc(trip.n)}${trip.dest?', '+esc(trip.dest):''}</span>`:''}</div>${rows}</div>`;
   }).join('');
@@ -496,7 +498,7 @@ function weekSummary(){
   let km=0,min=0,yd=0;
   w.days.forEach((items,d)=>items.forEach((x,i)=>{const k=id(wsel,d,i);if(x.z==='rest')return;if(x.z==='yoga'){if(state.checks[k])yd++;return}const lg=state.logs[k]||{};
     if(lg.km)km+=parseFloat(lg.km)||0; if(lg.t)min+=parseFloat(lg.t)||0;
-    lines.push(`${state.checks[k]?'[x]':'[ ]'} ${DN[d]} ${x.t}${lg.t||lg.km||lg.hr?` — ${[lg.t&&lg.t+' min',lg.km&&lg.km+' km',lg.hr&&'HR '+lg.hr].filter(Boolean).join(', ')}`:''}${lg.n?` — "${lg.n}"`:''}`)}));
+    lines.push(`${state.checks[k]?'[x]':'[ ]'} ${DN[d]} ${x.t}${lg.t||lg.km||lg.hr||lg.rpe?` — ${[lg.t&&lg.t+' min',lg.km&&lg.km+' km',lg.hr&&'HR '+lg.hr,lg.rpe&&'RPE '+lg.rpe].filter(Boolean).join(', ')}`:''}${lg.n?` — "${lg.n}"`:''}`)}));
   lines.push(`Logged: ${km.toFixed(1)} km, ${Math.round(min)} min. Yoga: ${yd} of 7 days.`);
   if(ci.rhr)lines.push(`Resting HR: ${ci.rhr}`); if(ci.wt)lines.push(`Weight: ${ci.wt} kg`);
   if(ci.load)lines.push(`Garmin load ratio: ${ci.load}`); if(ci.sleep)lines.push(`Sleep: ${ci.sleep}`);
@@ -545,7 +547,7 @@ function seasonSummary(){
       if(x.z==='yoga'){if(state.checks[k])yd++;return}
       tot++; if(state.checks[k])dn++; const lg=state.logs[k];
       if(lg){km+=parseFloat(lg.km)||0;min+=parseFloat(lg.t)||0}
-      if(state.checks[k]||lg)rows.push(`  ${state.checks[k]?'[x]':'[ ]'} ${DN[d]} ${x.t}${lg?' — '+[lg.t&&lg.t+' min',lg.km&&lg.km+' km',lg.hr&&'HR '+lg.hr,lg.n&&'"'+lg.n+'"'].filter(Boolean).join(', '):''}`)}));
+      if(state.checks[k]||lg)rows.push(`  ${state.checks[k]?'[x]':'[ ]'} ${DN[d]} ${x.t}${lg?' — '+[lg.t&&lg.t+' min',lg.km&&lg.km+' km',lg.hr&&'HR '+lg.hr,lg.rpe&&'RPE '+lg.rpe,lg.n&&'"'+lg.n+'"'].filter(Boolean).join(', '):''}`)}));
     L.push('',`Week ${wi+1} (${fd(dayDate(wi,0))}–${fd(dayDate(wi,6))}), ${w.title}. Target ${w.km}. Done ${dn}/${tot}. Logged ${km.toFixed(1)} km, ${Math.round(min)} min. Yoga ${yd}/7.`);
     rows.forEach(r=>L.push(r));
     const ci=state.ci[wi]; if(ci){const c=[ci.rhr&&'RHR '+ci.rhr,ci.wt&&ci.wt+' kg',ci.load&&'load '+ci.load,ci.sleep&&'sleep '+ci.sleep,ci.pain&&'pain: '+ci.pain,ci.notes&&'notes: '+ci.notes].filter(Boolean);if(c.length)L.push('  Check-in: '+c.join(', '))}
