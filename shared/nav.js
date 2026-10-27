@@ -73,7 +73,12 @@ body.lhn-open{overflow:hidden}`;
       `<div class="lhn-g"><h4>${g}</h4><div class="lhn-l">${list.map(([p, n]) =>
         `<a href="${root}${p}"${page && page[0] === p ? ' aria-current="page"' : ''}>${n}</a>`).join('')}</div></div>`).join('') +
     `</div><button class="lhn-fab" data-x>Close</button>`;
-  document.body.append(pad, btn, ov);
+  document.body.append(btn, ov);
+  /* The spacer belongs at the end of the page. This script runs straight after
+     the bar, while the rest of the page is still being read, so appending it
+     now put 84px of blank space under the bar on every page. */
+  const atEnd = () => document.body.appendChild(pad);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', atEnd); else atEnd();
 
   const show = on => {
     ov.hidden = !on; btn.setAttribute('aria-expanded', on);

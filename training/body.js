@@ -97,7 +97,9 @@ try{BH.well=JSON.parse(localStorage.getItem('lifehub-wellness')||'null')}catch(e
 /* Body drawn from the traced chart (body-shapes.js). Fit: 395 px tall, centred at x=180. */
 const BH_ANCH={front:{swim:[179,236],str:[161,323],mob:[262,470],rec:[318,80],run:[346,596],vert:[393,810]},
   back:{swim:[111,238],str:[171,308],mob:[181,495],rec:[254,80],run:[287,622],vert:[320,798]}};
-function bhFit(view){const B=BH_SHAPES[view].box,s=395/B[3];return {s,tx:180-(B[0]+B[2]/2)*s,ty:4-B[1]*s}}
+/* The figure is 237 units tall (60% of the 395 it once filled, his ask, 27 Oct 2026),
+   centred between the rings at y 192. */
+function bhFit(view){const B=BH_SHAPES[view].box,s=237/B[3];return {s,tx:180-(B[0]+B[2]/2)*s,ty:192-(B[1]+B[3]/2)*s}}
 function bhAnchor(view,k){const f=bhFit(view),p=BH_ANCH[view][k];return [p[0]*f.s+f.tx,p[1]*f.s+f.ty]}
 function bhBodySVG(load,view){
   const V=BH_SHAPES[view],f=bhFit(view),val=m=>Math.min(1,(load[m]||0)/1.6);
@@ -131,14 +133,14 @@ function renderBody(){
   nodes.forEach(n=>n.to=bhAnchor(BH.view,n.k));
   const ring=(v,col)=>{const C=2*Math.PI*19,p=v==null?0:v/100;return `<circle r="19" fill="rgba(15,19,18,.9)" stroke="rgba(255,255,255,.10)" stroke-width="3"/>
     <circle r="19" fill="none" stroke="${col||(p>=1?'#CFE8A8':'#FF8A3D')}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(C*p).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90)"/>`};
-  const svg=`<svg viewBox="0 0 360 420" role="img" aria-label="Body map: muscles worked in the last 7 days, and this week's progress by type">
+  const svg=`<svg viewBox="0 40 360 320" role="img" aria-label="Body map: muscles worked in the last 7 days, and this week's progress by type">
     <defs>
       <radialGradient id="bhHot"><stop offset="0" stop-color="#FFD9A0"/><stop offset=".6" stop-color="#FF9A4D"/><stop offset="1" stop-color="#F0702A"/></radialGradient>
       <linearGradient id="bhSkin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#26332B"/><stop offset="1" stop-color="#121815"/></linearGradient>
       <filter id="bhGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter>
       <filter id="bhEdge" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur in="SourceAlpha" stdDeviation="2" result="b"/><feFlood flood-color="#BFE88A" flood-opacity=".35"/><feComposite in2="b" operator="in" result="g"/><feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
     </defs>
-    <ellipse cx="180" cy="396" rx="70" ry="9" fill="rgba(191,232,138,.10)"/>
+    <ellipse cx="180" cy="314" rx="44" ry="6" fill="rgba(191,232,138,.10)"/>
     ${bhBodySVG(load,BH.view)}
     ${nodes.map(n=>`<line x1="${n.x}" y1="${n.y}" x2="${n.to[0]}" y2="${n.to[1]}" stroke="rgba(191,232,138,.38)" stroke-width="1"/><circle cx="${n.to[0]}" cy="${n.to[1]}" r="2.6" fill="#CFE8A8"/>`).join('')}
     ${nodes.map(n=>`<g class="bh-node" data-node="${n.k}" transform="translate(${n.x},${n.y})" tabindex="0" role="button" aria-label="${n.n}: ${n.lbl||(n.v==null?'nothing planned':n.v+'% done')}">${ring(n.v,n.col)}
