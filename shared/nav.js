@@ -17,7 +17,7 @@
   const GROUPS = [
     ['Body', [['training/', 'Training'], ['meals/', 'Meals']]],
     ['Money', [['money/', 'Money'], ['business/', 'Business'], ['invoice/', 'New invoice']]],
-    ['Home', [['heat/', 'Heating'], ['car/', 'Car'], ['holidays/', 'Holidays']]],
+    ['Home', [['heat/', 'Heating'], ['car/', 'Car'], ['holidays/', 'Holidays'], ['time/', 'Time']]],
     ['Mind', [['jar/', 'Ideas jar'], ['robotics/', 'Robotics']]],
   ];
   // A family sign-in sees only her pages, and her "home" is the first of them.
