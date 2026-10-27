@@ -12,7 +12,7 @@
 
    Run: node jar/check.js */
 const KEY = 'lifehub-jar';
-const AREAS = ['QA work', 'Life', 'Photography'];
+const AREAS = ['QA work', 'Life', 'Photography', 'Side projects'];
 const STATES = [['new', 'In the jar'], ['review', 'In review'], ['done', 'Finished']];
 const WHEN = [['all', 'Any time'], ['1', 'Today'], ['7', '7 days'], ['30', '30 days']];
 

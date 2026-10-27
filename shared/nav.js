@@ -8,6 +8,8 @@
    The bar says where you are; Menu opens every page at once, grouped.
    Menu floats at the bottom right, where the thumb is; Close sits in the same spot. A spacer at the end of the page
    keeps it off the last line. A page with its own bottom bar lifts it (invoice: .issue).
+   The open menu is thumb friendly too (27 Oct 2026): the pages sit at the bottom of the screen, not the top,
+   Life hub (home) is a button at the bottom left, Close at the bottom right, and nothing needs the top.
    To add a page: one line in GROUPS. */
 (function () {
   const GROUPS = [
@@ -38,17 +40,19 @@
   font-family:inherit;font-size:15px;font-weight:700;line-height:1;color:var(--paper);background:var(--ink);border:0;border-radius:28px;
   padding:17px 22px;box-shadow:0 6px 20px rgba(0,0,0,.28);cursor:pointer}
 .lhn-pad{height:calc(84px + env(safe-area-inset-bottom,0px))}
-.lhn-ov{position:fixed;inset:0;z-index:60;background:var(--paper);overflow-y:auto;
-  padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 24px)}
+.lhn-ov{position:fixed;inset:0;z-index:60;background:var(--paper);overflow-y:auto;display:flex;flex-direction:column;
+  padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 92px)}
 .lhn-ov[hidden]{display:none}
-.lhn-in{max-width:520px;margin:0 auto}
-.lhn-top{display:flex;align-items:center;justify-content:space-between}
-.lhn-top a{font-weight:800;font-size:22px;color:var(--ink);text-decoration:none}
-.lhn-top button{font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);background:rgba(127,127,127,.12);border:0;border-radius:16px;padding:8px 14px;cursor:pointer}
+/* margin-top:auto pushes the pages down to the thumb; a long list still scrolls. */
+.lhn-in{width:100%;max-width:520px;margin:auto auto 0}
+.lhn-home{position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));
+  font-family:inherit;font-size:15px;font-weight:700;line-height:1;color:var(--ink);background:var(--card);text-decoration:none;
+  border-radius:28px;padding:17px 22px;box-shadow:var(--shadow)}
+.lhn-home[aria-current="page"]{background:var(--sand,#E2D3BC);color:#1E2522}
 .lhn-g{margin-top:20px}
 .lhn-g h4{margin:0 0 8px;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
 .lhn-l{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.lhn-l a{display:block;padding:16px 14px;border-radius:16px;background:var(--card);color:var(--ink);
+.lhn-l a{display:flex;align-items:center;min-height:56px;padding:12px 14px;border-radius:16px;background:var(--card);color:var(--ink);
   text-decoration:none;font-weight:700;font-size:16px;box-shadow:var(--shadow)}
 .lhn-l a[aria-current="page"]{background:var(--sand,#E2D3BC);color:#1E2522}
 body.lhn-open{overflow:hidden}`;
@@ -68,11 +72,11 @@ body.lhn-open{overflow:hidden}`;
   const ov = document.createElement('div');
   ov.className = 'lhn-ov'; ov.id = 'lhnOv'; ov.hidden = true;
   ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-label', 'All pages');
-  ov.innerHTML = `<div class="lhn-in"><div class="lhn-top"><a href="${home}">Life hub</a>
-    <button data-x>Close</button></div>` + groups.map(([g, list]) =>
+  ov.innerHTML = `<div class="lhn-in">` + groups.map(([g, list]) =>
       `<div class="lhn-g"><h4>${g}</h4><div class="lhn-l">${list.map(([p, n]) =>
         `<a href="${root}${p}"${page && page[0] === p ? ' aria-current="page"' : ''}>${n}</a>`).join('')}</div></div>`).join('') +
-    `</div><button class="lhn-fab" data-x>Close</button>`;
+    `</div><a class="lhn-home" href="${home}"${page ? '' : ' aria-current="page"'}>Life hub</a>
+    <button class="lhn-fab" data-x>Close</button>`;
   document.body.append(btn, ov);
   /* The spacer belongs at the end of the page. This script runs straight after
      the bar, while the rest of the page is still being read, so appending it
