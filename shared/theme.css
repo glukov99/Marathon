@@ -41,5 +41,5 @@ tr.today td{background:rgba(143,192,182,.08)!important}
 /* App feel: no double-tap zoom, no text resize on rotate */
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* Tab bars scroll sideways only, never up and down */
-nav{overflow-y:hidden!important;overscroll-behavior:contain;align-items:stretch}
-nav button{margin-bottom:0!important}
+nav,.tabs{overflow-y:hidden!important;overscroll-behavior:contain;align-items:stretch}
+nav button,.tabs button{margin-bottom:0!important}
