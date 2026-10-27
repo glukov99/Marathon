@@ -10,6 +10,8 @@
    keeps it off the last line. A page with its own bottom bar lifts it (invoice: .issue).
    The open menu is thumb friendly too (27 Oct 2026): the pages sit at the bottom of the screen, not the top,
    Life hub (home) is a button at the bottom left, Close at the bottom right, and nothing needs the top.
+   On a wide screen a full-screen sheet with the pages pushed down looked odd, so there the menu pops out of
+   the Menu button instead: a panel that grows from its corner, over a dimmed page. A click outside closes it.
    To add a page: one line in GROUPS. */
 (function () {
   const GROUPS = [
@@ -55,7 +57,18 @@
 .lhn-l a{display:flex;align-items:center;min-height:56px;padding:12px 14px;border-radius:16px;background:var(--card);color:var(--ink);
   text-decoration:none;font-weight:700;font-size:16px;box-shadow:var(--shadow)}
 .lhn-l a[aria-current="page"]{background:var(--sand,#E2D3BC);color:#1E2522}
-body.lhn-open{overflow:hidden}`;
+body.lhn-open{overflow:hidden}
+@media(min-width:700px){
+  .lhn-ov{display:block;padding:0;background:rgba(0,0,0,.28)}
+  .lhn-in{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));
+    width:380px;max-height:calc(100vh - 120px);overflow-y:auto;margin:0;padding:4px 14px 14px;border-radius:22px;
+    background:var(--paper);box-shadow:0 18px 50px rgba(0,0,0,.35);transform-origin:bottom right;animation:lhnPop .16s ease-out}
+  .lhn-g{margin-top:14px}
+  .lhn-l a{min-height:48px}
+  .lhn-home{position:static;display:block;margin-top:14px;text-align:center;box-shadow:none}
+}
+@keyframes lhnPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.lhn-in{animation:none}}`;
   document.head.appendChild(css);
 
   el.className = 'lhn';
@@ -75,7 +88,7 @@ body.lhn-open{overflow:hidden}`;
   ov.innerHTML = `<div class="lhn-in">` + groups.map(([g, list]) =>
       `<div class="lhn-g"><h4>${g}</h4><div class="lhn-l">${list.map(([p, n]) =>
         `<a href="${root}${p}"${page && page[0] === p ? ' aria-current="page"' : ''}>${n}</a>`).join('')}</div></div>`).join('') +
-    `</div><a class="lhn-home" href="${home}"${page ? '' : ' aria-current="page"'}>Life hub</a>
+    `<a class="lhn-home" href="${home}"${page ? '' : ' aria-current="page"'}>Life hub</a></div>
     <button class="lhn-fab" data-x>Close</button>`;
   document.body.append(btn, ov);
   /* The spacer belongs at the end of the page. This script runs straight after
@@ -90,7 +103,8 @@ body.lhn-open{overflow:hidden}`;
     (on ? ov.querySelector('.lhn-fab') : btn).focus();
   };
   btn.addEventListener('click', () => show(true));
-  ov.addEventListener('click', e => { if (e.target.closest('[data-x]')) show(false); });
+  // Close, or a click on the dimmed page around the menu.
+  ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-x]')) show(false); });
   addEventListener('pageshow', () => { if (!ov.hidden) show(false); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !ov.hidden) show(false); });
 })();
