@@ -28,6 +28,7 @@ const out=[];P.W.forEach((w,wi)=>w.days.forEach((xs,d)=>xs.forEach(x=>{const run
   out.push({date:t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'),week:wi+1,t:x.t,d:x.d,m:x.m,z:x.z,ex:x.ex,then:x.then,rt:x.rt,run:run?(x.run||null):undefined})})));
 process.stdout.write(JSON.stringify({sessions:out,EX:P.EX,ROUTINE:P.ROUTINE}));
 """
+STRENGTH_BUILD = 2  # bump when build() changes, so every strength workout on Garmin is updated
 STRENGTH = {'sportTypeId': 5, 'sportTypeKey': 'strength_training', 'displayOrder': 5}
 RUNNING = {'sportTypeId': 1, 'sportTypeKey': 'running', 'displayOrder': 1}
 DIST = {'conditionTypeId': 3, 'conditionTypeKey': 'distance', 'displayOrder': 3, 'displayable': True}
@@ -81,7 +82,9 @@ def build(name, desc, ex, EX):
                               targetType={'workoutTargetTypeId': 1, 'workoutTargetTypeKey': 'no.target', 'displayOrder': 1})
 
     steps = []
-    for n, rows, note in ex:
+    for bi, (n, rows, note) in enumerate(ex):
+        if bi:  # rest before the next exercise too, so the watch does not go straight into it (that ran like a superset)
+            steps.append(rest())
         group = nxt() if n > 1 else None
         inner = []
         for key, a, how in (r + [''] * (3 - len(r)) for r in rows):
@@ -190,7 +193,7 @@ def versions(sessions, EX, ROUTINE):
             sig = hashlib.sha1(json.dumps([s['t'], steps]).encode()).hexdigest()[:8]
             add(sig, f"{PREFIX}{s['t']} · W{s['week']}", s['d'], lambda n, d, st=steps: build_run(n, d, st), s['date'])
         if s.get('ex'):
-            sig = hashlib.sha1(json.dumps([s['t'], s['ex']]).encode()).hexdigest()[:8]
+            sig = hashlib.sha1(json.dumps([s['t'], s['ex'], STRENGTH_BUILD]).encode()).hexdigest()[:8]
             add(sig, f"{PREFIX}{s['t'].split(':')[0]} · W{s['week']}", s['d'], lambda n, d, s=s: build(n, d, s['ex'], EX), s['date'])
         for k in filter(None, (s.get('then'), s.get('rt'))):  # after-session routine, or the day's PM yoga
             R = ROUTINE[k]
