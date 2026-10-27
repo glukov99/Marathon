@@ -1,0 +1,16 @@
+{
+  "name": "Life hub",
+  "short_name": "Life hub",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#18201E",
+  "theme_color": "#18201E",
+  "icons": [
+    { "src": "shared/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "shared/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "shared/icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
