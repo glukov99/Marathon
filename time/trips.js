@@ -75,7 +75,7 @@
   const PARTS = ['ready', 'travel', 'arrive', 'there', 'home', 'total'];
   function stats(trips) {
     const by = {};
-    trips.filter(t => t.what && !t.open).forEach(t => (by[t.what] = by[t.what] || []).push(t));
+    trips.filter(t => t.what && !t.open && !UNNAMED.test(t.what)).forEach(t => (by[t.what] = by[t.what] || []).push(t));
     const out = {};
     for (const [what, ts] of Object.entries(by)) {
       const o = { n: ts.length, parts: {} };
@@ -98,6 +98,55 @@
     return r;
   }
 
-  const api = { ACTS, PLACES, PARTS, build, stats, plan, actFor, q };
+  /* ---- GPS visits (our own Arc, lifehub-script Visits.js) ---- */
+  function dist(a, b) {
+    const k = Math.PI / 180, x = (b.lon - a.lon) * k * Math.cos((a.lat + b.lat) / 2 * k), y = (b.lat - a.lat) * k;
+    return Math.sqrt(x * x + y * y) * 6371e3;
+  }
+  function placeOf(v, places) {
+    let best = null, bd = Infinity;
+    (places || []).forEach(p => { const d = dist(p, v); if (d <= (p.r || 150) && d < bd) { best = p; bd = d; } });
+    return best;
+  }
+  const UNNAMED = /^\?/;
+  const spotKey = v => '?' + v.lat.toFixed(3) + ',' + v.lon.toFixed(3);
+  /* Visits become marks: Home = back (arrived) and out (left); any other place = in and off.
+     A place not named yet gets a "?lat,lon" key, so its trips can be named later from the Places list. */
+  function visitMarks(visits, places, current) {
+    const all = (visits || []).concat(current ? [{ id: 'vnow', start: current.start, end: 0, lat: current.lat, lon: current.lon }] : []);
+    const out = [];
+    all.forEach(v => {
+      const p = placeOf(v, places), name = p ? p.name : '', base = { what: '', end: 0, src: 'gps', lat: v.lat, lon: v.lon };
+      if (/^home$/i.test(name)) {
+        out.push({ ...base, id: v.id + ':b', at: v.start, mark: 'back', place: '' });
+        if (v.end) out.push({ ...base, id: v.id + ':o', at: v.end, mark: 'out', place: '' });
+      } else {
+        const pl = name || spotKey(v);
+        out.push({ ...base, id: v.id + ':i', at: v.start, mark: 'in', place: pl });
+        if (v.end) out.push({ ...base, id: v.id + ':f', at: v.end, mark: 'off', place: pl });
+      }
+    });
+    return out;
+  }
+  /* Taps and typed trips + GPS. Once GPS covers a time, the heating automation's leave/arrive (500 m out) is dropped. */
+  function merge(marks, visits, places, current) {
+    const gm = visitMarks(visits, places, current);
+    const span = (visits || []).map(v => [v.start - 45 * 60e3, (v.end || Date.now()) + 45 * 60e3]);
+    const keep = marks.filter(m => m.src !== 'heat' || !span.some(([a, b]) => m.at >= a && m.at <= b));
+    return keep.concat(gm);
+  }
+  /* Stops with no name yet, grouped within 150 m, most visited first. */
+  function unnamed(visits, places) {
+    const groups = [];
+    (visits || []).filter(v => !placeOf(v, places)).forEach(v => {
+      const g = groups.find(g => dist(g, v) <= 150);
+      if (g) { g.vs.push(v); g.lat = g.vs.reduce((s, x) => s + x.lat, 0) / g.vs.length; g.lon = g.vs.reduce((s, x) => s + x.lon, 0) / g.vs.length; }
+      else groups.push({ lat: v.lat, lon: v.lon, vs: [v] });
+    });
+    return groups.map(g => ({ lat: g.lat, lon: g.lon, n: g.vs.length, last: Math.max(...g.vs.map(v => v.start)),
+      med: q(g.vs.map(v => v.end - v.start), .5), key: spotKey(g.vs[0]) })).sort((a, b) => b.n - a.n || b.last - a.last);
+  }
+
+  const api = { ACTS, PLACES, PARTS, UNNAMED, build, stats, plan, actFor, q, dist, placeOf, visitMarks, merge, unnamed };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Trips = api;
 })(this);

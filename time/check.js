@@ -56,4 +56,21 @@ assert.equal((at - p.startBy) / M, 70);
 // under 3 trips: the longest
 assert.equal(T.stats(T.build(marks.slice(0, 6), d + 9000 * M)).Gym.parts.ready.plan / M, 10);
 
+// 6. GPS: home + gym visits, a ready tap at home. Home visit ends = out, next home visit starts = back. Heat marks inside GPS time drop.
+const places = [{ name: 'Home', lat: 42.1354, lon: 24.7453, r: 150 }, { name: 'Gym', lat: 42.15, lon: 24.76, r: 150 }];
+const vis = [{ id: 'v1', start: d - 600 * M, end: d + 30 * M, lat: 42.1355, lon: 24.7452 }, { id: 'v2', start: d + 50 * M, end: d + 140 * M, lat: 42.1501, lon: 24.7601 },
+  { id: 'v3', start: d + 160 * M, end: 0, lat: 42.1354, lon: 24.7454 }, { id: 'v4', start: d + 400 * M, end: d + 420 * M, lat: 42.10, lon: 24.70 }];
+vis[2].end = d + 390 * M;
+const taps = [{ id: 't1', at: d + 10 * M, mark: 'ready', what: 'Gym', place: '', end: 0 }, { id: 'h1', at: d + 33 * M, mark: 'out', src: 'heat', what: '', place: '', end: 0 }];
+const all = T.merge(taps, vis, places, null);
+assert.ok(!all.some(m => m.id === 'h1'));
+t = T.build(all, d + 500 * M);
+const g = t.find(x => x.what === 'Gym');
+assert.deepEqual([g.parts.ready, g.parts.travel, g.parts.there, g.parts.home, g.parts.total].map(x => x / M), [20, 20, 90, 20, 150]);
+const un = t.find(x => T.UNNAMED.test(x.what));
+assert.ok(un && un.what === '?42.100,24.700');
+assert.ok(!T.stats(t)[un.what]);
+assert.equal(T.unnamed(vis, places).length, 1);
+assert.equal(T.unnamed(vis, places)[0].n, 1);
+
 console.log('time check ok');

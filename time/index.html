@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610272302"></script>
+<script src="../shared/auth.js?v=202610272315"></script>
 <title>Time — Life hub</title>
 <style>
 :root{--paper:#ECEAE4;--card:#FBFAF7;--ink:#1B1E1A;--soft:#5F665D;--faint:#8C9289;--rule:#D6D3CA;--acc:#3F6B3A;--acc2:#B5782B;--shadow:none;
@@ -64,10 +64,10 @@ button,input,select{font:inherit;color:inherit}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);padding:8px 14px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:40;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610272302">
+<link rel="stylesheet" href="../shared/theme.css?v=202610272315">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610272302"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610272315"></script>
 <main class="wrap">
   <header class="hero"><div class="k">Home</div><h1>Time</h1></header>
   <div class="sub" id="upd">Loading…</div>
@@ -87,6 +87,15 @@ button,input,select{font:inherit;color:inherit}
   <div class="sec">How long things take</div>
   <section class="panel" id="stats"></section>
 
+  <div class="sec" id="places">Places</div>
+  <section class="panel">
+    <div class="sub" id="gps-st"></div>
+    <h3 style="margin-top:12px">Stops to name</h3>
+    <div id="pl-un"></div>
+    <datalist id="pl-names"></datalist>
+    <div id="pl-named" style="margin-top:10px"></div>
+  </section>
+
   <div class="sec">Recent trips</div>
   <section class="panel" id="trips"></section>
 
@@ -101,11 +110,11 @@ button,input,select{font:inherit;color:inherit}
     <div class="row" style="margin-top:10px"><button class="btn" id="a-save">Add</button><span class="sub">Counts in the totals only, with no breakdown.</span></div>
   </section>
 
-  <p class="foot">How it measures: the Time shortcut (or the buttons above) marks when you start getting ready. Leaving and coming home come from the heating automations (500 m from home), or "Leaving now" and "I'm back". Arrive and Leave automations at each place split the trip into travel and time there. "Plan for" is the time you stay inside 4 times out of 5; with fewer than 3 trips it is the longest one so far.</p>
+  <p class="foot">How it measures: Overland sends your location in the background, and the back end finds every stop of 5 minutes or more. Name a stop once and every visit there, past and future, counts for it. Name your home first: leaving it and coming back is what makes a trip. The buttons at the top mark when you start getting ready, which no location can show. "Plan for" is the time you stay inside 4 times out of 5; with fewer than 3 trips it is the longest one so far.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610272302"></script>
-<script src="trips.js?v=202610272302"></script>
-<script src="app.js?v=202610272302"></script>
+<script src="../shared/sync.js?v=202610272315"></script>
+<script src="trips.js?v=202610272315"></script>
+<script src="app.js?v=202610272315"></script>
 </body>
 </html>

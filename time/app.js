@@ -19,9 +19,11 @@
     return g - tzOff(g - tzOff(g));
   }
   const PART = { ready: 'getting ready', travel: 'travel there', there: 'there', home: 'way home', arrive: 'start to arrival', total: 'total' };
+  const label = w => Trips.UNNAMED.test(w || '') ? 'Unnamed stop' : (w || 'Trip');
   const MARK = { ready: 'Getting ready', out: 'Left home', in: 'Arrived', off: 'Left', back: 'Home', manual: 'Typed in' };
 
-  let marks = [], skew = 0, busy = false, openTrip = null;
+  let marks = [], skew = 0, busy = false, openTrip = null, gps = { visits: [], places: [], current: null, lastPoint: 0 };
+  const real = id => !String(id).includes(':') && id !== 'vnow'; // GPS marks are computed, not stored
 
   function say(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(say.h); say.h = setTimeout(() => t.classList.remove('show'), 3200); }
 
@@ -34,6 +36,7 @@
       const r = await (await fetch(url)).json();
       if (r.error) { say(r.error); return null; }
       marks = r.marks || []; skew = r.now ? r.now - Date.now() : 0;
+      gps = { visits: r.visits || [], places: r.places || [], current: r.current || null, lastPoint: r.lastPoint || 0 };
       render(); return r;
     } catch (e) { say('Offline. Try again.'); return null; }
     finally { busy = false; }
@@ -42,13 +45,14 @@
 
   function render() {
     const now = Date.now() + skew;
-    const trips = Trips.build(marks, now), st = Trips.stats(trips);
+    const trips = Trips.build(Trips.merge(marks, gps.visits, gps.places, gps.current), now), st = Trips.stats(trips);
     openTrip = trips.find(t => t.open) || null;
     $('upd').textContent = trips.length ? trips.length + ' trips logged' : 'Nothing logged yet. Start with the buttons below or the Time shortcut.';
     renderNow(now, st);
     renderStats(st);
     renderPlan(st);
     renderTrips(trips);
+    renderPlaces(now);
   }
 
   function renderNow(now, st) {
@@ -59,14 +63,14 @@
       return;
     }
     const s = t.what && st[t.what], since = t.start;
-    const step = t.visits.length ? (t.visits[t.visits.length - 1].off ? 'on the way back' : 'at ' + t.visits[t.visits.length - 1].place) : t.marks.some(m => m.mark === 'out') ? 'on the way' : 'getting ready';
+    const step = t.visits.length ? (t.visits[t.visits.length - 1].off ? 'on the way back' : 'at ' + label(t.visits[t.visits.length - 1].place)) : t.marks.some(m => m.mark === 'out') ? 'on the way' : 'getting ready';
     let hint = '';
     if (s && step === 'getting ready' && s.parts.ready) hint = `Usually you leave after ${dur(s.parts.ready.med)}. Plan for ${dur(s.parts.ready.plan)}: leave by <b>${hm(since + s.parts.ready.plan)}</b>.`;
-    $('now').innerHTML = `<div class="live"><div class="sub">${esc(t.what || 'Trip')} · ${esc(step)} · since ${hm(since)}</div>
+    $('now').innerHTML = `<div class="live"><div class="sub">${esc(label(t.what))} · ${esc(step)} · since ${hm(since)}</div>
       <div class="big" id="tick">${dur(now - since)}</div>${hint ? `<div class="sub">${hint}</div>` : ''}
       <div class="row">${t.marks.some(m => m.mark === 'out') ? '' : '<button class="btn" data-m="out">Leaving now</button>'}
       <button class="btn${t.marks.some(m => m.mark === 'out') ? '' : ' ghost'}" data-m="back">I'm back</button>
-      <button class="x" data-del="${t.ids.join(',')}">Cancel this trip</button></div></div>`;
+      ${t.ids.some(real) ? `<button class="x" data-del="${t.ids.filter(real).join(',')}">Cancel the taps</button>` : ''}</div></div>`;
   }
 
   function renderStats(st) {
@@ -106,22 +110,52 @@
     if (!list.length) { $('trips').innerHTML = '<span class="sub">None yet.</span>'; return; }
     const opts = cur => Trips.ACTS.concat(cur && !Trips.ACTS.includes(cur) ? [cur] : []).map(a => `<option${a === cur ? ' selected' : ''}>${esc(a)}</option>`).join('');
     $('trips').innerHTML = list.map(t => {
-      const P = t.parts, first = t.marks[0];
+      const P = t.parts;
       const steps = ['ready', 'travel', 'there', 'home'].filter(k => P[k]).map(k => `<span>${PART[k]} <b>${dur(P[k])}</b></span>`).join('');
       const marksHtml = t.manual ? '' : `<details><summary class="sub">Times</summary><ul class="marks">${t.marks.map(m =>
-        `<li><span style="min-width:110px">${MARK[m.mark]}${m.place ? ' ' + esc(m.place) : ''}</span><input type="time" value="${hm(m.at)}" data-at="${m.id}" data-day="${ymd(m.at)}"><button class="x" data-del="${m.id}" aria-label="Delete this mark">✕</button></li>`).join('')}</ul></details>`;
+        `<li><span style="min-width:110px">${MARK[m.mark]}${m.place ? ' ' + esc(label(m.place)) : ''}</span>` + (real(m.id)
+          ? `<input type="time" value="${hm(m.at)}" data-at="${m.id}" data-day="${ymd(m.at)}"><button class="x" data-del="${m.id}" aria-label="Delete this mark">✕</button>`
+          : `<span class="num" style="font-weight:600">${hm(m.at)}</span><span class="sub">GPS</span>`) + `</li>`).join('')}</ul></details>`;
+      const firstReal = t.marks.find(m => real(m.id));
+      const named = firstReal ? `<select data-what="${firstReal.id}" aria-label="What it was"><option value="">What was it?</option>${opts(Trips.UNNAMED.test(t.what) ? '' : t.what)}</select>`
+        : Trips.UNNAMED.test(t.what) ? '<a class="sub" href="#places">Name this place</a>' : '';
       return `<div class="trip"><div class="trip-h"><div><b>${day(t.start)}</b> <span class="sub">${hm(t.start)}${t.end ? '–' + hm(t.end) : ''}</span>
         ${t.manual ? '<span class="tag">typed</span>' : ''}${t.unfinished ? '<span class="tag">no end</span>' : ''}</div>
-        <select data-what="${first.id}" aria-label="What it was"><option value="">What was it?</option>${opts(t.what)}</select></div>
+        ${named}</div>
+        <div class="sub">${esc(label(t.what))}</div>
         <div class="steps" style="margin-top:4px">${P.total ? `<span>total <b>${dur(P.total)}</b></span>` : ''}${steps}</div>
-        <div class="row">${marksHtml}<button class="x" data-del="${t.ids.join(',')}">Delete trip</button></div></div>`;
+        <div class="row">${marksHtml}${t.ids.some(real) ? `<button class="x" data-del="${t.ids.filter(real).join(',')}">${t.ids.every(real) ? 'Delete trip' : 'Delete the taps'}</button>` : ''}</div></div>`;
     }).join('');
+  }
+
+  function ago(ms) { const m = Math.round(ms / M); return m < 2 ? 'just now' : m < 90 ? m + ' min ago' : m < 2880 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; }
+  function renderPlaces(now) {
+    const lp = gps.lastPoint && gps.lastPoint > Date.now() - 400 * 864e5 ? gps.lastPoint : 0;
+    $('gps-st').innerHTML = lp ? `Overland last sent a location <b>${ago(now - lp)}</b>.` + (now - lp > 6 * 3600e3 ? ' <span class="plan">Check that tracking is on in Overland.</span>' : '')
+      : 'No locations from Overland yet. Set it up with the steps below.';
+    const names = ['Home'].concat(Trips.PLACES);
+    $('pl-names').innerHTML = [...new Set(names.concat(gps.places.map(p => p.name)))].map(n => `<option value="${esc(n)}">`).join('');
+    const un = Trips.unnamed(gps.visits, gps.places).slice(0, 12);
+    const map = (a, b) => `https://maps.apple.com/?ll=${a},${b}&q=Stop`;
+    $('pl-un').innerHTML = un.length ? un.map(u => `<div class="trip"><div class="trip-h"><div><b>${u.n} visit${u.n > 1 ? 's' : ''}</b> <span class="sub">usually ${dur(u.med)} · last ${day(u.last)} ${hm(u.last)}</span></div>
+        <a class="sub" href="${map(u.lat, u.lon)}" target="_blank" rel="noopener">Map</a></div>
+        <div class="row" style="margin-top:6px"><input list="pl-names" placeholder="Name it (Home, Gym…)" data-pl="${u.lat},${u.lon}" style="flex:1;padding:8px"><button class="btn" data-plsave="${u.lat},${u.lon}">Save</button></div></div>`).join('')
+      : `<span class="sub">${gps.visits.length ? 'Every stop has a name.' : 'Stops appear here after the first day with Overland.'}</span>`;
+    const count = p => gps.visits.filter(v => Trips.placeOf(v, gps.places) === p).length;
+    $('pl-named').innerHTML = gps.places.length ? gps.places.map(p => `<div class="trip-h" style="padding:6px 0"><span><b>${esc(p.name)}</b> <span class="sub">${count(p)} visits</span></span>
+        <span><a class="sub" href="${map(p.lat, p.lon)}" target="_blank" rel="noopener">Map</a> <button class="x" data-plrm="${p.lat},${p.lon}">Remove</button></span></div>`).join('') : '';
   }
 
   document.addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b || busy) return;
     if (b.dataset.go) return mark('ready', b.dataset.go);
     if (b.dataset.m) return mark(b.dataset.m);
+    if (b.dataset.plsave) {
+      const inp = document.querySelector(`input[data-pl="${b.dataset.plsave}"]`), name = inp && inp.value.trim();
+      if (!name) return say('Type a name first.');
+      const [la, lo] = b.dataset.plsave.split(','); const r = await call(`&cmd=place&name=${encodeURIComponent(name)}&lat=${la}&lon=${lo}`); if (r) say(r.msg); return;
+    }
+    if (b.dataset.plrm) { if (!confirm('Remove this place? Its visits go back to unnamed.')) return; const [la, lo] = b.dataset.plrm.split(','); const r = await call(`&cmd=place&name=&lat=${la}&lon=${lo}`); if (r) say(r.msg); return; }
     if (b.dataset.del) { if (!confirm('Delete?')) return; const r = await call('&cmd=del&id=' + encodeURIComponent(b.dataset.del)); if (r) say(r.msg); }
   });
   document.addEventListener('change', async e => {
