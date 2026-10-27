@@ -40,3 +40,5 @@ tr.today td{background:rgba(143,192,182,.08)!important}
 .mtn .lg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
 /* App feel: no double-tap zoom, no text resize on rotate */
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+/* Tab bars scroll sideways only, never up and down */
+nav{overflow-y:hidden!important;overscroll-behavior:contain}
