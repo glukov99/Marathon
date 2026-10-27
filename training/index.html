@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610272112"></script>
+<script src="../shared/auth.js?v=202610272236"></script>
 <title>Season 2027 — Plovdiv, Bairi, Vitosha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -192,11 +192,11 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610272112">
-<link rel="stylesheet" href="body.css?v=202610272112">
+<link rel="stylesheet" href="../shared/theme.css?v=202610272236">
+<link rel="stylesheet" href="body.css?v=202610272236">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610272112"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610272236"></script>
 <div class="wrap">
   <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
@@ -243,12 +243,12 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="plan.js?v=202610272112"></script>
-<script src="../shared/sync.js?v=202610272112"></script>
-<script src="../holidays/holidays-data.js?v=202610272112"></script>
-<script src="../shared/travel.js?v=202610272112"></script>
-<script src="body-shapes.js?v=202610272112"></script>
-<script src="body.js?v=202610272112"></script>
+<script src="plan.js?v=202610272236"></script>
+<script src="../shared/sync.js?v=202610272236"></script>
+<script src="../holidays/holidays-data.js?v=202610272236"></script>
+<script src="../shared/travel.js?v=202610272236"></script>
+<script src="body-shapes.js?v=202610272236"></script>
+<script src="body.js?v=202610272236"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -326,8 +326,8 @@ function renderWeek(){
         <div class="ib"><div class="t">${esc(x.t)}${x.m?`<small>${x.m>=60?Math.floor(x.m/60)+'h'+(x.m%60?String(x.m%60).padStart(2,'0'):''):x.m+' min'}</small>`:''}</div>
         <div class="d">${esc(x.d)}</div>
         ${x.ex?exList(x.ex):''}
-        ${x.rt?'<div class="d">On the watch. Steps in the Yoga tab.</div>':''}
-        ${x.then&&!items.slice(i+1).some(y=>y.then===x.then)?`<div class="d">${ROUTINE[x.then].then}: ${ROUTINE[x.then].t.toLowerCase()}, ${routineMin(x.then)} min (Yoga tab, and on the watch).</div>`:''}
+        ${x.rt?`<div class="d">Follow the video. On the watch, start the day's yoga workout and press Lap when the video ends.</div>`:''}
+        ${x.then&&!items.slice(i+1).some(y=>y.then===x.then)?`<div class="d">${ROUTINE[x.then].then}: ${ROUTINE[x.then].t.toLowerCase()}, ${routineMin(x.then)} min. Follow the video, the watch records it.</div><a class="lg-t" href="${ylink(ROUTINE[x.then].video)}" target="_blank" rel="noopener">Open the video</a>`:''}
         ${lgTxt?`<div class="logged">Logged: ${esc(lgTxt)}</div>`:''}
         ${x.link?`<a class="lg-t" href="${x.link}" target="_blank" rel="noopener">Open on YouTube</a>`:''}
         ${canLog?`<button class="lg-t" data-lg="${k}">${openLog===k?'Close':(lg?'Edit log':'Log it')}</button>`:''}
@@ -443,7 +443,7 @@ const sec2=s=>s>=60&&s%60===0?s/60+' min':s>=60?Math.floor(s/60)+' min '+s%60+' 
 const routineTable=R=>`<table><tr><th>Move</th><th>How long</th><th>How</th></tr>${R.steps.filter(s=>s[5]!=='Right').map(s=>
     `<tr><td>${esc(s[0])}</td><td>${sec2(s[1])}${s[5]?', each side':''}</td><td>${esc(s[2])}</td></tr>`).join('')}</table>`;
 const routinePanel=()=>`<div class="panel"><h3>Routines on the watch<span class="yc">${Object.keys(ROUTINE).length} routines</span></h3><div class="pc">
-  <p>Recovery flows from Breathe and Flow videos, as Garmin yoga workouts: one pose per step, with a timer. They are on the watch on the days the plan suggests them. Tap one for its steps.</p>
+  <p>Recovery flows from Breathe and Flow. Follow the video itself; the watch has a yoga workout with the same name that just records it (press Lap at the end). The steps below are a reference for when you can't play the video.</p>
   ${Object.entries(ROUTINE).map(([k,R])=>`<details class="rt"><summary><b>${esc(R.t)}</b> · ${routineMin(k)} min</summary>
     <p>${esc(R.when)} Video: <a href="${ylink(R.video)}" target="_blank" rel="noopener">${esc(R.video)}</a></p>${routineTable(R)}</details>`).join('')}</div></div>`;
 function renderYoga(){
@@ -454,7 +454,7 @@ function renderYoga(){
     <ul class="ylist">${YV.filter(v=>v[1]===c).map(li).join('')}</ul></div>`;
   document.getElementById('tab-yoga').innerHTML=`
   <div class="panel"><h3>How it fits the week</h3><div class="pc">
-    <p>Every day has a fixed routine, already on the watch as a Garmin yoga workout, so there is nothing to pick. After Gym A and the key runs there is also the <b>post-training stretch</b>. The routine changes from week to week within each kind of day.</p>
+    <p>Every day has a fixed routine (a Breathe and Flow video), so there is nothing to pick. Open the video from the day's plan; the watch records it. After Gym A and the key runs there is also the <b>post-training stretch</b>. The routine changes from week to week within each kind of day.</p>
     <table><tr><th>Day</th><th>Routine</th></tr>${Object.values(YSLOT).map(Y=>`<tr><td><b>${esc(Y.n)}</b>${Y.why?`<br><span style="color:var(--soft);font-size:13px">${esc(Y.why)}</span>`:''}</td><td>${[...new Set(Y.r)].map(k=>esc(ROUTINE[k].t)+' ('+routineMin(k)+' min)').join(' or ')}</td></tr>`).join('')}</table>
     <p style="font-size:13.5px;color:var(--soft)">The video lists further down are extras, for days you want something else.</p></div></div>
   ${routinePanel()}

@@ -7,7 +7,7 @@
   ~/.venvs/garmin/bin/python training/garmin_push.py check       no network: every exercise and pose is a real Garmin one
 
 Reads training/plan.js through node, the same data the page shows. One Garmin workout per version of a strength
-session ("LH Gym A · W1") and one per yoga routine ("LH Post-training stretch"), scheduled on every day that uses it.
+session ("LH Gym A · W1") and one per yoga routine ("LH Post-training stretch": one open step, you follow the video), scheduled on every day that uses it.
 Running it again changes only what is wrong. Exercises done per leg or per side get a Left and a Right step, so the
 watch counts each leg's set. The login lives in ~/.garminconnect, never in this repo.
 Needs: pip install "garminconnect[workout]". Weekly run: ~/Library/LaunchAgents/com.lifehub.garmin-push.plist.
@@ -28,6 +28,7 @@ const out=[];P.W.forEach((w,wi)=>w.days.forEach((xs,d)=>xs.forEach(x=>{const run
   out.push({date:t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'),week:wi+1,t:x.t,d:x.d,m:x.m,z:x.z,ex:x.ex,then:x.then,rt:x.rt,run:run?(x.run||null):undefined})})));
 process.stdout.write(JSON.stringify({sessions:out,EX:P.EX,ROUTINE:P.ROUTINE}));
 """
+YOGA_BUILD = 2  # bump when build_yoga() changes
 STRENGTH_BUILD = 2  # bump when build() changes, so every strength workout on Garmin is updated
 STRENGTH = {'sportTypeId': 5, 'sportTypeKey': 'strength_training', 'displayOrder': 5}
 RUNNING = {'sportTypeId': 1, 'sportTypeKey': 'running', 'displayOrder': 1}
@@ -105,14 +106,12 @@ def build(name, desc, ex, EX):
 
 
 def build_yoga(name, desc, R):
-    """A yoga routine as a Garmin yoga workout: one timed step per pose, the side and the cue in the step note."""
-    from garminconnect.workout import _strength_exercise_step
-    steps = []
-    for i, s in enumerate(R['steps']):
-        what, secs, how, cat, pose = s[:5]
-        note = ', '.join(x for x in ((s[5] if len(s) > 5 else ''), what, how) if x)
-        steps.append(_strength_exercise_step(cat, i + 1, END['time'], float(secs), pose, None, note[:500]))
-    return workout(name, desc, YOGA, steps)
+    """A yoga routine as one open step: follow the video, the watch only records. End it with the lap button.
+    (Pose-by-pose timers broke the flow: a buzz and a new screen every 15-60 s, and the timer ran through transitions.)"""
+    from garminconnect.workout import ExecutableStep
+    step = ExecutableStep(stepOrder=1, stepType={'stepTypeId': 3, 'stepTypeKey': 'interval', 'displayOrder': 3},
+                          endCondition=LAP, targetType=NO_TARGET, description=f"Video: {R['video']}"[:500])
+    return workout(name, desc, YOGA, [step])
 
 
 def auto_run(s):
@@ -197,8 +196,8 @@ def versions(sessions, EX, ROUTINE):
             add(sig, f"{PREFIX}{s['t'].split(':')[0]} · W{s['week']}", s['d'], lambda n, d, s=s: build(n, d, s['ex'], EX), s['date'])
         for k in filter(None, (s.get('then'), s.get('rt'))):  # after-session routine, or the day's PM yoga
             R = ROUTINE[k]
-            sig = hashlib.sha1(json.dumps(R).encode()).hexdigest()[:8]
-            add(sig, f"{PREFIX}{R['t']}", R['when'], lambda n, d, R=R: build_yoga(n, d, R), s['date'])
+            sig = hashlib.sha1(json.dumps([R, YOGA_BUILD]).encode()).hexdigest()[:8]
+            add(sig, f"{PREFIX}{R['t']}", f"Follow the video: {R['video']} (Breathe and Flow). {R['when']}", lambda n, d, R=R: build_yoga(n, d, R), s['date'])
     for v in out.values():
         v['json'] = v.pop('make')(v['name'], v['desc'])
     return out
