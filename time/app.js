@@ -36,7 +36,7 @@
       const r = await (await fetch(url)).json();
       if (r.error) { say(r.error); return null; }
       marks = r.marks || []; skew = r.now ? r.now - Date.now() : 0;
-      gps = { visits: r.visits || [], places: r.places || [], current: r.current || null, lastPoint: r.lastPoint || 0 };
+      gps = { visits: r.visits || [], places: r.places || [], current: r.current || null, lastPoint: r.lastPoint || 0, ovUrl: r.overlandUrl || '' };
       render(); return r;
     } catch (e) { say('Offline. Try again.'); return null; }
     finally { busy = false; }
@@ -132,7 +132,8 @@
   function renderPlaces(now) {
     const lp = gps.lastPoint && gps.lastPoint > Date.now() - 400 * 864e5 ? gps.lastPoint : 0;
     $('gps-st').innerHTML = lp ? `Overland last sent a location <b>${ago(now - lp)}</b>.` + (now - lp > 6 * 3600e3 ? ' <span class="plan">Check that tracking is on in Overland.</span>' : '')
-      : 'No locations from Overland yet. Set it up with the steps below.';
+      : 'No locations from Overland yet.';
+    $('gps-st').innerHTML += gps.ovUrl ? ` <div class="row" style="margin-top:8px"><button class="btn ghost" data-ovcopy="1">Copy the Overland server address</button><span class="sub">Paste it in Overland → Settings → Server URL. It holds the key, so don't share it.</span></div>` : '';
     const names = ['Home'].concat(Trips.PLACES);
     $('pl-names').innerHTML = [...new Set(names.concat(gps.places.map(p => p.name)))].map(n => `<option value="${esc(n)}">`).join('');
     const un = Trips.unnamed(gps.visits, gps.places).slice(0, 12);
@@ -150,6 +151,7 @@
     const b = e.target.closest('button'); if (!b || busy) return;
     if (b.dataset.go) return mark('ready', b.dataset.go);
     if (b.dataset.m) return mark(b.dataset.m);
+    if (b.dataset.ovcopy) { try { await navigator.clipboard.writeText(gps.ovUrl); say('Copied. Paste it in Overland.'); } catch (x) { prompt('Copy this address:', gps.ovUrl); } return; }
     if (b.dataset.plsave) {
       const inp = document.querySelector(`input[data-pl="${b.dataset.plsave}"]`), name = inp && inp.value.trim();
       if (!name) return say('Type a name first.');
