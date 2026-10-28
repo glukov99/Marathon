@@ -27,7 +27,7 @@
   const tripNames = () => [...new Set(Trips.ACTS.concat(marks.filter(m => m.what && m.mark !== 'start').map(m => m.what)))].filter(n => !homeNames().includes(n) || Trips.ACTS.includes(n));
   const allNames = () => [...new Set(tripNames().concat(homeNames()))];
   const askName = q => { const v = (prompt(q) || '').replace(/\s+/g, ' ').trim().slice(0, 40); return v; };
-  let openTask = null;
+  let openTask = null, rAll = null;
   let marks = [], skew = 0, busy = false, openTrip = null, gps = { visits: [], places: [], current: null, lastPoint: 0 };
   const real = id => !String(id).includes(':') && id !== 'vnow'; // GPS marks are computed, not stored
 
@@ -52,6 +52,7 @@
   function render() {
     const now = Date.now() + skew;
     const trips = Trips.build(Trips.merge(marks, gps.visits, gps.places, gps.current, gps.runs), now), st = Trips.stats(trips);
+    rAll = Trips.readyAll(trips);
     openTrip = trips.find(t => t.open && !t.task) || null;
     openTask = trips.find(t => t.open && t.task) || null;
     $('upd').textContent = trips.length ? trips.length + ' trips logged' : 'Nothing logged yet. Start with the buttons below or the Time shortcut.';
@@ -93,7 +94,9 @@
       return `<div class="act"><div class="act-h"><b>${esc(a)}</b><span>${T ? `<span class="num">${dur(T.med)}</span> <span class="plan">plan for ${dur(T.plan)}</span>` : ''}</span></div>
         <div class="steps">${parts}<span>${s.n} trip${s.n > 1 ? 's' : ''}</span></div></div>`;
     });
-    $('stats').innerHTML = rows.join('');
+    const ra = rAll ? `<div class="act"><div class="act-h"><b>Getting ready, any trip</b><span><span class="num">${dur(rAll.med)}</span> <span class="plan">plan for ${dur(rAll.plan)}</span></span></div>
+      <div class="steps"><span>from the tap to leaving home</span><span>${rAll.n} trip${rAll.n > 1 ? 's' : ''}</span></div></div>` : '';
+    $('stats').innerHTML = ra + rows.join('');
   }
 
   function renderPlan(st) {
@@ -112,13 +115,13 @@
     if (!at) { $('p-ans').innerHTML = '<span class="sub">Pick a time to see when to start.</span>'; return; }
     let when = sofia(ymd(Date.now()), at);
     if (when < Date.now() + skew - 10 * M) when += 24 * 3600e3; // already past today: tomorrow
-    const p = Trips.plan(s, when);
+    const p = Trips.plan(s, when, rAll);
     if (!p.startBy && !p.leaveBy) { $('p-ans').innerHTML = `<span class="sub">No ${esc(sel.value)} trips measured yet. After the first one this tells you when to start.</span>`; return; }
     const late = p.startBy && p.startBy < Date.now() + skew;
     $('p-ans').innerHTML = (p.startBy ? `${p.leaveBy ? 'Start getting ready by' : 'Start by'} <span class="t">${hm(p.startBy)}</span><br>` : '') +
       (p.leaveBy ? `Leave home by <span class="t">${hm(p.leaveBy)}</span>` : '') +
       (late ? `<br><span class="plan">That is already past: start now.</span>` : '') +
-      `<div class="sub">From ${s.n} trip${s.n > 1 ? 's' : ''}, planned for the slow days, not the typical one.</div>`;
+      `<div class="sub">From ${s.n} trip${s.n > 1 ? 's' : ''}, planned for the slow days, not the typical one.${p.readyFromAll ? ' Getting ready uses your figure for all trips, since this one has none yet.' : ''}</div>`;
   }
 
   function renderTrips(trips) {

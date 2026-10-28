@@ -45,6 +45,7 @@ marks = [mk(-3000, 'manual', { what: 'Gym', end: d - 3000 * M + 105 * M })];
   const b = 1440 * (i + 1);
   marks.push(mk(b, 'ready', { what: 'Gym' }), mk(b + r, 'out'), mk(b + r + tr, 'in', { place: 'Gym' }), mk(b + r + tr + 90, 'off', { place: 'Gym' }), mk(b + r + 2 * tr + 90, 'back'));
 });
+const marks5 = marks.slice();
 t = T.build(marks, d + 9000 * M);
 const s = T.stats(t).Gym;
 assert.equal(s.n, 5);
@@ -140,5 +141,12 @@ const wm = t.find(x => x.legs);
 assert.equal(wm.what, 'Nursery drop-off → Run');
 assert.deepEqual(wm.legs.map(l => [l.what, l.parts.total / M, l.parts.ready ? l.parts.ready / M : 0]), [['Nursery drop-off', 109, 71], ['Run', 64, 0]]);
 assert.equal(wm.legs[1].parts.home / M, 12);
+
+// 12. Getting ready over everything: trips with ready 10, 15, 40, 12 (gym) → median 12, plan 40. Planner falls back to it.
+t = T.build(marks5, d + 9000 * M);
+const ra = T.readyAll(t);
+assert.deepEqual([ra.n, ra.med / M, ra.plan / M], [4, 12, 40]);
+const pf = T.plan({ n: 1, parts: { travel: { med: 10 * M, plan: 10 * M } } }, d + 600 * M, ra);
+assert.ok(pf.readyFromAll && (d + 600 * M - pf.startBy) / M === 50);
 
 console.log('time check ok');

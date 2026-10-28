@@ -142,10 +142,18 @@
     return out;
   }
 
+  /* Getting ready across every trip, whatever it was for: from the tap to leaving home. Counted once per trip
+     (a chain's legs share one getting-ready). */
+  function readyAll(trips) {
+    const xs = trips.filter(t => !t.open && !t.task && t.parts && t.parts.ready > 0).map(t => t.parts.ready);
+    return xs.length ? { n: xs.length, med: q(xs, .5), plan: xs.length < 3 ? Math.max(...xs) : q(xs, .8) } : null;
+  }
+
   /* "I need to be there at T": when to start getting ready and when to leave. */
-  function plan(st, at) {
+  function plan(st, at, rAll) {
     if (!st) return {};
-    const P = st.parts, r = {};
+    const P = Object.assign({}, st.parts), r = {};
+    if (!P.ready && P.travel && rAll) { P.ready = rAll; r.readyFromAll = true; } // no getting-ready for this one yet: use the all-trips figure
     if (P.travel) r.leaveBy = at - P.travel.plan;
     if (P.ready && r.leaveBy) r.startBy = r.leaveBy - P.ready.plan;
     else if (P.arrive) r.startBy = at - P.arrive.plan;
@@ -228,6 +236,6 @@
       med: q(g.vs.map(v => v.end - v.start), .5), key: spotKey(g.vs[0]) })).sort((a, b) => b.n - a.n || b.last - a.last);
   }
 
-  const api = { ACTS, PLACES, PARTS, UNNAMED, build, stats, plan, actFor, q, dist, placeOf, visitMarks, merge, unnamed };
+  const api = { ACTS, PLACES, PARTS, UNNAMED, build, stats, plan, readyAll, actFor, q, dist, placeOf, visitMarks, merge, unnamed };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Trips = api;
 })(this);
