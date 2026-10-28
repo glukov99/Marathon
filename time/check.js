@@ -68,6 +68,20 @@ const taps = [{ id: 't1', at: d + 10 * M, mark: 'ready', what: 'Gym', place: '',
 const all = T.merge(taps, vis, places, null);
 assert.ok(!all.some(m => m.id === 'h1'));
 t = T.build(all, d + 500 * M);
+// 6b. 28 Oct: Overland paused at the office (stay 13:10, its end read late at 16:42) and sent nothing from home.
+// The heating automation's arrive-home at 16:35 must close the trip; a later "I'm back" tap changes nothing.
+{
+  const off = { name: 'Office', lat: 42.1306, lon: 24.7431, r: 150 };
+  const v = [{ id: 'o1', start: d + 10 * M, end: d + 222 * M, lat: 42.1306, lon: 24.7431 }];
+  const mm = T.merge([{ id: 'r', at: d - 10 * M, mark: 'ready', what: 'Office', place: '', end: 0 },
+    { id: 'ho', at: d - 3 * M, mark: 'out', src: 'heat', what: '', place: '', end: 0 },
+    { id: 'hb', at: d + 215 * M, mark: 'back', src: 'heat', what: '', place: '', end: 0 },
+    { id: 'tap', at: d + 350 * M, mark: 'back', src: 'page', what: '', place: '', end: 0 }], v, places.concat(off), null);
+  const tt = T.build(mm, d + 400 * M);
+  assert.equal(tt.length, 1);
+  assert.ok(!tt[0].open);
+  assert.equal((tt[0].end || tt[0].back) - d, 215 * M);
+}
 const g = t.find(x => x.what === 'Gym');
 assert.deepEqual([g.parts.ready, g.parts.travel, g.parts.there, g.parts.home, g.parts.total].map(x => x / M), [20, 20, 90, 20, 150]);
 const un = t.find(x => T.UNNAMED.test(x.what));

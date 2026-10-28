@@ -217,11 +217,17 @@
     });
     return out;
   }
-  /* Taps and typed trips + GPS. Once GPS covers a time, the heating automation's leave/arrive (500 m out) is dropped. */
+  /* Taps and typed trips + GPS. The heating automation's leave/arrive (500 m out) is dropped only when GPS has the
+     same leave or arrive within 45 min. Before 28 Oct any GPS stay nearby dropped it: Overland paused at the office,
+     sent nothing from home, and the 16:35 arrive-home was lost, so the trip stayed open until a tap. */
   function merge(marks, visits, places, current, runs) {
-    const gm = visitMarks(visits, places, current).concat(runMarks(runs, visits, places, marks));
-    const span = (visits || []).map(v => [v.start - 45 * 60e3, (v.end || Date.now()) + 45 * 60e3]);
-    const keep = marks.filter(m => m.src !== 'heat' || !span.some(([a, b]) => m.at >= a && m.at <= b));
+    const vm = visitMarks(visits, places, current), gm = vm.concat(runMarks(runs, visits, places, marks));
+    const near = (m, at) => Math.abs(m.at - at) <= 45 * 60e3;
+    const keep = marks.filter(m => m.src !== 'heat' || !vm.some(g => g.mark === m.mark && near(g, m.at)));
+    // A stay where the phone paused ends at the first point after the pause, which can be after you got home.
+    // ponytail: the leave is then put 1 min before the arrive, so that way home reads ~0; good enough, it is rare.
+    const backs = keep.filter(m => m.src === 'heat' && m.mark === 'back').map(m => m.at);
+    gm.forEach(g => { const b = g.mark === 'off' && backs.find(x => x < g.at && near(g, x)); if (b) g.at = b - 60e3; });
     return keep.concat(gm);
   }
   /* Runs from the watch. The trip must be door to door, travel included, so:
