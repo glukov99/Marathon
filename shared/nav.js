@@ -38,6 +38,7 @@
 .lhn a,.lhn button{font-family:inherit;font-size:13px;font-weight:600;line-height:1;color:var(--soft);text-decoration:none;
   background:rgba(127,127,127,.12);border:0;border-radius:16px;padding:8px 13px;cursor:pointer}
 .lhn .lhn-cur{font-size:13px;font-weight:700;color:var(--ink)}
+.lhn-upd{display:block;margin:14px 0 0;background:none;border:0;color:var(--faint);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:6px 0}
 .lhn-fab{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:59;
   font-family:inherit;font-size:15px;font-weight:700;line-height:1;color:var(--paper);background:var(--ink);border:0;border-radius:28px;
   padding:17px 22px;box-shadow:0 6px 20px rgba(0,0,0,.28);cursor:pointer}
@@ -88,7 +89,8 @@ body.lhn-open{overflow:hidden}
   ov.innerHTML = `<div class="lhn-in">` + groups.map(([g, list]) =>
       `<div class="lhn-g"><h4>${g}</h4><div class="lhn-l">${list.map(([p, n]) =>
         `<a href="${root}${p}"${page && page[0] === p ? ' aria-current="page"' : ''}>${n}</a>`).join('')}</div></div>`).join('') +
-    `<a class="lhn-home" href="${home}"${page ? '' : ' aria-current="page"'}>Life hub</a></div>
+    `<a class="lhn-home" href="${home}"${page ? '' : ' aria-current="page"'}>Life hub</a>
+    <button class="lhn-upd" data-upd>Reload the latest version</button></div>
     <button class="lhn-fab" data-x>Close</button>`;
   document.body.append(btn, ov);
   /* The spacer belongs at the end of the page. This script runs straight after
@@ -105,6 +107,34 @@ body.lhn-open{overflow:hidden}
   btn.addEventListener('click', () => show(true));
   // Close, or a click on the dimmed page around the menu.
   ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-x]')) show(false); });
+  ov.addEventListener('click', e => { if (e.target.closest('[data-upd]')) window.LifeHubUpdate && LifeHubUpdate(true); });
   addEventListener('pageshow', () => { if (!ov.hidden) show(false); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && !ov.hidden) show(false); });
+})();
+
+/* Fresh pages in the home-screen app (28 Oct 2026). GitHub Pages lets a page be kept for 10 minutes, and the
+   iPhone app also keeps the open page in memory, so a push showed up late there. Now, whenever a page opens or
+   the app comes back to the front, it asks version.json (never cached) which build is live. If that is newer
+   than the build this page came from (its own ?v= tag), the page reloads itself at a new address, which no
+   cache holds. Once per build per session, so a slow CDN cannot loop it. The menu has "Reload the latest version". */
+(function () {
+  const s = document.currentScript;
+  if (!s) return;
+  const mine = (/[?&]v=(\d+)/.exec(s.src) || [])[1];
+  const base = s.src.replace(/shared\/nav\.js.*$/, '');
+  async function check(force) {
+    try {
+      const r = await fetch(base + 'version.json?t=' + Date.now(), { cache: 'no-store' });
+      const v = (await r.json()).v;
+      if (!force && !(v && mine && v > mine)) return;
+      const k = 'lh-upd-' + v;
+      try { if (!force && sessionStorage.getItem(k)) return; sessionStorage.setItem(k, '1'); } catch (e) {}
+      const u = new URL(location.href);
+      u.searchParams.set('u', force ? String(Date.now()) : v);
+      location.replace(u.toString());
+    } catch (e) { if (force) location.reload(); }
+  }
+  window.LifeHubUpdate = check;
+  check(false);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) check(false); });
 })();

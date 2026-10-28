@@ -11,4 +11,6 @@ for p in glob.glob(os.path.join(root, '**', '*.html'), recursive=True):
     if n != s:
         open(p, 'w').write(n)
         print('tagged', os.path.relpath(p, root))
+# The pages compare their own ?v= with this file when they open (shared/nav.js) and reload themselves if a newer one is live.
+open(os.path.join(root, 'version.json'), 'w').write('{"v":"' + v + '"}\n')
 print('version', v)
