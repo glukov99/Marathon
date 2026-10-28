@@ -10,7 +10,9 @@ let marks = [mk(0, 'ready', { what: 'Nursery drop-off' }), mk(20, 'out'), mk(32,
   mk(55, 'in', { place: 'Gym' }), mk(145, 'off', { place: 'Gym' }), mk(165, 'back')];
 let t = T.build(marks, d + 200 * M);
 assert.equal(t.length, 1);
-assert.equal(t[0].what, 'Nursery drop-off');
+assert.equal(t[0].what, 'Nursery drop-off → Gym');
+assert.deepEqual(t[0].legs.map(l => Object.fromEntries(Object.entries(l.parts).map(([k, v]) => [k, v / M]))),
+  [{ ready: 20, travel: 12, arrive: 32, there: 8, total: 40 }, { travel: 15, arrive: 15, there: 90, home: 20, total: 125 }]);
 assert.deepEqual(Object.fromEntries(Object.entries(t[0].parts).map(([k, v]) => [k, v / M])), { ready: 20, travel: 12, arrive: 32, there: 98, home: 20, total: 165 });
 
 // 2. No menu tap: the place names it; afternoon nursery = pick-up. Duplicate out keeps the first.
@@ -91,5 +93,29 @@ assert.equal(T.merge([], [{ id: 'g', start: d + 90 * M, end: d + 150 * M, lat: 4
 // d) no GPS at all that day: the run is the trip
 t = T.build(T.merge([], [], places, null, run), d + 700 * M);
 assert.equal(t.find(x => x.what === 'Run').parts.total / M, 36);
+
+// 8. The morning: ready 07:00 (tap "Nursery drop-off"), leave 07:20, nursery 07:30–07:36, run 07:40–08:20 (phone along), home 08:25.
+const nur = { name: 'Nursery', lat: 42.14, lon: 24.75, r: 150 };
+const pl2 = places.concat([nur]);
+const mv = [{ id: 'h0', start: d - 600 * M, end: d + 20 * M, lat: 42.1354, lon: 24.7453 }, { id: 'n0', start: d + 30 * M, end: d + 36 * M, lat: 42.14, lon: 24.75 },
+  { id: 'x0', start: d + 55 * M, end: d + 61 * M, lat: 42.13, lon: 24.70 }, // a chat mid-run: belongs to the run
+  { id: 'h1', start: d + 85 * M, end: d + 900 * M, lat: 42.1354, lon: 24.7453 }];
+t = T.build(T.merge([{ id: 'm1', at: d, mark: 'ready', what: 'Nursery drop-off', place: '', end: 0 }], mv, pl2, null, [{ id: '7', start: d + 40 * M, end: d + 80 * M }]), d + 1000 * M);
+const mo = t.find(x => x.legs);
+assert.equal(mo.what, 'Nursery drop-off → Run');
+const L = mo.legs.map(l => [l.what, Object.fromEntries(Object.entries(l.parts).map(([k, v]) => [k, v / M]))]);
+assert.deepEqual(L[0], ['Nursery drop-off', { ready: 20, travel: 10, arrive: 30, there: 6, total: 36 }]);
+assert.deepEqual(L[1], ['Run', { travel: 4, arrive: 4, there: 40, home: 5, total: 49 }]);
+assert.equal(mo.parts.total / M, 85);
+const S = T.stats(t);
+assert.ok(S['Nursery drop-off'] && S['Run'] && S['Nursery drop-off → Run']);
+// planner: be at the nursery at 07:30 → start by 07:00, leave by 07:20
+const pz = T.plan(S['Nursery drop-off'], d + 30 * M);
+assert.deepEqual([(pz.startBy - d) / M, (pz.leaveBy - d) / M], [0, 20]);
+
+// 9. A 4-min unnamed stop (traffic) on the way to the gym does not split the trip
+t = T.build(T.merge([], [{ id: 'q0', start: d - 600 * M, end: d, lat: 42.1354, lon: 24.7453 }, { id: 'q1', start: d + 5 * M, end: d + 9 * M, lat: 42.11, lon: 24.71 },
+  { id: 'q2', start: d + 20 * M, end: d + 100 * M, lat: 42.15, lon: 24.76 }, { id: 'q3', start: d + 120 * M, end: d + 900 * M, lat: 42.1354, lon: 24.7453 }], places, null, []), d + 1000 * M);
+assert.ok(t.some(x => x.what === 'Gym' && !x.legs && x.parts.total / M === 120));
 
 console.log('time check ok');

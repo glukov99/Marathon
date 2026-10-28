@@ -123,7 +123,8 @@
         ${t.manual ? '<span class="tag">typed</span>' : ''}${t.unfinished ? '<span class="tag">no end</span>' : ''}</div>
         ${named}</div>
         <div class="sub">${esc(label(t.what))}</div>
-        <div class="steps" style="margin-top:4px">${P.total ? `<span>total <b>${dur(P.total)}</b></span>` : ''}${steps}</div>
+        <div class="steps" style="margin-top:4px">${P.total ? `<span>total <b>${dur(P.total)}</b></span>` : ''}${t.legs ? '' : steps}</div>
+        ${t.legs ? t.legs.map(l => `<div class="steps"><span style="min-width:120px;color:var(--ink)">${esc(l.what)}</span>${l.parts.total ? `<b>${dur(l.parts.total)}</b>` : ''}${['ready', 'travel', 'there', 'home'].filter(k => l.parts[k]).map(k => `<span>${PART[k]} <b>${dur(l.parts[k])}</b></span>`).join('')}</div>`).join('') : ''}
         <div class="row">${marksHtml}${t.ids.some(real) ? `<button class="x" data-del="${t.ids.filter(real).join(',')}">${t.ids.every(real) ? 'Delete trip' : 'Delete the taps'}</button>` : ''}</div></div>`;
     }).join('');
   }

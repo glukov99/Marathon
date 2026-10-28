@@ -61,9 +61,41 @@
     if (at) p.there = at;
     if (vl && end > vl.off) p.home = end - vl.off;
     if (end) p.total = end - start;
-    const what = t.what || (v0 ? actFor(v0.place, v0.in) : t.visits[0] ? actFor(t.visits[0].place, t.visits[0].off) : '');
+    const real = t.visits.find(v => v.in && !UNNAMED.test(v.place)) || t.visits.find(v => v.in && v.off - v.in >= 10 * 60e3) || v0; // skip traffic stops
+    const what = t.what || (real ? actFor(real.place, real.in) : t.visits[0] ? actFor(t.visits[0].place, t.visits[0].off) : '');
     const live = !end && now - start < 12 * H;
-    return { what, start, end, open: live, unfinished: !end && !live, parts: p, visits: t.visits, ids: t.marks.map(m => m.id), marks: t.marks };
+    const legs = splitLegs(t, start, end);
+    return { what: legs ? legs.map(l => l.what).join(' → ') : what, start, end, open: live, unfinished: !end && !live, parts: p, legs,
+      visits: t.visits, ids: t.marks.map(m => m.id), marks: t.marks };
+  }
+
+  /* A trip with two or more things in it (drop-off, then a run) is split into legs, one per thing:
+     a leg runs from the end of the previous thing (or the trip's start) to the end of its own thing;
+     the last leg also takes the way home. Things: each stop, and each run from the watch
+     (a stop during a run belongs to the run). The menu tap names the leg it matches, otherwise the first. */
+  function splitLegs(t, start, end) {
+    const runs = t.marks.filter(m => m.src === 'run' && m.mark === 'out' && m.end).map(m => ({ act: 'Run', a: m.at, b: m.end }));
+    const stops = t.visits.filter(v => v.in && !runs.some(r => v.in >= r.a && v.in <= r.b))
+      .filter(v => !UNNAMED.test(v.place) || (v.off && v.off - v.in >= 10 * 60e3)) // a short unnamed stop is traffic, not a thing
+      .map(v => ({ act: actFor(v.place, v.in), a: v.in, b: v.off || 0 }));
+    const xs = runs.concat(stops).sort((x, y) => x.a - y.a);
+    if (xs.length < 2) return null;
+    let tapLeg = t.what ? xs.findIndex(x => x.act === t.what) : -1;
+    if (t.what && tapLeg < 0) tapLeg = 0;
+    let from = start;
+    return xs.map((x, k) => {
+      const last = k === xs.length - 1, legEnd = last ? end : (x.b || xs[k + 1].a), p = {};
+      if (k === 0 && t.ready && t.out && t.out > t.ready) p.ready = t.out - t.ready;
+      const go = k === 0 ? (t.out || start) : from;
+      if (x.a > go) p.travel = x.a - go;
+      if (x.a > from) p.arrive = x.a - from;
+      if (x.b > x.a) p.there = x.b - x.a;
+      if (last && end && x.b && end > x.b) p.home = end - x.b;
+      if (legEnd > from) p.total = legEnd - from;
+      const leg = { what: k === tapLeg ? t.what : x.act, start: from, end: legEnd, parts: p };
+      from = legEnd || from;
+      return leg;
+    });
   }
 
   function q(xs, f) { // nearest rank
@@ -75,7 +107,8 @@
   const PARTS = ['ready', 'travel', 'arrive', 'there', 'home', 'total'];
   function stats(trips) {
     const by = {};
-    trips.filter(t => t.what && !t.open && !UNNAMED.test(t.what)).forEach(t => (by[t.what] = by[t.what] || []).push(t));
+    const add = t => { if (t.what && !UNNAMED.test(t.what)) (by[t.what] = by[t.what] || []).push(t); };
+    trips.filter(t => !t.open).forEach(t => { add(t); (t.legs || []).forEach(add); }); // the whole chain counts too, as "A → B"
     const out = {};
     for (const [what, ts] of Object.entries(by)) {
       const o = { n: ts.length, parts: {} };
@@ -149,7 +182,7 @@
       const mid = (r.start + r.end) / 2;
       const atHome = vs.some(v => isHome(v) && v.start <= mid && (v.end || Infinity) >= mid);
       const gpsOn = vs.some(v => (v.end || Infinity) >= r.start - H12 && v.start <= r.end + H12);
-      const out = { id: 'r:' + r.id + ':o', at: r.start, mark: 'out', what: 'Run', place: '', end: 0, src: 'run' };
+      const out = { id: 'r:' + r.id + ':o', at: r.start, mark: 'out', what: 'Run', place: '', end: r.end, src: 'run' };
       return atHome || !gpsOn ? [out, { id: 'r:' + r.id + ':b', at: r.end, mark: 'back', what: '', place: '', end: 0, src: 'run' }] : [out];
     });
   }
