@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610281047"></script>
+<script src="../shared/auth.js?v=202610281050"></script>
 <title>Time — Life hub</title>
 <style>
 :root{--paper:#ECEAE4;--card:#FBFAF7;--ink:#1B1E1A;--soft:#5F665D;--faint:#8C9289;--rule:#D6D3CA;--acc:#3F6B3A;--acc2:#B5782B;--shadow:none;
@@ -61,13 +61,17 @@ button,input,select{font:inherit;color:inherit}
 .form label{font-size:12px;color:var(--faint);display:block}
 .form input,.form select{width:100%;min-width:0;max-width:100%;padding:8px;-webkit-appearance:none;appearance:none}
 .foot{font-size:12.5px;color:var(--faint);margin-top:22px}
+.sheet{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet-in{width:100%;max-width:520px;background:var(--card);border-radius:20px;padding:16px;box-shadow:var(--shadow)}
+.sheet-q{font-weight:700;margin-bottom:10px}
+.sheet-v{width:100%;padding:10px;font-size:16px}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);padding:8px 14px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:40;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610281047">
+<link rel="stylesheet" href="../shared/theme.css?v=202610281050">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610281047"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610281050"></script>
 <main class="wrap">
   <header class="hero"><div class="k">Home</div><h1>Time</h1></header>
   <div class="sub" id="upd">Loading…</div>
@@ -113,8 +117,8 @@ button,input,select{font:inherit;color:inherit}
   <p class="foot">How it measures: Overland sends your location in the background, and the back end finds every stop of 3 minutes or more. Name a stop once and every visit there, past and future, counts for it. Name your home first: leaving it and coming back is what makes a trip. Runs from your watch name their trip by themselves, even with the phone at home. The buttons at the top mark when you start getting ready, which no location can show. "Plan for" is the time you stay inside 4 times out of 5; with fewer than 3 trips it is the longest one so far.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610281047"></script>
-<script src="trips.js?v=202610281047"></script>
-<script src="app.js?v=202610281047"></script>
+<script src="../shared/sync.js?v=202610281050"></script>
+<script src="trips.js?v=202610281050"></script>
+<script src="app.js?v=202610281050"></script>
 </body>
 </html>

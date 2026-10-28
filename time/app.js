@@ -26,7 +26,23 @@
   const homeNames = () => [...new Set(marks.filter(m => m.mark === 'start' && m.what).map(m => m.what))];
   const tripNames = () => [...new Set(Trips.ACTS.concat(marks.filter(m => m.what && m.mark !== 'start').map(m => m.what)))].filter(n => !homeNames().includes(n) || Trips.ACTS.includes(n));
   const allNames = () => [...new Set(tripNames().concat(homeNames()))];
-  const askName = q => { const v = (prompt(q) || '').replace(/\s+/g, ' ').trim().slice(0, 40); return v; };
+  /* Our own small sheet instead of prompt()/confirm(): the home-screen app does not show those (28 Oct 2026). */
+  function sheet(q, withInput, okText) {
+    return new Promise(res => {
+      const el = document.createElement('div');
+      el.className = 'sheet';
+      el.innerHTML = `<div class="sheet-in" role="dialog" aria-label="${esc(q)}"><div class="sheet-q">${esc(q)}</div>
+        ${withInput ? '<input class="sheet-v" maxlength="40" autocomplete="off">' : ''}
+        <div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn ghost" data-sh="0">Cancel</button><button class="btn" data-sh="1">${esc(okText || 'OK')}</button></div></div>`;
+      document.body.appendChild(el);
+      const inp = el.querySelector('.sheet-v');
+      const done = ok => { const v = inp ? inp.value.replace(/\s+/g, ' ').trim().slice(0, 40) : ''; el.remove(); res(withInput ? (ok && v ? v : '') : ok); };
+      el.addEventListener('click', e => { e.stopPropagation(); const b = e.target.closest('[data-sh]'); if (b) done(b.dataset.sh === '1'); else if (e.target === el) done(false); });
+      if (inp) { inp.addEventListener('keydown', e => { if (e.key === 'Enter') done(true); if (e.key === 'Escape') done(false); }); setTimeout(() => inp.focus(), 30); }
+    });
+  }
+  const askName = q => sheet(q, true, 'Start');
+  const sure = (q, ok) => sheet(q, false, ok || 'Delete');
   let openTask = null, rAll = null;
   let marks = [], skew = 0, busy = false, openTrip = null, gps = { visits: [], places: [], current: null, lastPoint: 0 };
   const real = id => !String(id).includes(':') && id !== 'vnow'; // GPS marks are computed, not stored
@@ -171,27 +187,27 @@
 
   document.addEventListener('click', async e => {
     const b = e.target.closest('button'); if (!b || busy) return;
-    if (b.dataset.go !== undefined) { const n = b.dataset.go || askName('Getting ready for what?'); return n ? mark('ready', n) : null; }
-    if (b.dataset.start !== undefined) { const n = b.dataset.start || askName('What are you starting? (e.g. Cooking)'); return n ? mark('start', n) : null; }
+    if (b.dataset.go !== undefined) { const n = b.dataset.go || await askName('Getting ready for what?'); return n ? mark('ready', n) : null; }
+    if (b.dataset.start !== undefined) { const n = b.dataset.start || await askName('What are you starting? (e.g. Cooking)'); return n ? mark('start', n) : null; }
     if (b.dataset.m) return mark(b.dataset.m);
-    if (b.dataset.ovcopy) { try { await navigator.clipboard.writeText(gps.ovUrl); say('Copied. Paste it in Overland.'); } catch (x) { prompt('Copy this address:', gps.ovUrl); } return; }
+    if (b.dataset.ovcopy) { try { await navigator.clipboard.writeText(gps.ovUrl); say('Copied. Paste it in Overland.'); } catch (x) { say('Could not copy. Try again.'); } return; }
     if (b.dataset.plsave) {
       const inp = document.querySelector(`input[data-pl="${b.dataset.plsave}"]`), name = inp && inp.value.trim();
       if (!name) return say('Type a name first.');
       const [la, lo] = b.dataset.plsave.split(','); const r = await call(`&cmd=place&name=${encodeURIComponent(name)}&lat=${la}&lon=${lo}`); if (r) say(r.msg); return;
     }
-    if (b.dataset.plrm) { if (!confirm('Remove this place? Its visits go back to unnamed.')) return; const [la, lo] = b.dataset.plrm.split(','); const r = await call(`&cmd=place&name=&lat=${la}&lon=${lo}`); if (r) say(r.msg); return; }
-    if (b.dataset.del) { if (!confirm('Delete?')) return; const r = await call('&cmd=del&id=' + encodeURIComponent(b.dataset.del)); if (r) say(r.msg); }
+    if (b.dataset.plrm) { if (!(await sure('Remove this place? Its visits go back to unnamed.', 'Remove'))) return; const [la, lo] = b.dataset.plrm.split(','); const r = await call(`&cmd=place&name=&lat=${la}&lon=${lo}`); if (r) say(r.msg); return; }
+    if (b.dataset.del) { if (!(await sure('Delete this?'))) return; const r = await call('&cmd=del&id=' + encodeURIComponent(b.dataset.del)); if (r) say(r.msg); }
   });
   document.addEventListener('change', async e => {
     const el = e.target;
     if (el.dataset.what) {
       let v = el.value;
-      if (v === '__other') { v = askName('What was it?'); if (!v) { render(); return; } }
+      if (v === '__other') { v = await sheet('What was it?', true, 'Save'); if (!v) { render(); return; } }
       const r = await call('&cmd=edit&id=' + el.dataset.what + '&what=' + encodeURIComponent(v)); if (r) say('Saved.');
     }
     if (el.id === 'a-what' && el.value === '__other') {
-      const v = askName('What was it?');
+      const v = await sheet('What was it?', true, 'Use it');
       if (v) { const o = document.createElement('option'); o.textContent = v; el.insertBefore(o, el.lastChild); el.value = v; } else el.selectedIndex = 0;
     }
     if (el.dataset.at && el.value) { const r = await call('&cmd=edit&id=' + el.dataset.at + '&at=' + sofia(el.dataset.day, el.value)); if (r) say('Saved.'); }
