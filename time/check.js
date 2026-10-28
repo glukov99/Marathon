@@ -164,4 +164,7 @@ assert.ok(pf.readyFromAll && (d + 600 * M - pf.startBy) / M === 50);
   assert.equal(tt.legs[0].parts.ready / M, 68);
 }
 
+// 14. One stay alone (unnamed home, no taps) is not a trip
+assert.equal(T.build(T.merge([], [{ id: 'z', start: d, end: 0, lat: 42.126, lon: 24.727 }], [], { start: d, last: d + 60 * M, lat: 42.126, lon: 24.727 }, []), d + 200 * M).length, 0);
+
 console.log('time check ok');

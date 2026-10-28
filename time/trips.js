@@ -18,7 +18,7 @@
 
   function build(marks, now) {
     const ms = marks.slice().sort((a, b) => a.at - b.at);
-    const trips = [];
+    let trips = [];
     let cur = null;
     const open = () => ({ marks: [], visits: [], ready: 0, out: 0, back: 0, what: '' });
     const last = t => t.marks.length ? t.marks[t.marks.length - 1].at : 0;
@@ -43,6 +43,9 @@
     }
     if (cur) { cur.open = true; trips.push(cur); }
     const t0 = now || Date.now();
+    // Just being at one place (one stay, no tap, no leaving or coming home) is not a trip: an unnamed home looked like
+    // "out at an unnamed stop since 07:04".
+    trips = trips.filter(t => t.manual || t.ready || t.out || t.back || new Set(t.visits.map(v => v.place.toLowerCase())).size > 1);
     return trips.map(t => t.manual ? finishManual(t) : finish(t, t0)).concat(tasks(ms, t0)).sort((a, b) => b.start - a.start);
   }
 
