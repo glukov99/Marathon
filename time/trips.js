@@ -24,6 +24,7 @@
     const last = t => t.marks.length ? t.marks[t.marks.length - 1].at : 0;
     const close = () => { if (cur) { trips.push(cur); cur = null; } };
     for (const m of ms) {
+      if (m.mark === 'start' || m.mark === 'stop') continue; // home timers, see tasks()
       if (m.mark === 'manual') { trips.push({ manual: true, marks: [m], what: m.what, start: m.at, end: m.end }); continue; }
       if (cur && m.at - last(cur) > 12 * H) close();
       if (m.mark === 'back' && !cur) continue; // home again with nothing open: nothing to measure
@@ -42,7 +43,21 @@
     }
     if (cur) { cur.open = true; trips.push(cur); }
     const t0 = now || Date.now();
-    return trips.map(t => t.manual ? finishManual(t) : finish(t, t0)).sort((a, b) => b.start - a.start);
+    return trips.map(t => t.manual ? finishManual(t) : finish(t, t0)).concat(tasks(ms, t0)).sort((a, b) => b.start - a.start);
+  }
+
+  /* Things done at home (cooking, bath time…): Start, then Stop. Starting another stops the one running.
+     They count like trips (total only) and never open or close a trip. Over 12 h without Stop = forgotten, not counted. */
+  function tasks(ms, now) {
+    const out = [];
+    let cur = null;
+    const close = at => { if (!cur) return; cur.end = at; cur.parts = { total: at - cur.start }; out.push(cur); cur = null; };
+    ms.filter(m => m.mark === 'start' || m.mark === 'stop').forEach(m => {
+      if (m.mark === 'start') { close(m.at); cur = { task: true, what: m.what, start: m.at, end: 0, parts: {}, visits: [], ids: [m.id], marks: [m] }; }
+      else if (cur) { cur.ids.push(m.id); cur.marks.push(m); close(m.at); }
+    });
+    if (cur) { const live = now - cur.start < 12 * H; out.push(Object.assign(cur, { open: live, unfinished: !live })); }
+    return out;
   }
 
   function finishManual(t) {
@@ -128,6 +143,7 @@
     if (P.travel) r.leaveBy = at - P.travel.plan;
     if (P.ready && r.leaveBy) r.startBy = r.leaveBy - P.ready.plan;
     else if (P.arrive) r.startBy = at - P.arrive.plan;
+    else if (P.total && !P.travel) r.startBy = at - P.total.plan; // a home timer: start this long before it has to be done
     return r;
   }
 

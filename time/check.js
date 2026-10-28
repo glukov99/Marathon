@@ -121,4 +121,14 @@ t = T.build(T.merge([], [{ id: 'q0', start: d - 600 * M, end: d, lat: 42.1354, l
   { id: 'q2', start: d + 20 * M, end: d + 100 * M, lat: 42.15, lon: 24.76 }, { id: 'q3', start: d + 120 * M, end: d + 900 * M, lat: 42.1354, lon: 24.7453 }], places, null, []), d + 1000 * M);
 assert.ok(t.some(x => x.what === 'Gym' && !x.legs && x.parts.total / M === 120));
 
+// 10. Home timers: start Cooking 18:00, start Bath time 18:40 (stops cooking), stop 19:05; a trip around them is untouched.
+n = 900;
+marks = [mk(660, 'start', { what: 'Cooking' }), mk(700, 'start', { what: 'Bath time' }), mk(725, 'stop'), mk(800, 'ready', { what: 'Shop' }), mk(815, 'back'), mk(900, 'start', { what: 'Cooking' })];
+t = T.build(marks, d + 920 * M);
+const tk = t.filter(x => x.task);
+assert.deepEqual(tk.map(x => [x.what, x.parts.total ? x.parts.total / M : null, !!x.open]), [['Cooking', null, true], ['Bath time', 25, false], ['Cooking', 40, false]]);
+assert.equal(t.find(x => x.what === 'Shop').parts.total / M, 15);
+assert.equal(T.stats(t).Cooking.n, 1);
+assert.equal((d + 1100 * M - T.plan(T.stats(t)['Bath time'], d + 1100 * M).startBy) / M, 25);
+
 console.log('time check ok');
