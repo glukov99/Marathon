@@ -94,6 +94,9 @@
       .filter(v => !UNNAMED.test(v.place) || (v.off && v.off - v.in >= 10 * 60e3)) // a short unnamed stop is traffic, not a thing
       .map(v => ({ act: actFor(v.place, v.in), a: v.in, b: v.off || 0 }));
     const xs = runs.concat(stops).sort((x, y) => x.a - y.a);
+    // The menu tap names something with no stop of its own yet (the nursery not named, or no GPS): it is the first
+    // thing, from the start until the next thing begins. "Nursery drop-off", then the watch's run → two legs.
+    if (t.what && xs.length && !xs.some(x => x.act === t.what) && xs[0].a > start) xs.unshift({ act: t.what, a: start, b: xs[0].a, tap: true });
     if (xs.length < 2) return null;
     let tapLeg = t.what ? xs.findIndex(x => x.act === t.what) : -1;
     if (t.what && tapLeg < 0) tapLeg = 0;
@@ -102,9 +105,11 @@
       const last = k === xs.length - 1, legEnd = last ? end : (x.b || xs[k + 1].a), p = {};
       if (k === 0 && t.ready && t.out && t.out > t.ready) p.ready = t.out - t.ready;
       const go = k === 0 ? (t.out || start) : from;
-      if (x.a > go) p.travel = x.a - go;
-      if (x.a > from) p.arrive = x.a - from;
-      if (x.b > x.a) p.there = x.b - x.a;
+      if (!x.tap) {
+        if (x.a > go) p.travel = x.a - go;
+        if (x.a > from) p.arrive = x.a - from;
+        if (x.b > x.a) p.there = x.b - x.a;
+      }
       if (last && end && x.b && end > x.b) p.home = end - x.b;
       if (legEnd > from) p.total = legEnd - from;
       const leg = { what: k === tapLeg ? t.what : x.act, start: from, end: legEnd, parts: p };
@@ -179,7 +184,7 @@
   }
   /* Taps and typed trips + GPS. Once GPS covers a time, the heating automation's leave/arrive (500 m out) is dropped. */
   function merge(marks, visits, places, current, runs) {
-    const gm = visitMarks(visits, places, current).concat(runMarks(runs, visits, places));
+    const gm = visitMarks(visits, places, current).concat(runMarks(runs, visits, places, marks));
     const span = (visits || []).map(v => [v.start - 45 * 60e3, (v.end || Date.now()) + 45 * 60e3]);
     const keep = marks.filter(m => m.src !== 'heat' || !span.some(([a, b]) => m.at >= a && m.at <= b));
     return keep.concat(gm);
@@ -190,11 +195,12 @@
      - phone along: GPS has the real leave and return (walk or drive to the start, the way home); the run only
        names the trip (an out mark named Run; the earlier GPS out wins, so it changes no time).
      A run mostly inside a stay away from home is left out: a treadmill, or a race with its own trip. */
-  function runMarks(runs, visits, places) {
-    const vs = visits || [], H12 = 12 * 3600e3;
-    // Runs before Overland started have only the watch's start and stop, no travel: they would make runs look shorter
-    // than the door-to-door trips measured since. So only runs from the first GPS stay on count.
-    const since = Math.min(...vs.map(v => v.start));
+  function runMarks(runs, visits, places, marks) {
+    const vs = visits || [], H12 = 12 * 3600e3, ms = marks || [];
+    // Runs from before the time log existed have only the watch's start and stop, no travel: they would make runs
+    // look shorter than the door-to-door trips measured since. So runs count from the first GPS stay or the first
+    // tap / leave / arrive mark, whichever came first (typed trips do not count as a start).
+    const since = Math.min(...vs.map(v => v.start), ...ms.filter(m => m.mark !== 'manual').map(m => m.at));
     if (!isFinite(since)) return [];
     const isHome = v => { const p = placeOf(v, places); return !!(p && /^home$/i.test(p.name)); };
     return (runs || []).filter(r => r.start >= since).filter(r => !vs.some(v => !isHome(v) &&
@@ -203,7 +209,9 @@
       const atHome = vs.some(v => isHome(v) && v.start <= mid && (v.end || Infinity) >= mid);
       const gpsOn = vs.some(v => (v.end || Infinity) >= r.start - H12 && v.start <= r.end + H12);
       const out = { id: 'r:' + r.id + ':o', at: r.start, mark: 'out', what: 'Run', place: '', end: r.end, src: 'run' };
-      return atHome || !gpsOn ? [out, { id: 'r:' + r.id + ':b', at: r.end, mark: 'back', what: '', place: '', end: 0, src: 'run' }] : [out];
+      // no GPS, but the heating automation (or a tap) saw you come home within 90 min: that is the real end, door to door
+      const backSoon = !gpsOn && ms.some(m => m.mark === 'back' && m.at >= r.end && m.at <= r.end + 90 * 60e3);
+      return (atHome || !gpsOn) && !backSoon ? [out, { id: 'r:' + r.id + ':b', at: r.end, mark: 'back', what: '', place: '', end: 0, src: 'run' }] : [out];
     });
   }
 

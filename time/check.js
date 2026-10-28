@@ -93,9 +93,10 @@ assert.equal(T.merge([], [{ id: 'g', start: d + 90 * M, end: d + 150 * M, lat: 4
 // d) no GPS around the run (gap in tracking), but GPS started earlier: the run is the trip
 t = T.build(T.merge([], [{ id: 'old', start: d - 3000 * M, end: d - 2900 * M, lat: 42.1354, lon: 24.7453 }], places, null, run), d + 700 * M);
 assert.equal(t.find(x => x.what === 'Run').parts.total / M, 36);
-// e) runs from before Overland started do not count at all
+// e) runs from before the time log started do not count at all
 assert.equal(T.merge([], [], places, null, run).length, 0);
 assert.equal(T.merge([], [{ id: 'late', start: d + 500 * M, end: d + 600 * M, lat: 42.1354, lon: 24.7453 }], places, null, run).filter(m => m.src === 'run').length, 0);
+assert.equal(T.merge([{ id: 'typed', at: d - 99 * M, mark: 'manual', what: 'Gym', place: '', end: d - 9 * M }], [], places, null, run).filter(m => m.src === 'run').length, 0);
 
 // 8. The morning: ready 07:00 (tap "Nursery drop-off"), leave 07:20, nursery 07:30–07:36, run 07:40–08:20 (phone along), home 08:25.
 const nur = { name: 'Nursery', lat: 42.14, lon: 24.75, r: 150 };
@@ -130,5 +131,14 @@ assert.deepEqual(tk.map(x => [x.what, x.parts.total ? x.parts.total / M : null, 
 assert.equal(t.find(x => x.what === 'Shop').parts.total / M, 15);
 assert.equal(T.stats(t).Cooking.n, 1);
 assert.equal((d + 1100 * M - T.plan(T.stats(t)['Bath time'], d + 1100 * M).startBy) / M, 25);
+
+// 11. This morning without GPS: tap 07:26 "Nursery drop-off", heat out 08:37, run 09:15–10:07, heat back 10:19.
+const am = d + 26 * M; // 07:26
+t = T.build(T.merge([{ id: 'w1', at: am, mark: 'ready', what: 'Nursery drop-off', place: '', end: 0 }, { id: 'w2', at: am + 71 * M, mark: 'out', what: '', place: '', end: 0, src: 'heat' },
+  { id: 'w3', at: am + 173 * M, mark: 'back', what: '', place: '', end: 0, src: 'heat' }], [], places, null, [{ id: 'rr', start: am + 109 * M, end: am + 161 * M }]), am + 300 * M);
+const wm = t.find(x => x.legs);
+assert.equal(wm.what, 'Nursery drop-off → Run');
+assert.deepEqual(wm.legs.map(l => [l.what, l.parts.total / M, l.parts.ready ? l.parts.ready / M : 0]), [['Nursery drop-off', 109, 71], ['Run', 64, 0]]);
+assert.equal(wm.legs[1].parts.home / M, 12);
 
 console.log('time check ok');
