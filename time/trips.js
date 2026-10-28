@@ -93,6 +93,7 @@
     const what = t.what || (real ? actFor(real.place, real.in) : t.visits[0] ? actFor(t.visits[0].place, t.visits[0].off) : '');
     const live = !end && now - start < 12 * H;
     const legs = splitLegs(t, start, end);
+    if (legs) { delete p.there; delete p.arrive; } // a chain's "time at stops" adds up unlike things; its legs carry those
     return { what: legs ? legs.map(l => l.what).join(' → ') : what, start, end, open: live, unfinished: !end && !live, parts: p, legs,
       visits: t.visits, ids: t.marks.map(m => m.id), marks: t.marks };
   }

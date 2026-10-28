@@ -13,7 +13,7 @@ assert.equal(t.length, 1);
 assert.equal(t[0].what, 'Nursery drop-off → Gym');
 assert.deepEqual(t[0].legs.map(l => Object.fromEntries(Object.entries(l.parts).map(([k, v]) => [k, v / M]))),
   [{ ready: 20, travel: 12, arrive: 32, there: 8, total: 40 }, { travel: 15, arrive: 15, there: 90, home: 20, total: 125 }]);
-assert.deepEqual(Object.fromEntries(Object.entries(t[0].parts).map(([k, v]) => [k, v / M])), { ready: 20, travel: 12, arrive: 32, there: 98, home: 20, total: 165 });
+assert.deepEqual(Object.fromEntries(Object.entries(t[0].parts).map(([k, v]) => [k, v / M])), { ready: 20, travel: 12, home: 20, total: 165 });
 
 // 2. No menu tap: the place names it; afternoon nursery = pick-up. Duplicate out keeps the first.
 n = 100;
@@ -162,6 +162,7 @@ assert.ok(pf.readyFromAll && (d + 600 * M - pf.startBy) / M === 50);
   assert.equal(tt.parts.ready / M, 68);
   assert.deepEqual(tt.legs.map(l => [l.what, Math.round(l.parts.total / M)]), [['Nursery drop-off', 83], ['Fuel', 12], ['Run', 94]]);
   assert.equal(tt.legs[0].parts.ready / M, 68);
+  assert.ok(!tt.parts.there && tt.legs[2].parts.there / M === 52);
 }
 
 // 14. One stay alone (unnamed home, no taps) is not a trip
