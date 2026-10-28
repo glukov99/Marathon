@@ -149,4 +149,19 @@ assert.deepEqual([ra.n, ra.med / M, ra.plan / M], [4, 12, 40]);
 const pf = T.plan({ n: 1, parts: { travel: { med: 10 * M, plan: 10 * M } } }, d + 600 * M, ra);
 assert.ok(pf.readyFromAll && (d + 600 * M - pf.startBy) / M === 50);
 
+// 13. Today with Home not named yet and the run spot named: ready ends at the first move (08:34), the run spot folds into the run.
+{
+  const P = [{ name: 'Nursery', lat: 42.14, lon: 24.75, r: 150 }, { name: 'Fuel', lat: 42.12, lon: 24.73, r: 150 }, { name: 'Youth hill', lat: 42.13, lon: 24.72, r: 150 }];
+  const a0 = d + 26 * M; // 07:26
+  const V = [{ id: 'h', start: a0 - 22 * M, end: a0 + 68 * M, lat: 42.126, lon: 24.727 }, { id: 'n', start: a0 + 77 * M, end: a0 + 83 * M, lat: 42.14, lon: 24.75 },
+    { id: 'f', start: a0 + 90 * M, end: a0 + 95 * M, lat: 42.12, lon: 24.73 }, { id: 'y1', start: a0 + 95 * M, end: a0 + 102 * M, lat: 42.13, lon: 24.72 },
+    { id: 'y2', start: a0 + 160 * M, end: a0 + 163 * M, lat: 42.13, lon: 24.72 }, { id: 'y3', start: a0 + 164 * M, end: a0 + 170 * M, lat: 42.13, lon: 24.72 }];
+  const tt = T.build(T.merge([{ id: 'w', at: a0, mark: 'ready', what: 'Nursery drop-off', place: '', end: 0 }, { id: 'b', at: a0 + 189 * M, mark: 'back', what: '', place: '', end: 0 }], V, P, null,
+    [{ id: 'R', start: a0 + 109 * M, end: a0 + 161 * M }]), a0 + 300 * M).find(x => x.legs);
+  assert.equal(tt.what, 'Nursery drop-off → Fuel → Run');
+  assert.equal(tt.parts.ready / M, 68);
+  assert.deepEqual(tt.legs.map(l => [l.what, Math.round(l.parts.total / M)]), [['Nursery drop-off', 83], ['Fuel', 12], ['Run', 94]]);
+  assert.equal(tt.legs[0].parts.ready / M, 68);
+}
+
 console.log('time check ok');

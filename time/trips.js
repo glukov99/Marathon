@@ -64,13 +64,23 @@
     return { manual: true, what: t.what, start: t.start, end: t.end, ids: [t.marks[0].id], parts: { total: t.end - t.start }, visits: [], marks: t.marks };
   }
 
+  /* When you actually left: the first sign of moving after the tap (left home, left a stop, arrived somewhere).
+     A run's own start counts only when nothing came before it, so an unnamed home cannot stretch "getting ready"
+     to the start of a run an hour later. */
+  function leftAt(t) {
+    const after = t.marks.filter(m => m.at >= (t.ready || 0) && (m.mark === 'in' || m.mark === 'off' || (m.mark === 'out' && m.src !== 'run'))).map(m => m.at);
+    const run = t.marks.filter(m => m.mark === 'out' && m.src === 'run').map(m => m.at);
+    return after.length ? Math.min(...after) : run.length ? Math.min(...run) : 0;
+  }
+
   function finish(t, now) {
     const v0 = t.visits.find(v => v.in), vl = t.visits.slice().reverse().find(v => v.off);
     const start = t.ready || t.out || (v0 && v0.in) || t.marks[0].at;
     const end = t.back || 0;
     const p = {};
-    if (t.ready && t.out && t.out > t.ready) p.ready = t.out - t.ready;
-    if (t.out && v0 && v0.in > t.out) p.travel = v0.in - t.out;
+    const left = leftAt(t);
+    if (t.ready && left > t.ready) p.ready = left - t.ready;
+    if (left && v0 && v0.in > left) p.travel = v0.in - left;
     if (v0 && v0.in > start) p.arrive = v0.in - start; // from the start to the door of the place
     const at = t.visits.filter(v => v.in && v.off).reduce((s, v) => s + (v.off - v.in), 0);
     if (at) p.there = at;
@@ -90,7 +100,18 @@
      (a stop during a run belongs to the run). The menu tap names the leg it matches, otherwise the first. */
   function splitLegs(t, start, end) {
     const runs = t.marks.filter(m => m.src === 'run' && m.mark === 'out' && m.end).map(m => ({ act: 'Run', a: m.at, b: m.end }));
-    const stops = t.visits.filter(v => v.in && !runs.some(r => v.in >= r.a && v.in <= r.b))
+    const near = 15 * 60e3, allIn = t.visits.filter(v => v.in);
+    // The parking or warm-up spot: you are there just before a run (ending ≤ 15 min before it) and back at the
+    // same spot just after it (≤ 15 min after; the car). Both belong to the run. A stop you do not come back to
+    // (the nursery, then straight onto the run) stays its own thing.
+    const same = (a, b) => a.place.toLowerCase() === b.place.toLowerCase();
+    const runSpot = v => runs.some(r => {
+      const before = allIn.filter(x => x.in < r.a), after = allIn.filter(x => x.in > r.b);
+      const pre = before[before.length - 1], post = after[0];
+      const ok = pre && post && pre.off && r.a - pre.off <= near && post.in - r.b <= near && same(pre, post);
+      return ok && (v === pre || (same(v, post) && v.in > r.b && v.in - r.b <= near + 30 * 60e3));
+    });
+    const stops = t.visits.filter(v => v.in && !runs.some(r => v.in >= r.a && v.in <= r.b) && !runSpot(v))
       .filter(v => !UNNAMED.test(v.place) || (v.off && v.off - v.in >= 10 * 60e3)) // a short unnamed stop is traffic, not a thing
       .map(v => ({ act: actFor(v.place, v.in), a: v.in, b: v.off || 0 }));
     const xs = runs.concat(stops).sort((x, y) => x.a - y.a)
@@ -104,8 +125,9 @@
     let from = start;
     return xs.map((x, k) => {
       const last = k === xs.length - 1, legEnd = last ? end : (x.b || xs[k + 1].a), p = {};
-      if (k === 0 && t.ready && t.out && t.out > t.ready) p.ready = t.out - t.ready;
-      const go = k === 0 ? (t.out || start) : from;
+      const left = leftAt(t);
+      if (k === 0 && t.ready && left > t.ready) p.ready = left - t.ready;
+      const go = k === 0 ? (left || start) : from;
       if (!x.tap) {
         if (x.a > go) p.travel = x.a - go;
         if (x.a > from) p.arrive = x.a - from;
