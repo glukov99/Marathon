@@ -135,18 +135,23 @@
     const keep = marks.filter(m => m.src !== 'heat' || !span.some(([a, b]) => m.at >= a && m.at <= b));
     return keep.concat(gm);
   }
-  /* Runs from the watch: out at the start, back at the end, named Run. With the phone along, GPS already has
-     the real leave time (the first out wins) and this only names the trip; with the phone at home it is the whole trip.
-     A run mostly inside a stay somewhere else (not home) is left out: that is a treadmill or a race with its own trip. */
+  /* Runs from the watch. The trip must be door to door, travel included, so:
+     - phone at home during the run (a Home stay covers it), or no GPS at all around it: the run is the trip,
+       out at the watch's start, back at its stop;
+     - phone along: GPS has the real leave and return (walk or drive to the start, the way home); the run only
+       names the trip (an out mark named Run; the earlier GPS out wins, so it changes no time).
+     A run mostly inside a stay away from home is left out: a treadmill, or a race with its own trip. */
   function runMarks(runs, visits, places) {
-    return (runs || []).filter(r => !(visits || []).some(v => {
-      const p = placeOf(v, places);
-      if (p && /^home$/i.test(p.name)) return false;
-      const over = Math.min(r.end, v.end || Infinity) - Math.max(r.start, v.start);
-      return over > (r.end - r.start) / 2;
-    })).flatMap(r => [
-      { id: 'r:' + r.id + ':o', at: r.start, mark: 'out', what: 'Run', place: '', end: 0, src: 'run' },
-      { id: 'r:' + r.id + ':b', at: r.end, mark: 'back', what: '', place: '', end: 0, src: 'run' }]);
+    const vs = visits || [], H12 = 12 * 3600e3;
+    const isHome = v => { const p = placeOf(v, places); return !!(p && /^home$/i.test(p.name)); };
+    return (runs || []).filter(r => !vs.some(v => !isHome(v) &&
+      Math.min(r.end, v.end || Infinity) - Math.max(r.start, v.start) > (r.end - r.start) / 2)).flatMap(r => {
+      const mid = (r.start + r.end) / 2;
+      const atHome = vs.some(v => isHome(v) && v.start <= mid && (v.end || Infinity) >= mid);
+      const gpsOn = vs.some(v => (v.end || Infinity) >= r.start - H12 && v.start <= r.end + H12);
+      const out = { id: 'r:' + r.id + ':o', at: r.start, mark: 'out', what: 'Run', place: '', end: 0, src: 'run' };
+      return atHome || !gpsOn ? [out, { id: 'r:' + r.id + ':b', at: r.end, mark: 'back', what: '', place: '', end: 0, src: 'run' }] : [out];
+    });
   }
 
   /* Stops with no name yet, grouped within 150 m, most visited first. */
