@@ -93,7 +93,8 @@
     const stops = t.visits.filter(v => v.in && !runs.some(r => v.in >= r.a && v.in <= r.b))
       .filter(v => !UNNAMED.test(v.place) || (v.off && v.off - v.in >= 10 * 60e3)) // a short unnamed stop is traffic, not a thing
       .map(v => ({ act: actFor(v.place, v.in), a: v.in, b: v.off || 0 }));
-    const xs = runs.concat(stops).sort((x, y) => x.a - y.a);
+    const xs = runs.concat(stops).sort((x, y) => x.a - y.a)
+      .reduce((acc, x) => { const l = acc[acc.length - 1]; if (l && l.act === x.act) l.b = x.b || l.b; else acc.push({ ...x }); return acc; }, []); // the same place twice in a row = one thing
     // The menu tap names something with no stop of its own yet (the nursery not named, or no GPS): it is the first
     // thing, from the start until the next thing begins. "Nursery drop-off", then the watch's run → two legs.
     if (t.what && xs.length && !xs.some(x => x.act === t.what) && xs[0].a > start) xs.unshift({ act: t.what, a: start, b: xs[0].a, tap: true });
