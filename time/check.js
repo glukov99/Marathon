@@ -73,4 +73,19 @@ assert.ok(!T.stats(t)[un.what]);
 assert.equal(T.unnamed(vis, places).length, 1);
 assert.equal(T.unnamed(vis, places)[0].n, 1);
 
+// 7. Runs from the watch. a) phone at home all day: the run is the whole trip, getting ready counted from the tap.
+const home = [{ id: 'h', start: d - 600 * M, end: d + 600 * M, lat: 42.1354, lon: 24.7453 }];
+const run = [{ id: '9', start: d + 100 * M, end: d + 136 * M }];
+t = T.build(T.merge([{ id: 'r1', at: d + 85 * M, mark: 'ready', what: '', place: '', end: 0 }], home, places, null, run), d + 700 * M);
+const rt = t.find(x => x.what === 'Run');
+assert.ok(rt, 'run trip');
+assert.deepEqual([rt.parts.ready, rt.parts.total].map(x => x / M), [15, 51]);
+// b) phone along: GPS left home 3 min before the watch started; the GPS stop-less trip becomes Run, total from the GPS leave.
+const two = [{ id: 'a', start: d - 600 * M, end: d + 97 * M, lat: 42.1354, lon: 24.7453 }, { id: 'b', start: d + 140 * M, end: d + 600 * M, lat: 42.1354, lon: 24.7453 }];
+t = T.build(T.merge([], two, places, null, run), d + 700 * M);
+assert.equal(t.filter(x => x.what === 'Run').length, 1);
+assert.equal(t.find(x => x.what === 'Run').parts.total / M, 39);
+// c) a treadmill-like run inside a gym stay is left out
+assert.equal(T.merge([], [{ id: 'g', start: d + 90 * M, end: d + 150 * M, lat: 42.15, lon: 24.76 }], places, null, run).filter(m => m.src === 'run').length, 0);
+
 console.log('time check ok');

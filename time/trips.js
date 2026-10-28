@@ -129,12 +129,26 @@
     return out;
   }
   /* Taps and typed trips + GPS. Once GPS covers a time, the heating automation's leave/arrive (500 m out) is dropped. */
-  function merge(marks, visits, places, current) {
-    const gm = visitMarks(visits, places, current);
+  function merge(marks, visits, places, current, runs) {
+    const gm = visitMarks(visits, places, current).concat(runMarks(runs, visits, places));
     const span = (visits || []).map(v => [v.start - 45 * 60e3, (v.end || Date.now()) + 45 * 60e3]);
     const keep = marks.filter(m => m.src !== 'heat' || !span.some(([a, b]) => m.at >= a && m.at <= b));
     return keep.concat(gm);
   }
+  /* Runs from the watch: out at the start, back at the end, named Run. With the phone along, GPS already has
+     the real leave time (the first out wins) and this only names the trip; with the phone at home it is the whole trip.
+     A run mostly inside a stay somewhere else (not home) is left out: that is a treadmill or a race with its own trip. */
+  function runMarks(runs, visits, places) {
+    return (runs || []).filter(r => !(visits || []).some(v => {
+      const p = placeOf(v, places);
+      if (p && /^home$/i.test(p.name)) return false;
+      const over = Math.min(r.end, v.end || Infinity) - Math.max(r.start, v.start);
+      return over > (r.end - r.start) / 2;
+    })).flatMap(r => [
+      { id: 'r:' + r.id + ':o', at: r.start, mark: 'out', what: 'Run', place: '', end: 0, src: 'run' },
+      { id: 'r:' + r.id + ':b', at: r.end, mark: 'back', what: '', place: '', end: 0, src: 'run' }]);
+  }
+
   /* Stops with no name yet, grouped within 150 m, most visited first. */
   function unnamed(visits, places) {
     const groups = [];

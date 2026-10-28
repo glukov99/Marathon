@@ -36,7 +36,7 @@
       const r = await (await fetch(url)).json();
       if (r.error) { say(r.error); return null; }
       marks = r.marks || []; skew = r.now ? r.now - Date.now() : 0;
-      gps = { visits: r.visits || [], places: r.places || [], current: r.current || null, lastPoint: r.lastPoint || 0, ovUrl: r.overlandUrl || '' };
+      gps = { visits: r.visits || [], places: r.places || [], current: r.current || null, lastPoint: r.lastPoint || 0, ovUrl: r.overlandUrl || '', runs: r.runs || [] };
       render(); return r;
     } catch (e) { say('Offline. Try again.'); return null; }
     finally { busy = false; }
@@ -45,7 +45,7 @@
 
   function render() {
     const now = Date.now() + skew;
-    const trips = Trips.build(Trips.merge(marks, gps.visits, gps.places, gps.current), now), st = Trips.stats(trips);
+    const trips = Trips.build(Trips.merge(marks, gps.visits, gps.places, gps.current, gps.runs), now), st = Trips.stats(trips);
     openTrip = trips.find(t => t.open) || null;
     $('upd').textContent = trips.length ? trips.length + ' trips logged' : 'Nothing logged yet. Start with the buttons below or the Time shortcut.';
     renderNow(now, st);
@@ -115,7 +115,7 @@
       const marksHtml = t.manual ? '' : `<details><summary class="sub">Times</summary><ul class="marks">${t.marks.map(m =>
         `<li><span style="min-width:110px">${MARK[m.mark]}${m.place ? ' ' + esc(label(m.place)) : ''}</span>` + (real(m.id)
           ? `<input type="time" value="${hm(m.at)}" data-at="${m.id}" data-day="${ymd(m.at)}"><button class="x" data-del="${m.id}" aria-label="Delete this mark">✕</button>`
-          : `<span class="num" style="font-weight:600">${hm(m.at)}</span><span class="sub">GPS</span>`) + `</li>`).join('')}</ul></details>`;
+          : `<span class="num" style="font-weight:600">${hm(m.at)}</span><span class="sub">${m.src === 'run' ? 'watch' : 'GPS'}</span>`) + `</li>`).join('')}</ul></details>`;
       const firstReal = t.marks.find(m => real(m.id));
       const named = firstReal ? `<select data-what="${firstReal.id}" aria-label="What it was"><option value="">What was it?</option>${opts(Trips.UNNAMED.test(t.what) ? '' : t.what)}</select>`
         : Trips.UNNAMED.test(t.what) ? '<a class="sub" href="#places">Name this place</a>' : '';
