@@ -89,9 +89,11 @@
     const rows = [...new Set(Trips.ACTS.concat(allNames(), Object.keys(st)))].map(a => {
       const s = st[a];
       if (!s) return `<div class="act"><div class="act-h"><b>${esc(a)}</b><span class="sub">no trips yet</span></div></div>`;
-      const T = s.parts.total;
-      const parts = ['ready', 'travel', 'there', 'home'].filter(k => s.parts[k]).map(k => `<span>${PART[k]} <b>${dur(s.parts[k].med)}</b></span>`).join('');
-      return `<div class="act"><div class="act-h"><b>${esc(a)}</b><span>${T ? `<span class="num">${dur(T.med)}</span> <span class="plan">plan for ${dur(T.plan)}</span>` : ''}</span></div>
+      const T = s.parts.total, A = s.parts.there;
+      // Headline: the thing itself (the run, the time at the gym); "plan for" is the whole trip, door to door.
+      const parts = ['ready', 'travel', 'home'].filter(k => s.parts[k]).map(k => `<span>${PART[k]} <b>${dur(s.parts[k].med)}</b></span>`).join('')
+        + (A && T ? `<span>door to door <b>${dur(T.med)}</b></span>` : '');
+      return `<div class="act"><div class="act-h"><b>${esc(a)}${A ? ` <span class="num" style="font-weight:600">${dur(A.med)}</span>` : ''}</b><span>${T ? (A ? '' : `<span class="num">${dur(T.med)}</span> `) + `<span class="plan">plan for ${dur(T.plan)}</span>` : ''}</span></div>
         <div class="steps">${parts}<span>${s.n} trip${s.n > 1 ? 's' : ''}</span></div></div>`;
     });
     const ra = rAll ? `<div class="act"><div class="act-h"><b>Getting ready, any trip</b><span><span class="num">${dur(rAll.med)}</span> <span class="plan">plan for ${dur(rAll.plan)}</span></span></div>
