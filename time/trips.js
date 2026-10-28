@@ -169,15 +169,19 @@
     return keep.concat(gm);
   }
   /* Runs from the watch. The trip must be door to door, travel included, so:
-     - phone at home during the run (a Home stay covers it), or no GPS at all around it: the run is the trip,
+     - phone at home during the run (a Home stay covers it), or no GPS around it: the run is the trip,
        out at the watch's start, back at its stop;
      - phone along: GPS has the real leave and return (walk or drive to the start, the way home); the run only
        names the trip (an out mark named Run; the earlier GPS out wins, so it changes no time).
      A run mostly inside a stay away from home is left out: a treadmill, or a race with its own trip. */
   function runMarks(runs, visits, places) {
     const vs = visits || [], H12 = 12 * 3600e3;
+    // Runs before Overland started have only the watch's start and stop, no travel: they would make runs look shorter
+    // than the door-to-door trips measured since. So only runs from the first GPS stay on count.
+    const since = Math.min(...vs.map(v => v.start));
+    if (!isFinite(since)) return [];
     const isHome = v => { const p = placeOf(v, places); return !!(p && /^home$/i.test(p.name)); };
-    return (runs || []).filter(r => !vs.some(v => !isHome(v) &&
+    return (runs || []).filter(r => r.start >= since).filter(r => !vs.some(v => !isHome(v) &&
       Math.min(r.end, v.end || Infinity) - Math.max(r.start, v.start) > (r.end - r.start) / 2)).flatMap(r => {
       const mid = (r.start + r.end) / 2;
       const atHome = vs.some(v => isHome(v) && v.start <= mid && (v.end || Infinity) >= mid);

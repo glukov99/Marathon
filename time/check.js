@@ -90,9 +90,12 @@ assert.equal(t.find(x => x.what === 'Run').parts.total / M, 43); // 97 → 140: 
 // c) a treadmill-like run inside a gym stay is left out
 assert.equal(T.merge([], [{ id: 'g', start: d + 90 * M, end: d + 150 * M, lat: 42.15, lon: 24.76 }], places, null, run).filter(m => m.src === 'run').length, 0);
 
-// d) no GPS at all that day: the run is the trip
-t = T.build(T.merge([], [], places, null, run), d + 700 * M);
+// d) no GPS around the run (gap in tracking), but GPS started earlier: the run is the trip
+t = T.build(T.merge([], [{ id: 'old', start: d - 3000 * M, end: d - 2900 * M, lat: 42.1354, lon: 24.7453 }], places, null, run), d + 700 * M);
 assert.equal(t.find(x => x.what === 'Run').parts.total / M, 36);
+// e) runs from before Overland started do not count at all
+assert.equal(T.merge([], [], places, null, run).length, 0);
+assert.equal(T.merge([], [{ id: 'late', start: d + 500 * M, end: d + 600 * M, lat: 42.1354, lon: 24.7453 }], places, null, run).filter(m => m.src === 'run').length, 0);
 
 // 8. The morning: ready 07:00 (tap "Nursery drop-off"), leave 07:20, nursery 07:30–07:36, run 07:40–08:20 (phone along), home 08:25.
 const nur = { name: 'Nursery', lat: 42.14, lon: 24.75, r: 150 };
