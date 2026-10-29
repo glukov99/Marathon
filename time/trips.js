@@ -103,7 +103,7 @@
      the last leg also takes the way home. Things: each stop, and each run from the watch
      (a stop during a run belongs to the run). The menu tap names the leg it matches, otherwise the first. */
   function splitLegs(t, start, end) {
-    const runs = t.marks.filter(m => m.src === 'run' && m.mark === 'out' && m.end).map(m => ({ act: 'Run', a: m.at, b: m.end }));
+    const runs = t.marks.filter(m => m.src === 'run' && m.mark === 'out' && m.end).map(m => ({ act: 'Run', a: m.at, b: m.end, watch: true }));
     const near = 15 * 60e3, allIn = t.visits.filter(v => v.in);
     // The parking or warm-up spot: you are there just before a run (ending ≤ 15 min before it) and back at the
     // same spot just after it (≤ 15 min after; the car). Both belong to the run. A stop you do not come back to
@@ -120,22 +120,31 @@
       .filter(v => !UNNAMED.test(v.place) || (v.off && v.off - v.in >= 10 * 60e3)) // a short unnamed stop is traffic, not a thing
       .map(v => ({ act: actFor(v.place, v.in), a: v.in, b: v.off || 0 }));
     const xs = runs.concat(stops).sort((x, y) => x.a - y.a)
-      .reduce((acc, x) => { const l = acc[acc.length - 1]; if (l && l.act === x.act) l.b = x.b || l.b; else acc.push({ ...x }); return acc; }, []); // the same place twice in a row = one thing
+      // the same place twice in a row = one thing. A stop at a spot named Run next to the watch's run: the watch's
+      // start and stop are the run (29 Oct 2026: a 37-min run read as 63 min from the stop before it).
+      .reduce((acc, x) => {
+        const l = acc[acc.length - 1];
+        if (!l || l.act !== x.act) acc.push({ ...x });
+        else if (x.watch && !l.watch) { l.s = l.a; l.a = x.a; l.b = x.b; l.watch = true; } // s: when you got to the spot
+        else if (!l.watch || x.watch) l.b = x.b || l.b;
+        return acc;
+      }, []);
     // The menu tap names something with no stop of its own yet (the nursery not named, or no GPS): it is the first
     // thing, from the start until the next thing begins. "Nursery drop-off", then the watch's run → two legs.
-    if (t.what && xs.length && !xs.some(x => x.act === t.what) && xs[0].a > start) xs.unshift({ act: t.what, a: start, b: xs[0].a, tap: true });
+    if (t.what && xs.length && !xs.some(x => x.act === t.what) && xs[0].a > start) xs.unshift({ act: t.what, a: start, b: xs[0].s || xs[0].a, tap: true });
     if (xs.length < 2) return null;
     let tapLeg = t.what ? xs.findIndex(x => x.act === t.what) : -1;
     if (t.what && tapLeg < 0) tapLeg = 0;
     let from = start;
     return xs.map((x, k) => {
-      const last = k === xs.length - 1, legEnd = last ? end : (x.b || xs[k + 1].a), p = {};
+      const last = k === xs.length - 1, legEnd = last ? end : (x.b || xs[k + 1].s || xs[k + 1].a), p = {};
       const left = leftAt(t);
       if (k === 0 && t.ready && left > t.ready) p.ready = left - t.ready;
       const go = k === 0 ? (left || start) : from;
       if (!x.tap) {
-        if (x.a > go) p.travel = x.a - go;
-        if (x.a > from) p.arrive = x.a - from;
+        const got = x.s || x.a; // at a run spot, travel ends when you get there, not when the watch starts
+        if (got > go) p.travel = got - go;
+        if (got > from) p.arrive = got - from;
         if (x.b > x.a) p.there = x.b - x.a;
       }
       if (last && end && x.b && end > x.b) p.home = end - x.b;

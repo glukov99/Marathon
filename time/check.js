@@ -200,3 +200,19 @@ console.log('time check ok');
   assert.ok(!T.stats([{ what: 'Run → ?42.1,24.7', parts: { total: 1 }, legs: [] }])['Run → ?42.1,24.7']);
 }
 console.log('track check ok');
+
+// 29 Oct 2026: a stop at the spot named Run, then the watch's 37-min run: the run is 37 min, not from the stop.
+{
+  const pl = [{ name: 'Home', lat: 42.1354, lon: 24.7453, r: 150 }, { name: 'Run', lat: 42.1459, lon: 24.7274, r: 150 }];
+  const vis = [{ id: 'h1', start: d - 600 * M, end: d + 38 * M, lat: 42.1354, lon: 24.7453 },
+    { id: 'rs', start: d + 42 * M, end: d + 50 * M, lat: 42.1459, lon: 24.7274 },
+    { id: 'tr', start: d + 55 * M, end: d + 109 * M, lat: 42.1517, lon: 24.7183 },
+    { id: 'h2', start: d + 129 * M, end: 0, lat: 42.1354, lon: 24.7453 }];
+  const tr = T.build(T.merge([{ id: 'x', at: d, mark: 'ready', what: 'Nursery drop-off', place: '', end: 0 }], vis, pl, null,
+    [{ id: 'r', start: d + 68 * M, end: d + 105 * M }]), d + 1000 * M);
+  const run = tr[0].legs.find(l => l.what === 'Run');
+  assert.equal(run.parts.there / M, 37);
+  assert.equal(T.stats(tr).Run.parts.there.med / M, 37);
+  assert.deepEqual(tr[0].legs.map(l => l.parts.total / M), [42, 87]); // drop-off ends at the spot; the run is door to door
+}
+console.log('run spot check ok');
