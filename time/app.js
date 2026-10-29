@@ -19,7 +19,7 @@
     return g - tzOff(g - tzOff(g));
   }
   const PART = { ready: 'getting ready', travel: 'travel there', there: 'there', home: 'way home', arrive: 'start to arrival', total: 'total' };
-  const label = w => Trips.UNNAMED.test(w || '') ? 'Unnamed stop' : (w || 'Trip');
+  const label = w => !w ? 'Trip' : Trips.UNNAMED.test(w) ? 'Unnamed stop' : w.replace(/\?-?[\d.]+,-?[\d.]+/g, 'unnamed stop');
   const MARK = { start: 'Started', stop: 'Stopped', ready: 'Getting ready', out: 'Left home', in: 'Arrived', off: 'Left', back: 'Home', manual: 'Typed in' };
 
   // Names: the built-in activities plus any name used before (typed through "Other…"). Home timers have their own list.
@@ -161,7 +161,7 @@
         ${named}</div>
         <div class="sub">${esc(label(t.what))}</div>
         <div class="steps" style="margin-top:4px">${P.total ? `<span>total <b>${dur(P.total)}</b></span>` : ''}${t.legs ? '' : steps}</div>
-        ${t.legs ? t.legs.map(l => `<div class="steps"><span style="min-width:120px;color:var(--ink)">${esc(l.what)}</span>${l.parts.total ? `<b>${dur(l.parts.total)}</b>` : ''}${['ready', 'travel', 'there', 'home'].filter(k => l.parts[k]).map(k => `<span>${PART[k]} <b>${dur(l.parts[k])}</b></span>`).join('')}</div>`).join('') : ''}
+        ${t.legs ? t.legs.map(l => `<div class="steps"><span style="min-width:120px;color:var(--ink)">${esc(label(l.what))}</span>${l.parts.total ? `<b>${dur(l.parts.total)}</b>` : ''}${['ready', 'travel', 'there', 'home'].filter(k => l.parts[k]).map(k => `<span>${PART[k]} <b>${dur(l.parts[k])}</b></span>`).join('')}</div>`).join('') : ''}
         <div class="row">${marksHtml}${t.ids.some(real) ? `<button class="x" data-del="${t.ids.filter(real).join(',')}">${t.ids.every(real) ? 'Delete trip' : 'Delete the taps'}</button>` : ''}</div></div>`;
     }).join('');
   }

@@ -115,7 +115,8 @@
       const ok = pre && post && pre.off && r.a - pre.off <= near && post.in - r.b <= near && same(pre, post);
       return ok && (v === pre || (same(v, post) && v.in > r.b && v.in - r.b <= near + 30 * 60e3));
     });
-    const stops = t.visits.filter(v => v.in && !runs.some(r => v.in >= r.a && v.in <= r.b) && !runSpot(v))
+    // a stop that overlaps the run at all is the run (the track you circled, the warm-up there before the watch started)
+    const stops = t.visits.filter(v => v.in && !runs.some(r => v.in <= r.b && (v.off || Infinity) >= r.a) && !runSpot(v))
       .filter(v => !UNNAMED.test(v.place) || (v.off && v.off - v.in >= 10 * 60e3)) // a short unnamed stop is traffic, not a thing
       .map(v => ({ act: actFor(v.place, v.in), a: v.in, b: v.off || 0 }));
     const xs = runs.concat(stops).sort((x, y) => x.a - y.a)
@@ -154,7 +155,7 @@
   const PARTS = ['ready', 'travel', 'arrive', 'there', 'home', 'total'];
   function stats(trips) {
     const by = {};
-    const add = t => { if (t.what && !UNNAMED.test(t.what)) (by[t.what] = by[t.what] || []).push(t); };
+    const add = t => { if (t.what && !UNNAMED.test(t.what) && !t.what.includes('→ ?')) (by[t.what] = by[t.what] || []).push(t); };
     trips.filter(t => !t.open).forEach(t => { add(t); (t.legs || []).forEach(add); }); // the whole chain counts too, as "A → B"
     const out = {};
     for (const [what, ts] of Object.entries(by)) {
@@ -235,7 +236,9 @@
        out at the watch's start, back at its stop;
      - phone along: GPS has the real leave and return (walk or drive to the start, the way home); the run only
        names the trip (an out mark named Run; the earlier GPS out wins, so it changes no time).
-     A run mostly inside a stay away from home is left out: a treadmill, or a race with its own trip. */
+     A run mostly inside a stay at a named place (not Home, not Run) is left out: a treadmill at the gym.
+     Inside an unnamed stay it counts: laps on a track or a small loop stay within 100 m and read as one long stop
+     (29 Oct 2026: the run vanished and the track showed up as a 54-min unnamed stop). */
   function runMarks(runs, visits, places, marks) {
     const vs = visits || [], H12 = 12 * 3600e3, ms = marks || [];
     // Runs from before the time log existed have only the watch's start and stop, no travel: they would make runs
@@ -244,7 +247,8 @@
     const since = Math.min(...vs.map(v => v.start), ...ms.filter(m => m.mark !== 'manual').map(m => m.at));
     if (!isFinite(since)) return [];
     const isHome = v => { const p = placeOf(v, places); return !!(p && /^home$/i.test(p.name)); };
-    return (runs || []).filter(r => r.start >= since).filter(r => !vs.some(v => !isHome(v) &&
+    const elsewhere = v => { const p = placeOf(v, places); return !!(p && !/^(home|run)$/i.test(p.name)); };
+    return (runs || []).filter(r => r.start >= since).filter(r => !vs.some(v => elsewhere(v) &&
       Math.min(r.end, v.end || Infinity) - Math.max(r.start, v.start) > (r.end - r.start) / 2)).flatMap(r => {
       const mid = (r.start + r.end) / 2;
       const atHome = vs.some(v => isHome(v) && v.start <= mid && (v.end || Infinity) >= mid);

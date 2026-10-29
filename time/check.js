@@ -183,3 +183,20 @@ assert.ok(pf.readyFromAll && (d + 600 * M - pf.startBy) / M === 50);
 assert.equal(T.build(T.merge([], [{ id: 'z', start: d, end: 0, lat: 42.126, lon: 24.727 }], [], { start: d, last: d + 60 * M, lat: 42.126, lon: 24.727 }, []), d + 200 * M).length, 0);
 
 console.log('time check ok');
+
+// 29 Oct 2026, real morning: drop-off tap, laps on a track read as one 54-min unnamed stay around the watch's run.
+{
+  const pl = [{ name: 'Home', lat: 42.1354, lon: 24.7453, r: 150 }, { name: 'Gym', lat: 42.15, lon: 24.76, r: 150 }];
+  const vis = [{ id: 'h1', start: d - 600 * M, end: d + 38 * M, lat: 42.1354, lon: 24.7453 },
+    { id: 'tr', start: d + 55 * M, end: d + 109 * M, lat: 42.1517, lon: 24.7183 },     // the track, unnamed
+    { id: 'h2', start: d + 129 * M, end: 0, lat: 42.1354, lon: 24.7453 }];
+  const runs = [{ id: 'r', start: d + 68 * M, end: d + 105 * M }];
+  const tr = T.build(T.merge([{ id: 'x', at: d, mark: 'ready', what: 'Nursery drop-off', place: '', end: 0 }], vis, pl, null, runs), d + 1000 * M);
+  assert.equal(tr.length, 1);
+  assert.equal(tr[0].what, 'Nursery drop-off → Run');                 // no unnamed leg, the run is back
+  assert.deepEqual(tr[0].legs.map(l => l.parts.total / M), [68, 61]);    // drop-off until the run starts; the run home
+  assert.ok(T.stats(tr).Run && T.stats(tr)['Nursery drop-off → Run']);
+  // a chain with an unnamed stop in it is not its own activity in the stats
+  assert.ok(!T.stats([{ what: 'Run → ?42.1,24.7', parts: { total: 1 }, legs: [] }])['Run → ?42.1,24.7']);
+}
+console.log('track check ok');
