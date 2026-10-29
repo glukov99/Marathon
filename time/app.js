@@ -174,15 +174,17 @@
     $('gps-st').innerHTML += gps.ovUrl ? ` <div class="row" style="margin-top:8px"><button class="btn ghost" data-ovcopy="1">Copy the Overland server address</button><span class="sub">Paste it in Overland → Settings → Server URL. It holds the key, so don't share it.</span></div>` : '';
     const names = ['Home'].concat(Trips.PLACES);
     $('pl-names').innerHTML = [...new Set(names.concat(gps.places.map(p => p.name)))].map(n => `<option value="${esc(n)}">`).join('');
-    const un = Trips.unnamed(gps.visits, gps.places).slice(0, 12);
+    const un = Trips.unnamed(gps.visits, gps.places, gps.runs).slice(0, 12);
     const map = (a, b) => `https://maps.apple.com/?ll=${a},${b}&q=Stop`;
     $('pl-un').innerHTML = un.length ? un.map(u => `<div class="trip"><div class="trip-h"><div><b>${u.n} visit${u.n > 1 ? 's' : ''}</b> <span class="sub">usually ${dur(u.med)} · last ${day(u.last)} ${hm(u.last)}</span></div>
         <a class="sub" href="${map(u.lat, u.lon)}" target="_blank" rel="noopener">Map</a></div>
-        <div class="row" style="margin-top:6px"><input list="pl-names" placeholder="Name it (Home, Gym…)" data-pl="${u.lat},${u.lon}" style="flex:1;padding:8px"><button class="btn" data-plsave="${u.lat},${u.lon}">Save</button></div></div>`).join('')
+        <div class="row" style="margin-top:6px"><input list="pl-names" placeholder="Name it (Home, Gym…)" data-pl="${u.lat},${u.lon}" style="flex:1;padding:8px"><button class="btn" data-plsave="${u.lat},${u.lon}">Save</button><button class="btn ghost" data-plign="${u.lat},${u.lon}">Ignore</button></div></div>`).join('')
       : `<span class="sub">${gps.visits.length ? 'Every stop has a name.' : 'Stops appear here after the first day with Overland.'}</span>`;
     const count = p => gps.visits.filter(v => Trips.placeOf(v, gps.places) === p).length;
-    $('pl-named').innerHTML = gps.places.length ? gps.places.map(p => `<div class="trip-h" style="padding:6px 0"><span><b>${esc(p.name)}</b> <span class="sub">${count(p)} visits</span></span>
-        <span><a class="sub" href="${map(p.lat, p.lon)}" target="_blank" rel="noopener">Map</a> <button class="x" data-plrm="${p.lat},${p.lon}">Remove</button></span></div>`).join('') : '';
+    const named = gps.places.filter(p => p.name !== Trips.IGNORED), ign = gps.places.length - named.length;
+    $('pl-named').innerHTML = (named.length ? named.map(p => `<div class="trip-h" style="padding:6px 0"><span><b>${esc(p.name)}</b> <span class="sub">${count(p)} visits</span></span>
+        <span><a class="sub" href="${map(p.lat, p.lon)}" target="_blank" rel="noopener">Map</a> <button class="x" data-plrm="${p.lat},${p.lon}">Remove</button></span></div>`).join('') : '')
+      + (ign ? `<div class="trip-h" style="padding:6px 0"><span class="sub">${ign} ignored stop${ign > 1 ? 's' : ''}</span><button class="x" data-plunign="1">Ask again</button></div>` : '');
   }
 
   document.addEventListener('click', async e => {
@@ -195,6 +197,12 @@
       const inp = document.querySelector(`input[data-pl="${b.dataset.plsave}"]`), name = inp && inp.value.trim();
       if (!name) return say('Type a name first.');
       const [la, lo] = b.dataset.plsave.split(','); const r = await call(`&cmd=place&name=${encodeURIComponent(name)}&lat=${la}&lon=${lo}`); if (r) say(r.msg); return;
+    }
+    if (b.dataset.plign) { const [la, lo] = b.dataset.plign.split(','); const r = await call(`&cmd=place&name=${Trips.IGNORED}&lat=${la}&lon=${lo}&r=60`); if (r) say('Ignored. It will not be asked about again.'); return; }
+    if (b.dataset.plunign) {
+      if (!(await sure('Ask about the ignored stops again?', 'Ask again'))) return;
+      for (const p of gps.places.filter(p => p.name === Trips.IGNORED)) await call(`&cmd=place&name=&lat=${p.lat}&lon=${p.lon}`);
+      say('They are back under Stops to name.'); return;
     }
     if (b.dataset.plrm) { if (!(await sure('Remove this place? Its visits go back to unnamed.', 'Remove'))) return; const [la, lo] = b.dataset.plrm.split(','); const r = await call(`&cmd=place&name=&lat=${la}&lon=${lo}`); if (r) say(r.msg); return; }
     if (b.dataset.del) { if (!(await sure('Delete this?'))) return; const r = await call('&cmd=del&id=' + encodeURIComponent(b.dataset.del)); if (r) say(r.msg); }

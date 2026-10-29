@@ -210,6 +210,8 @@
     return best;
   }
   const UNNAMED = /^\?/;
+  /* "Ignore" on a pending stop saves it as a small place named Ignored (60 m): its visits make no marks at all. */
+  const IGNORED = 'Ignored', isIgnored = p => !!(p && p.name === IGNORED);
   const spotKey = v => '?' + v.lat.toFixed(3) + ',' + v.lon.toFixed(3);
   /* Visits become marks: Home = back (arrived) and out (left); any other place = in and off.
      A place not named yet gets a "?lat,lon" key, so its trips can be named later from the Places list. */
@@ -217,7 +219,9 @@
     const all = (visits || []).concat(current ? [{ id: 'vnow', start: current.start, end: 0, lat: current.lat, lon: current.lon }] : []);
     const out = [];
     all.forEach(v => {
-      const p = placeOf(v, places), name = p ? p.name : '', base = { what: '', end: 0, src: 'gps', lat: v.lat, lon: v.lon };
+      const p = placeOf(v, places);
+      if (isIgnored(p)) return;
+      const name = p ? p.name : '', base = { what: '', end: 0, src: 'gps', lat: v.lat, lon: v.lon };
       if (/^home$/i.test(name)) {
         out.push({ ...base, id: v.id + ':b', at: v.start, mark: 'back', place: '' });
         if (v.end) out.push({ ...base, id: v.id + ':o', at: v.end, mark: 'out', place: '' });
@@ -258,7 +262,7 @@
     const since = Math.min(...vs.map(v => v.start), ...ms.filter(m => m.mark !== 'manual').map(m => m.at));
     if (!isFinite(since)) return [];
     const isHome = v => { const p = placeOf(v, places); return !!(p && /^home$/i.test(p.name)); };
-    const elsewhere = v => { const p = placeOf(v, places); return !!(p && !/^(home|run)$/i.test(p.name)); };
+    const elsewhere = v => { const p = placeOf(v, places); return !!(p && !isIgnored(p) && !/^(home|run)$/i.test(p.name)); };
     return (runs || []).filter(r => r.start >= since).filter(r => !vs.some(v => elsewhere(v) &&
       Math.min(r.end, v.end || Infinity) - Math.max(r.start, v.start) > (r.end - r.start) / 2)).flatMap(r => {
       const mid = (r.start + r.end) / 2;
@@ -271,10 +275,12 @@
     });
   }
 
-  /* Stops with no name yet, grouped within 150 m, most visited first. */
-  function unnamed(visits, places) {
+  /* Stops with no name yet, grouped within 150 m, most visited first. A stop during a run from the watch, or in the
+     20 min after it, is the run (a track, a hill, the cool-down), so it is not asked about. */
+  function unnamed(visits, places, runs) {
     const groups = [];
-    (visits || []).filter(v => !placeOf(v, places)).forEach(v => {
+    const inRun = v => (runs || []).some(r => v.start <= r.end + 20 * 60e3 && v.end >= r.start); // + the cool-down after
+    (visits || []).filter(v => !placeOf(v, places) && !inRun(v)).forEach(v => {
       const g = groups.find(g => dist(g, v) <= 150);
       if (g) { g.vs.push(v); g.lat = g.vs.reduce((s, x) => s + x.lat, 0) / g.vs.length; g.lon = g.vs.reduce((s, x) => s + x.lon, 0) / g.vs.length; }
       else groups.push({ lat: v.lat, lon: v.lon, vs: [v] });
@@ -283,6 +289,6 @@
       med: q(g.vs.map(v => v.end - v.start), .5), key: spotKey(g.vs[0]) })).sort((a, b) => b.n - a.n || b.last - a.last);
   }
 
-  const api = { ACTS, PLACES, PARTS, UNNAMED, build, stats, plan, readyAll, actFor, q, dist, placeOf, visitMarks, merge, unnamed };
+  const api = { ACTS, PLACES, PARTS, UNNAMED, IGNORED, build, stats, plan, readyAll, actFor, q, dist, placeOf, visitMarks, merge, unnamed };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.Trips = api;
 })(this);

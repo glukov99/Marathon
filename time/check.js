@@ -216,3 +216,13 @@ console.log('track check ok');
   assert.deepEqual(tr[0].legs.map(l => l.parts.total / M), [42, 87]); // drop-off ends at the spot; the run is door to door
 }
 console.log('run spot check ok');
+
+// Ignore: a stop saved as "Ignored" makes no marks and is not asked about; a stop during a run is not asked about.
+{
+  const pl = [{ name: 'Home', lat: 42.1354, lon: 24.7453, r: 150 }, { name: 'Ignored', lat: 42.14, lon: 24.73, r: 60 }];
+  const vis = [{ id: 'i', start: d, end: d + 20 * M, lat: 42.14, lon: 24.73 }, { id: 'u', start: d + 60 * M, end: d + 80 * M, lat: 42.16, lon: 24.70 }];
+  assert.equal(T.visitMarks(vis, pl).filter(m => m.id.startsWith('i')).length, 0);
+  assert.equal(T.unnamed(vis, pl).length, 1);
+  assert.equal(T.unnamed(vis, pl, [{ start: d + 50 * M, end: d + 90 * M }]).length, 0);
+}
+console.log('ignore check ok');
