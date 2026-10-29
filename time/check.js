@@ -127,7 +127,7 @@ assert.deepEqual(L[0], ['Nursery drop-off', { ready: 20, travel: 10, arrive: 30,
 assert.deepEqual(L[1], ['Run', { travel: 4, arrive: 4, there: 40, home: 5, total: 49 }]);
 assert.equal(mo.parts.total / M, 85);
 const S = T.stats(t);
-assert.ok(S['Nursery drop-off'] && S['Run'] && S['Nursery drop-off → Run']);
+assert.ok(S['Nursery drop-off'] && S['Run'] && !S['Nursery drop-off → Run']);
 // planner: be at the nursery at 07:30 → start by 07:00, leave by 07:20
 const pz = T.plan(S['Nursery drop-off'], d + 30 * M);
 assert.deepEqual([(pz.startBy - d) / M, (pz.leaveBy - d) / M], [0, 20]);
@@ -195,7 +195,7 @@ console.log('time check ok');
   assert.equal(tr.length, 1);
   assert.equal(tr[0].what, 'Nursery drop-off → Run');                 // no unnamed leg, the run is back
   assert.deepEqual(tr[0].legs.map(l => l.parts.total / M), [68, 61]);    // drop-off until the run starts; the run home
-  assert.ok(T.stats(tr).Run && T.stats(tr)['Nursery drop-off → Run']);
+  assert.ok(T.stats(tr).Run && T.stats(tr)['Nursery drop-off'] && !T.stats(tr)['Nursery drop-off → Run']); // legs count, the chain does not
   // a chain with an unnamed stop in it is not its own activity in the stats
   assert.ok(!T.stats([{ what: 'Run → ?42.1,24.7', parts: { total: 1 }, legs: [] }])['Run → ?42.1,24.7']);
 }

@@ -155,6 +155,7 @@
     });
   }
 
+  const mean = xs => xs.reduce((a, b) => a + b, 0) / xs.length;
   function q(xs, f) { // nearest rank
     const s = xs.slice().sort((a, b) => a - b);
     return s[Math.max(0, Math.ceil(f * s.length) - 1)];
@@ -164,14 +165,15 @@
   const PARTS = ['ready', 'travel', 'arrive', 'there', 'home', 'total'];
   function stats(trips) {
     const by = {};
-    const add = t => { if (t.what && !UNNAMED.test(t.what) && !t.what.includes('→ ?')) (by[t.what] = by[t.what] || []).push(t); };
-    trips.filter(t => !t.open).forEach(t => { add(t); (t.legs || []).forEach(add); }); // the whole chain counts too, as "A → B"
+    // Each thing counts once: a chain (drop-off → run) adds its legs, not itself; Georgi wants an average per thing (29 Oct 2026)
+    const add = t => { if (t.what && !UNNAMED.test(t.what)) (by[t.what] = by[t.what] || []).push(t); };
+    trips.filter(t => !t.open).forEach(t => { if (t.legs) t.legs.forEach(add); else add(t); });
     const out = {};
     for (const [what, ts] of Object.entries(by)) {
       const o = { n: ts.length, parts: {} };
       for (const k of PARTS) {
         const xs = ts.map(t => t.parts[k]).filter(x => x > 0);
-        if (xs.length) o.parts[k] = { n: xs.length, med: q(xs, .5), plan: xs.length < 3 ? Math.max(...xs) : q(xs, .8) };
+        if (xs.length) o.parts[k] = { n: xs.length, avg: mean(xs), med: q(xs, .5), plan: xs.length < 3 ? Math.max(...xs) : q(xs, .8) };
       }
       out[what] = o;
     }
@@ -182,7 +184,7 @@
      (a chain's legs share one getting-ready). */
   function readyAll(trips) {
     const xs = trips.filter(t => !t.open && !t.task && t.parts && t.parts.ready > 0).map(t => t.parts.ready);
-    return xs.length ? { n: xs.length, med: q(xs, .5), plan: xs.length < 3 ? Math.max(...xs) : q(xs, .8) } : null;
+    return xs.length ? { n: xs.length, avg: mean(xs), med: q(xs, .5), plan: xs.length < 3 ? Math.max(...xs) : q(xs, .8) } : null;
   }
 
   /* "I need to be there at T": when to start getting ready and when to leave. */

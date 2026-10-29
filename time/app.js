@@ -82,7 +82,7 @@
   function renderNow(now, st) {
     const t = openTrip;
     const task = openTask ? `<div class="live" style="margin-bottom:14px"><div class="sub">At home · ${esc(openTask.what)} · since ${hm(openTask.start)}</div>
-        <div class="big" id="tick2">${dur(now - openTask.start)}</div>${st[openTask.what] && st[openTask.what].parts.total ? `<div class="sub">Usually ${dur(st[openTask.what].parts.total.med)}, plan for ${dur(st[openTask.what].parts.total.plan)}.</div>` : ''}
+        <div class="big" id="tick2">${dur(now - openTask.start)}</div>${st[openTask.what] && st[openTask.what].parts.total ? `<div class="sub">On average ${dur(st[openTask.what].parts.total.avg)}.</div>` : ''}
         <div class="row"><button class="btn" data-m="stop">Stop</button><button class="x" data-del="${openTask.ids.join(',')}">Cancel</button></div></div>` : '';
     const home = `<h3 style="margin-top:16px">At home</h3><div class="grid">${homeNames().filter(n => !openTask || n !== openTask.what).map(a => `<button data-start="${esc(a)}">${esc(a)}</button>`).join('')}<button data-start="">+ New…</button></div>`;
     if (!t) {
@@ -93,7 +93,7 @@
     const s = t.what && st[t.what], since = t.start;
     const step = t.visits.length ? (t.visits[t.visits.length - 1].off ? 'on the way back' : 'at ' + label(t.visits[t.visits.length - 1].place)) : t.marks.some(m => m.mark === 'out') ? 'on the way' : 'getting ready';
     let hint = '';
-    if (s && step === 'getting ready' && s.parts.ready) hint = `Usually you leave after ${dur(s.parts.ready.med)}. Plan for ${dur(s.parts.ready.plan)}: leave by <b>${hm(since + s.parts.ready.plan)}</b>.`;
+    if (s && step === 'getting ready' && s.parts.ready) hint = `On average you leave after ${dur(s.parts.ready.avg)}: about <b>${hm(since + s.parts.ready.avg)}</b>.`;
     $('now').innerHTML = `<div class="live"><div class="sub">${esc(label(t.what))} · ${esc(step)} · since ${hm(since)}</div>
       <div class="big" id="tick">${dur(now - since)}</div>${hint ? `<div class="sub">${hint}</div>` : ''}
       <div class="row">${t.marks.some(m => m.mark === 'out') ? '' : '<button class="btn" data-m="out">Leaving now</button>'}
@@ -106,14 +106,13 @@
       const s = st[a];
       if (!s) return `<div class="act"><div class="act-h"><b>${esc(a)}</b><span class="sub">no trips yet</span></div></div>`;
       const T = s.parts.total, A = s.parts.there;
-      // Headline: the thing itself (the run, the time at the gym); "plan for" is the whole trip, door to door.
-      const parts = ['ready', 'travel', 'home'].filter(k => s.parts[k]).map(k => `<span>${PART[k]} <b>${dur(s.parts[k].med)}</b></span>`).join('')
-        + (A && T ? `<span>door to door <b>${dur(T.med)}</b></span>` : '');
-      return `<div class="act"><div class="act-h"><b>${esc(a)}${A ? ` <span class="num" style="font-weight:600">${dur(A.med)}</span>` : ''}</b><span>${T ? (A ? '' : `<span class="num">${dur(T.med)}</span> `) + `<span class="plan">plan for ${dur(T.plan)}</span>` : ''}</span></div>
+      // Averages (Georgi, 29 Oct 2026). Headline: the thing itself (the run, the time at the gym); then door to door.
+      const parts = ['ready', 'travel', 'home'].filter(k => s.parts[k]).map(k => `<span>${PART[k]} <b>${dur(s.parts[k].avg)}</b></span>`).join('');
+      return `<div class="act"><div class="act-h"><b>${esc(a)}${A ? ` <span class="num" style="font-weight:600">${dur(A.avg)}</span>` : ''}</b><span>${T ? `<span class="${A ? 'plan' : 'num'}">${A ? 'door to door ' : ''}${dur(T.avg)}</span>` : ''}</span></div>
         <div class="steps">${parts}<span>${s.n} trip${s.n > 1 ? 's' : ''}</span></div></div>`;
     });
-    const ra = rAll ? `<div class="act"><div class="act-h"><b>Getting ready, any trip</b><span><span class="num">${dur(rAll.med)}</span> <span class="plan">plan for ${dur(rAll.plan)}</span></span></div>
-      <div class="steps"><span>from the tap to leaving home</span><span>${rAll.n} trip${rAll.n > 1 ? 's' : ''}</span></div></div>` : '';
+    const ra = rAll ? `<div class="act"><div class="act-h"><b>Getting ready, any trip</b><span><span class="num">${dur(rAll.avg)}</span></span></div>
+      <div class="steps"><span>average, from the tap to leaving home</span><span>${rAll.n} trip${rAll.n > 1 ? 's' : ''}</span></div></div>` : '';
     $('stats').innerHTML = ra + rows.join('');
   }
 
@@ -146,7 +145,8 @@
     const list = trips.filter(t => !t.open).slice(0, 25);
     if (!list.length) { $('trips').innerHTML = '<span class="sub">None yet.</span>'; return; }
     const opts = cur => [...new Set(tripNames().concat(cur ? [cur] : []))].map(a => `<option${a === cur ? ' selected' : ''}>${esc(a)}</option>`).join('') + '<option value="__other">Other…</option>';
-    $('trips').innerHTML = list.map(t => {
+    // The log is for fixing a trip (a wrong name, a time), not for reading: folded away under the averages
+    $('trips').innerHTML = `<details><summary class="sub">Show the last ${list.length} trip${list.length > 1 ? 's' : ''} (to fix a name or a time)</summary>` + list.map(t => {
       const P = t.parts;
       const steps = ['ready', 'travel', 'there', 'home'].filter(k => P[k]).map(k => `<span>${PART[k]} <b>${dur(P[k])}</b></span>`).join('');
       const marksHtml = t.manual ? '' : `<details><summary class="sub">Times</summary><ul class="marks">${t.marks.map(m =>
@@ -163,7 +163,7 @@
         <div class="steps" style="margin-top:4px">${P.total ? `<span>total <b>${dur(P.total)}</b></span>` : ''}${t.legs ? '' : steps}</div>
         ${t.legs ? t.legs.map(l => `<div class="steps"><span style="min-width:120px;color:var(--ink)">${esc(label(l.what))}</span>${l.parts.total ? `<b>${dur(l.parts.total)}</b>` : ''}${['ready', 'travel', 'there', 'home'].filter(k => l.parts[k]).map(k => `<span>${PART[k]} <b>${dur(l.parts[k])}</b></span>`).join('')}</div>`).join('') : ''}
         <div class="row">${marksHtml}${t.ids.some(real) ? `<button class="x" data-del="${t.ids.filter(real).join(',')}">${t.ids.every(real) ? 'Delete trip' : 'Delete the taps'}</button>` : ''}</div></div>`;
-    }).join('');
+    }).join('') + '</details>';
   }
 
   function ago(ms) { const m = Math.round(ms / M); return m < 2 ? 'just now' : m < 90 ? m + ' min ago' : m < 2880 ? Math.round(m / 60) + ' h ago' : Math.round(m / 1440) + ' days ago'; }
