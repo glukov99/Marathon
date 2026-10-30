@@ -239,7 +239,19 @@
   function merge(marks, visits, places, current, runs) {
     const vm = visitMarks(visits, places, current), gm = vm.concat(runMarks(runs, visits, places, marks));
     const near = (m, at) => Math.abs(m.at - at) <= 45 * 60e3;
-    const keep = marks.filter(m => m.src !== 'heat' || !vm.some(g => g.mark === m.mark && near(g, m.at)));
+    let keep = marks.filter(m => m.src !== 'heat' || !vm.some(g => g.mark === m.mark && near(g, m.at)));
+    /* Driving past home (31 Oct 2026, Georgi: "I passed close by"): the office-to-nursery road crosses the heating's
+       500 m ring, so it logs arrive 17:19 and leave 17:26. A heating arrive followed by a heating leave within 15 min,
+       with no GPS stay at home in between, was a drive-by: drop both. */
+    const PASS = 15 * 60e3;
+    const heat = keep.filter(m => m.src === 'heat').sort((a, b) => a.at - b.at), gone = new Set();
+    heat.forEach((m, i) => {
+      const nx = heat[i + 1];
+      if (m.mark !== 'back' || !nx || nx.mark !== 'out' || nx.at - m.at > PASS) return;
+      const homeStay = vm.some(g => g.mark === 'back' && g.at <= nx.at && g.at >= m.at - PASS);
+      if (!homeStay) { gone.add(m.id); gone.add(nx.id); }
+    });
+    if (gone.size) keep = keep.filter(m => !gone.has(m.id));
     // A stay where the phone paused ends at the first point after the pause, which can be after you got home.
     // ponytail: the leave is then put 1 min before the arrive, so that way home reads ~0; good enough, it is rare.
     const backs = keep.filter(m => m.src === 'heat' && m.mark === 'back').map(m => m.at);

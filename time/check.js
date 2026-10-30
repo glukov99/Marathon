@@ -226,3 +226,22 @@ console.log('run spot check ok');
   assert.equal(T.unnamed(vis, pl, [{ start: d + 50 * M, end: d + 90 * M }]).length, 0);
 }
 console.log('ignore check ok');
+
+// Drive-by: heating arrive 17:19 + leave 17:26 while passing home, GPS at the office until 17:34 → both dropped.
+{
+  const pl = [{ name: 'Home', lat: 42.1257, lon: 24.7274, r: 150 }, { name: 'Office', lat: 42.1305, lon: 24.7431, r: 150 }, { name: 'Nursery', lat: 42.1471, lon: 24.7290, r: 150 }];
+  const t0 = Date.parse('2026-10-30T12:29:00Z'); // 14:29 Sofia
+  const hm = [{ id: 'h1', at: t0, mark: 'out', what: '', place: '', end: 0, src: 'heat' },
+    { id: 'h2', at: t0 + 170 * M, mark: 'back', what: '', place: '', end: 0, src: 'heat' },
+    { id: 'h3', at: t0 + 177 * M, mark: 'out', what: '', place: '', end: 0, src: 'heat' },
+    { id: 'h4', at: t0 + 319 * M, mark: 'back', what: '', place: '', end: 0, src: 'heat' }];
+  const vs = [{ id: 'o', start: t0 + 2 * M, end: t0 + 185 * M, lat: 42.1305, lon: 24.7431 },
+    { id: 'n', start: t0 + 187 * M, end: t0 + 206 * M, lat: 42.1471, lon: 24.7290 }];
+  const tr = T.build(T.merge(hm, vs, pl, null), t0 + 400 * M);
+  assert.equal(tr.length, 1, 'one trip: office then pick-up, no stop at home');
+  assert.equal(tr[0].what, 'Office → Nursery pick-up');
+  // A real quick stop at home (GPS has it) stays.
+  const vs2 = vs.concat([{ id: 'hm', start: t0 + 171 * M, end: t0 + 176 * M, lat: 42.1257, lon: 24.7274 }]);
+  assert.equal(T.build(T.merge(hm, vs2, pl, null), t0 + 400 * M).length, 2);
+}
+console.log('drive-by check ok');
