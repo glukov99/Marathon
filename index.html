@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="shared/icons/apple-touch-icon.png">
-<script src="shared/auth.js?v=202610310003"></script>
+<script src="shared/auth.js?v=202610310101"></script>
 <title>Life hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,14 +42,14 @@ button{font:inherit;color:inherit}
 .mods span.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .hero{padding:22px 0 16px}
 .hero .k{font-size:13px;color:var(--soft)}
-.hero h1{margin:2px 0 0;font:700 clamp(40px,11vw,64px)/.9 'Barlow Condensed',sans-serif;letter-spacing:-.01em}
+.hero h1{margin:2px 0 0;font:600 clamp(40px,11vw,64px)/.9 'Barlow Condensed',sans-serif;letter-spacing:-.01em}
 .dtype{display:inline-block;margin-top:10px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:3px;background:var(--card);border-left:3px solid var(--dc)}
 nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:1px solid var(--rule);display:flex;overflow-x:auto;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
 nav button{background:none;border:0;border-bottom:2px solid transparent;font:600 18px 'Barlow Condensed',sans-serif;color:var(--soft);padding:12px 12px 9px;cursor:pointer;white-space:nowrap;margin-bottom:-1px}
 nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
 .panel{background:var(--card);border:1px solid var(--rule);border-radius:3px;margin-top:14px;box-shadow:var(--shadow);overflow:hidden}
-.panel h3{margin:0;padding:14px 16px 0;font:700 23px/1.1 'Barlow Condensed',sans-serif}
+.panel h3{margin:0;padding:14px 16px 0;font:600 23px/1.1 'Barlow Condensed',sans-serif}
 .panel .pc{padding:8px 16px 14px}
 .panel p{margin:6px 0}
 .sub{font-size:13px;color:var(--soft)}
@@ -109,11 +109,11 @@ ul.steps li{margin:5px 0}
 .tr.on .box svg{opacity:1}
 .hrm{display:flex;gap:10px;padding:4px 16px 2px}
 .hrm div{flex:1;min-width:0;padding:10px 12px;border-radius:16px;background:rgba(127,127,127,.08)}
-.hrm b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+.hrm b{display:block;font-size:24px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
 .hrm span{display:block;font-size:12.5px;color:var(--soft)}
 .hmd{display:flex;gap:8px;padding:10px 16px 14px;flex-wrap:wrap}
 .hmd button,.hmd a{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;border-radius:16px;
-  border:1px solid var(--rule);background:rgba(127,127,127,.06);color:var(--ink);font:inherit;font-size:12.5px;font-weight:700;text-decoration:none;cursor:pointer}
+  border:1px solid var(--rule);background:rgba(127,127,127,.06);color:var(--ink);font:inherit;font-size:12.5px;font-weight:600;text-decoration:none;cursor:pointer}
 .hmd [aria-pressed="true"]{border-color:color-mix(in srgb,#FF8A3D 55%,transparent);background:color-mix(in srgb,#FF8A3D 14%,transparent)}
 .hmd button:disabled{opacity:.5}
 .tr a.yt{font-size:12.5px;color:var(--acc);font-weight:600}
@@ -121,7 +121,7 @@ ul.steps li{margin:5px 0}
 .race b{color:var(--ink);font-family:'Barlow Condensed',sans-serif;font-size:20px}
 .mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
 .mini a{display:block;background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:12px 14px;text-decoration:none;color:var(--ink);box-shadow:var(--shadow)}
-.mini b{font:700 20px 'Barlow Condensed',sans-serif;display:block}
+.mini b{font:600 20px 'Barlow Condensed',sans-serif;display:block}
 .mini span{font-size:12.5px;color:var(--soft)}
 .wk td,.wk th{font-size:13px}
 </style>
@@ -129,10 +129,10 @@ ul.steps li{margin:5px 0}
 :root{--rec:#6E9DC2;--easy:#2F7F60;--mp:#B98A22;--st:#C9702A;--hard:#8E2521;--vert:#6B4E8F;--gym:#4F5F69;--test:#1F6F8B;--swim:#3C8FA6;--race:#1B1E1A}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rec:#7FB0D6;--easy:#4FAE88;--mp:#D9AA45;--st:#E08A45;--hard:#D2584F;--vert:#A68BD0;--gym:#93A6B2;--test:#4FAACB;--swim:#5BB4CC;--race:#E8EBE5}}
 </style>
-<link rel="stylesheet" href="shared/theme.css?v=202610310003">
+<link rel="stylesheet" href="shared/theme.css?v=202610310101">
 </head>
 <body>
-<div id="lhn"></div><script src="shared/nav.js?v=202610310003"></script>
+<div id="lhn"></div><script src="shared/nav.js?v=202610310101"></script>
 <div class="wrap">
   <div class="panel hidden" id="ebCard"><div class="card-h"><h3>Bank approval</h3></div><div class="pc">
     <p class="sub" id="ebMsg"></p>
@@ -172,14 +172,14 @@ ul.steps li{margin:5px 0}
     <p class="sub">Same URL and token as the Intervals.icu sync. Enter them once on each device.</p></div></div>
   <div class="foot">Ticks here are the same as in Training.</div>
 </div>
-<script src="shared/invoices.js?v=202610310003"></script>
-<script src="training/plan.js?v=202610310003"></script>
-<script src="shared/sync.js?v=202610310003"></script>
-<script src="meals/meals-data.js?v=202610310003"></script>
-<script src="holidays/holidays-data.js?v=202610310003"></script>
-<script src="shared/travel.js?v=202610310003"></script>
-<script src="heat/icons.js?v=202610310003"></script>
-<script src="car/car-data.js?v=202610310003"></script>
+<script src="shared/invoices.js?v=202610310101"></script>
+<script src="training/plan.js?v=202610310101"></script>
+<script src="shared/sync.js?v=202610310101"></script>
+<script src="meals/meals-data.js?v=202610310101"></script>
+<script src="holidays/holidays-data.js?v=202610310101"></script>
+<script src="shared/travel.js?v=202610310101"></script>
+<script src="heat/icons.js?v=202610310101"></script>
+<script src="car/car-data.js?v=202610310101"></script>
 <script>
 const TKEY='season-2027-gl';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));

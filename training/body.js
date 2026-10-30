@@ -115,21 +115,21 @@ function bhBodySVG(load,view){
 function renderBody(){
   const el=document.getElementById('bodyhub');if(!el)return;
   const load=bhLoad(),{c,items}=bhWeek(),R=bhReady(),A=bhAcwr(),t0=today0(),h=new Date().getHours();
-  const hello=(h<12?'Good morning':h<18?'Good afternoon':'Good evening')+', Georgi';
-  let head='No readiness data yet.',sub='Connect wellness data to see your readiness.';
-  if(R){head=R.score>=80?'Your numbers look strong today.':R.score>=65?'Your numbers look normal today.':R.score>=50?'Your numbers are a bit low today.':'Your numbers are low today.';
+  const hello=new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'short'});
+  let head='No readiness data yet',sub='Connect wellness data to see your readiness.';
+  if(R){head=R.score>=80?'Your numbers look strong today':R.score>=65?'Your numbers look normal today':R.score>=50?'Your numbers are a bit low today':'Your numbers are low today';
     sub=[R.last.hrv!=null&&R.H?`HRV ${R.last.hrv} ms (normal ${Math.round(R.H.m)})`:'',R.last.rhr!=null&&R.R?`Resting HR ${R.last.rhr} (normal ${Math.round(R.R.m)})`:'',
       R.last.sleepH!=null?`Sleep ${R.last.sleepH} h${R.last.sleepScore?' · score '+R.last.sleepScore:''}`:''].filter(Boolean).join(' · ')
-    if(R.age>=2){head='No new Garmin data since '+R.date.split('-').reverse().slice(0,2).join('.')+'.';sub='These numbers are '+R.age+' days old. Open Garmin Connect to sync, or check the Intervals.icu connection.'}}
+    if(R.age>=2){head='No new Garmin data since '+R.date.split('-').reverse().slice(0,2).join('.');sub='These numbers are '+R.age+' days old. Open Garmin Connect to sync, or check the Intervals.icu connection.'}}
   const pct=k=>c[k][1]?Math.round(c[k][0]/c[k][1]*100):null;
   const sleepP=R&&R.sleep7?Math.min(100,Math.round(R.sleep7/8*100)):null;
   const nodes=[
-    {k:'swim',n:'SWIM',x:38,y:70,v:pct('swim')},
-    {k:'str',n:'STRENGTH',x:38,y:180,v:pct('str')},
-    {k:'mob',n:'MOBILITY',x:38,y:295,v:pct('mob')},
-    {k:'rec',n:'FORM',x:322,y:70,v:R&&R.form!=null?Math.round(Math.max(0,Math.min(1,(R.form+30)/55))*100):null,lbl:R&&R.form!=null?(R.form>0?'+':'')+R.form:'—',col:R&&R.form!=null?(R.form<-30?'#E07A63':R.form<-10?'#FF8A3D':'#CFE8A8'):null},
-    {k:'run',n:'RUN',x:322,y:200,v:pct('run')},
-    {k:'vert',n:'VERT',x:322,y:315,v:pct('vert')}];
+    {k:'swim',n:'Swim',x:38,y:70,v:pct('swim')},
+    {k:'str',n:'Strength',x:38,y:180,v:pct('str')},
+    {k:'mob',n:'Mobility',x:38,y:295,v:pct('mob')},
+    {k:'rec',n:'Form',x:322,y:70,v:R&&R.form!=null?Math.round(Math.max(0,Math.min(1,(R.form+30)/55))*100):null,lbl:R&&R.form!=null?(R.form>0?'+':'')+R.form:'—',col:R&&R.form!=null?(R.form<-30?'#E07A63':R.form<-10?'#FF8A3D':'#CFE8A8'):null},
+    {k:'run',n:'Run',x:322,y:200,v:pct('run')},
+    {k:'vert',n:'Vert',x:322,y:315,v:pct('vert')}];
   nodes.forEach(n=>n.to=bhAnchor(BH.view,n.k));
   const ring=(v,col)=>{const C=2*Math.PI*19,p=v==null?0:v/100;return `<circle r="19" fill="rgba(15,19,18,.9)" stroke="rgba(255,255,255,.10)" stroke-width="3"/>
     <circle r="19" fill="none" stroke="${col||(p>=1?'#CFE8A8':'#FF8A3D')}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${(C*p).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90)"/>`};

@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610310003"></script>
+<script src="../shared/auth.js?v=202610310101"></script>
 <title>New invoice — Life hub</title>
 <style>
 :root{
@@ -28,37 +28,37 @@ button,input,select,textarea{font:inherit;color:inherit}
 .hero{padding:22px 0 6px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
 .hero .k{font-size:13px;color:var(--soft)}
 .hero h1{margin:2px 0 0}
-.no{font-size:15px;font-weight:800;padding:7px 12px;border-radius:14px;background:rgba(255,255,255,.06);font-variant-numeric:tabular-nums}
+.no{font-size:15px;font-weight:600;padding:7px 12px;border-radius:14px;background:rgba(255,255,255,.06);font-variant-numeric:tabular-nums}
 .sub{font-size:13px;color:var(--soft)}
 .panel{background:var(--card);border:1px solid var(--rule);border-radius:3px;margin-top:14px;box-shadow:var(--shadow);padding:14px 16px}
 .panel h3{margin:0 0 10px;padding-top:0!important}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .grid .full{grid-column:1/-1}
 @media (max-width:560px){.grid{grid-template-columns:minmax(0,1fr)}}
-label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--faint);font-weight:700;letter-spacing:.03em;min-width:0}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--faint);font-weight:600;letter-spacing:.03em;min-width:0}
 input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px;border:1px solid var(--rule);background:rgba(255,255,255,.05);font-size:16px;color-scheme:dark}
 .row{display:flex;gap:8px;align-items:flex-end}
 .row>*{min-width:0}
-.btn{background:var(--ink);color:var(--paper);border:0;border-radius:3px;padding:9px 14px;cursor:pointer;font-weight:700;font-size:14px;white-space:nowrap}
+.btn{background:var(--ink);color:var(--paper);border:0;border-radius:3px;padding:9px 14px;cursor:pointer;font-weight:600;font-size:14px;white-space:nowrap}
 .btn.ghost{background:none;color:var(--ink);border:1px solid var(--rule)}
 .btn.sm{padding:6px 10px;font-size:13px}
 .btn:disabled{opacity:.5;cursor:default}
 .line{display:grid;grid-template-columns:minmax(0,1fr) 70px 62px 96px 62px 30px;gap:8px;align-items:center;margin-top:8px}
 .line .x{background:none;border:0;color:var(--faint);font-size:20px;cursor:pointer;padding:0}
-.lh{display:grid;grid-template-columns:minmax(0,1fr) 70px 62px 96px 62px 30px;gap:8px;font-size:11.5px;color:var(--faint);font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.lh{display:grid;grid-template-columns:minmax(0,1fr) 70px 62px 96px 62px 30px;gap:8px;font-size:11.5px;color:var(--faint);font-weight:600;}
 @media (max-width:560px){
   .lh{display:none}
   .line{grid-template-columns:repeat(4,minmax(0,1fr)) 30px;padding:10px 0;border-bottom:1px solid var(--rule)}
   .line .d{grid-column:1/-1}
 }
 .seg{display:inline-flex;padding:3px;gap:3px;border-radius:14px;background:rgba(0,0,0,.22);border:1px solid var(--rule)}
-.seg button{border:0;background:none;border-radius:11px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer;color:var(--soft)}
+.seg button{border:0;background:none;border-radius:11px;padding:6px 12px;font-weight:600;font-size:13px;cursor:pointer;color:var(--soft)}
 .seg button[aria-pressed="true"]{background:var(--sand);color:#1E2522}
 .opts{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
 .tot{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .tot div{border-radius:14px;padding:10px 12px;background:rgba(255,255,255,.04)}
-.tot .l{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);font-weight:700}
-.tot .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+.tot .l{font-size:11.5px;color:var(--faint);font-weight:600}
+.tot .v{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
 .tot .big .v{font-size:24px;color:var(--acc2)}
 .words{margin-top:8px;font-size:13.5px;color:var(--soft)}
 .pv{margin-top:14px;border-radius:10px;overflow:hidden;background:#fff;position:relative}
@@ -73,8 +73,8 @@ input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px
 .list li:last-child{border-bottom:0}
 .list .n{font-variant-numeric:tabular-nums;color:var(--faint);min-width:96px}
 .list .c{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.list a{color:var(--acc2);text-decoration:none;font-weight:700}
-.list .act{background:none;border:0;color:var(--acc2);font-weight:700;cursor:pointer;padding:0;font-size:14px}
+.list a{color:var(--acc2);text-decoration:none;font-weight:600}
+.list .act{background:none;border:0;color:var(--acc2);font-weight:600;cursor:pointer;padding:0;font-size:14px}
 .list .act{white-space:nowrap}
 .list li.off .c,.list li.off .n{text-decoration:line-through;color:var(--faint)}
 .list .sent{font-size:12px;color:var(--acc)}
@@ -83,10 +83,10 @@ input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:12px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:40;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610310003">
+<link rel="stylesheet" href="../shared/theme.css?v=202610310101">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610310003"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610310101"></script>
 <main class="wrap">
   <header class="hero">
     <div><div class="k">GL Studio · Фактура</div><h1>New invoice</h1></div>
@@ -171,7 +171,7 @@ input,select,textarea{width:100%;min-width:0;padding:9px 11px;border-radius:12px
   <section class="panel"><ul class="list" id="issued-list"><li class="sub">None yet. Invoices 1–76 were issued in InvoicePro (see Business).</li></ul></section>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610310003"></script>
-<script src="app.js?v=202610310003"></script>
+<script src="../shared/sync.js?v=202610310101"></script>
+<script src="app.js?v=202610310101"></script>
 </body>
 </html>

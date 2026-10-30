@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610310003"></script>
+<script src="../shared/auth.js?v=202610310101"></script>
 <title>Car — Life hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,14 +42,14 @@ button{font:inherit;color:inherit}
 .mods span.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .hero{padding:22px 0 16px}
 .hero .k{font-size:13px;color:var(--soft)}
-.hero h1{margin:2px 0 0;font:700 clamp(40px,11vw,64px)/.9 'Barlow Condensed',sans-serif;letter-spacing:-.01em}
+.hero h1{margin:2px 0 0;font:600 clamp(40px,11vw,64px)/.9 'Barlow Condensed',sans-serif;letter-spacing:-.01em}
 .dtype{display:inline-block;margin-top:10px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:3px;background:var(--card);border-left:3px solid var(--dc)}
 nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:1px solid var(--rule);display:flex;overflow-x:auto;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
 nav button{background:none;border:0;border-bottom:2px solid transparent;font:600 18px 'Barlow Condensed',sans-serif;color:var(--soft);padding:12px 12px 9px;cursor:pointer;white-space:nowrap;margin-bottom:-1px}
 nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
 .panel{background:var(--card);border:1px solid var(--rule);border-radius:3px;margin-top:14px;box-shadow:var(--shadow);overflow:hidden}
-.panel h3{margin:0;padding:14px 16px 0;font:700 23px/1.1 'Barlow Condensed',sans-serif}
+.panel h3{margin:0;padding:14px 16px 0;font:600 23px/1.1 'Barlow Condensed',sans-serif}
 .panel .pc{padding:8px 16px 14px}
 .panel p{margin:6px 0}
 .sub{font-size:13px;color:var(--soft)}
@@ -98,7 +98,7 @@ ul.steps li{margin:5px 0}
 .car .meta{font-size:13px;color:var(--soft);padding:2px 16px 0}
 .row{display:flex;gap:10px;align-items:center;padding:9px 16px;border-top:1px solid var(--rule)}
 .row .nm{flex:1;min-width:0}.row .nm b{font-size:14.5px;font-weight:600}.row .nm span{display:block;font-size:12.5px;color:var(--soft)}
-.pill{flex-shrink:0;font-size:12px;font-weight:700;padding:3px 9px;border-radius:12px;white-space:nowrap;background:var(--card2);color:var(--soft)}
+.pill{flex-shrink:0;font-size:12px;font-weight:600;padding:3px 9px;border-radius:12px;white-space:nowrap;background:var(--card2);color:var(--soft)}
 .pill.r{background:var(--big);color:#fff}.pill.a{background:var(--acc2);color:#fff}.pill.g{background:var(--done);color:var(--acc)}
 input.f{font:inherit;font-size:13.5px;padding:5px 7px;border:1px solid var(--rule);border-radius:3px;background:var(--paper);color:var(--ink);min-width:0}
 .kmrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 16px 12px}
@@ -112,10 +112,10 @@ input.f{font:inherit;font-size:13.5px;padding:5px 7px;border:1px solid var(--rul
 .addf .btn{grid-column:1/-1;justify-self:start}
 .ed.addf{display:none}.ed.addf.open{display:grid}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610310003">
+<link rel="stylesheet" href="../shared/theme.css?v=202610310101">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610310003"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610310101"></script>
 <div class="wrap">
   <header class="hero"><div class="k">Life hub</div><h1>Car</h1><div class="sub" id="sy"></div></header>
   <div class="panel"><h3>Next up</h3><div id="next"></div>
@@ -124,8 +124,8 @@ input.f{font:inherit;font-size:13.5px;padding:5px 7px;border:1px solid var(--rul
   <div class="foot">Dates come from the "Моят автомобил" app. When you renew something, change its date here. Red: 14 days or less. Amber: 45 days or less.</div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610310003"></script>
-<script src="car-data.js?v=202610310003"></script>
+<script src="../shared/sync.js?v=202610310101"></script>
+<script src="car-data.js?v=202610310101"></script>
 <script>
 let st=C_load();
 const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];

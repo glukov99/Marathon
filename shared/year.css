@@ -3,8 +3,8 @@
    it rather than being copied into each page. */
 .day{background:var(--card);border-radius:16px;margin-top:12px;overflow:hidden;box-shadow:var(--shadow)}
 .dh{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--rule)}
-.dh b{font-size:22px;font-weight:800;min-width:30px}
-.dh .dw{font-size:12px;font-weight:700;background:rgba(255,255,255,.08);border-radius:6px;padding:2px 7px;color:var(--soft)}
+.dh b{font-size:22px;font-weight:600;min-width:30px}
+.dh .dw{font-size:12px;font-weight:600;background:rgba(255,255,255,.08);border-radius:6px;padding:2px 7px;color:var(--soft)}
 .dh .inc,.dh .exp{margin-left:auto;font-size:14px;font-weight:600;min-width:70px;text-align:right}
 .dh .exp{margin-left:10px}
 .tr{display:flex;gap:10px;padding:10px 14px;align-items:flex-start}
@@ -13,7 +13,7 @@
 .tb{flex:1;min-width:0}
 .tb b{display:block;font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tb span{display:block;font-size:12.5px;color:var(--soft)}
-.ta{font-weight:700;white-space:nowrap}
+.ta{font-weight:600;white-space:nowrap}
 .yg{padding:10px 12px 12px}
 .chips.yk{margin:0 0 12px}
 .ygh,.yr{display:grid;grid-template-columns:minmax(0,1fr) repeat(12,10px) 44px 36px;gap:1px;align-items:center}
@@ -30,7 +30,7 @@
 .yc.z{background:var(--rule);opacity:.45}
 .yt{font-size:10.5px;text-align:right;font-variant-numeric:tabular-nums}
 .yt.av{color:var(--faint)}
-.yr.net .yn{font-weight:700}
+.yr.net .yn{font-weight:600}
 .ysep{height:1px;background:var(--rule);margin:7px 0}
 .ym{display:flex;flex-wrap:wrap;gap:4px 9px;padding:1px 0 7px 2px;font-size:11.5px;color:var(--soft);font-variant-numeric:tabular-nums}
 .ym .av{color:var(--faint)}
@@ -92,11 +92,11 @@
 .gb{display:flex;align-items:flex-end;gap:3px;height:96px}
 .gb i{display:block;width:12px;border-radius:2px 2px 0 0;min-height:2px}
 .gb i.in{background:var(--acc)}.gb i.out{background:var(--big)}.gb i.net{background:var(--soft)}
-.gl{font-size:12px;font-weight:700;order:2}
+.gl{font-size:12px;font-weight:600;order:2}
 .gv{display:flex;flex-direction:column;align-items:center;order:3;font-size:10.5px;font-variant-numeric:tabular-nums}
 .gv b{font-weight:600}
 .gv .in{color:var(--acc)}.gv .out{color:var(--big)}.gv .net{color:var(--soft)}
-.chh{font-size:12.5px;color:var(--soft);padding:10px 14px 2px;font-weight:700}
+.chh{font-size:12.5px;color:var(--soft);padding:10px 14px 2px;font-weight:600}
 .donut{display:block;width:190px;height:190px;margin:16px auto 8px}
 
 /* Twelve months of in and out, one row each (Charts.inOut). */

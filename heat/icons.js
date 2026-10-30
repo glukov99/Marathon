@@ -20,14 +20,13 @@
   };
   const css = document.createElement('style');
   css.textContent = `
-.hic{flex-shrink:0;display:inline-grid;place-items:center;width:42px;height:42px;border-radius:50%;
-  background:radial-gradient(circle at 50% 45%,#4A2A12,#24140A 75%);border:1.5px solid #FF8A3D;
-  box-shadow:0 0 8px rgba(255,138,61,.65),0 0 20px rgba(255,138,61,.3),inset 0 0 10px rgba(255,138,61,.28);transition:.25s}
-.hic svg{width:64%;height:64%;fill:none;stroke:#FFC27A;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;
-  filter:drop-shadow(0 0 2px rgba(255,159,69,.9))}
-.hic .f{fill:#FFB55E;stroke:none}
-.hic.sm{width:30px;height:30px}
-[aria-pressed="false"] .hic,.hic.dim{opacity:.5;box-shadow:none;filter:saturate(.6)}`;
+.hic{flex-shrink:0;display:inline-grid;place-items:center;width:40px;height:40px;border-radius:50%;
+  background:var(--card2);box-shadow:0 0 0 1px var(--rule);transition:background-color .2s ease,color .2s ease;color:var(--soft)}
+.hic svg{width:50%;height:50%;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.hic .f{fill:currentColor;stroke:none;opacity:.6}
+.hic.sm{width:28px;height:28px}
+[aria-pressed="true"] .hic{color:var(--acc2);background:color-mix(in srgb,var(--acc2) 14%,var(--card2))}
+[aria-pressed="false"] .hic,.hic.dim{opacity:.6}`;
   document.head.appendChild(css);
   const fill = (root) => (root || document).querySelectorAll('[data-ic]').forEach(e => {
     if (e.firstChild) return;

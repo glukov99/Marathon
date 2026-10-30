@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610310003"></script>
+<script src="../shared/auth.js?v=202610310101"></script>
 <title>Meals — Life hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,14 +42,14 @@ button{font:inherit;color:inherit}
 .mods span.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .hero{padding:22px 0 16px}
 .hero .k{font-size:13px;color:var(--soft)}
-.hero h1{margin:2px 0 0;font:700 clamp(40px,11vw,64px)/.9 'Barlow Condensed',sans-serif;letter-spacing:-.01em}
+.hero h1{margin:2px 0 0;font:600 clamp(40px,11vw,64px)/.9 'Barlow Condensed',sans-serif;letter-spacing:-.01em}
 .dtype{display:inline-block;margin-top:10px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:3px;background:var(--card);border-left:3px solid var(--dc)}
 nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:1px solid var(--rule);display:flex;overflow-x:auto;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
 nav button{background:none;border:0;border-bottom:2px solid transparent;font:600 18px 'Barlow Condensed',sans-serif;color:var(--soft);padding:12px 12px 9px;cursor:pointer;white-space:nowrap;margin-bottom:-1px}
 nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
 .panel{background:var(--card);border:1px solid var(--rule);border-radius:3px;margin-top:14px;box-shadow:var(--shadow);overflow:hidden}
-.panel h3{margin:0;padding:14px 16px 0;font:700 23px/1.1 'Barlow Condensed',sans-serif}
+.panel h3{margin:0;padding:14px 16px 0;font:600 23px/1.1 'Barlow Condensed',sans-serif}
 .panel .pc{padding:8px 16px 14px}
 .panel p{margin:6px 0}
 .sub{font-size:13px;color:var(--soft)}
@@ -94,10 +94,10 @@ ul.steps li{margin:5px 0}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610310003">
+<link rel="stylesheet" href="../shared/theme.css?v=202610310101">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610310003"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610310101"></script>
 <div class="wrap">
     <header class="hero">
     <div class="k" id="hk"></div>
@@ -120,8 +120,8 @@ ul.steps li{margin:5px 0}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="meals-data.js?v=202610310003"></script>
-<script src="../shared/sync.js?v=202610310003"></script>
+<script src="meals-data.js?v=202610310101"></script>
+<script src="../shared/sync.js?v=202610310101"></script>
 <script>
 /* ============ state + storage ============ */
 const LKEY='lifehub-meals';

@@ -1,43 +1,78 @@
 /* Life hub theme: dark version of the soft sage / sand / terracotta look.
-   Loaded after each page's own styles, so it wins. One file = one look everywhere. */
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+   Loaded after each page's own styles, so it wins. One file = one look everywhere.
+
+   Craft pass, 31 Oct 2026 (unslop, after Damir Sokolovsky's "unslop" skill, @heydamir, CC BY 4.0):
+   - Surfaces are plain: no colour washes behind the page, no gloss on cards. Depth = a lighter
+     surface and a hairline (--shadow is now a 1px hairline ring, so every card that uses it gets one).
+   - Hierarchy from size and colour, not weight: headings 600, figures 600, nothing at 700-900.
+   - Labels in sentence case, no wide letter spacing.
+   - Colour has meaning: sage = money in / good, terracotta = money out / warning, sand = the one
+     primary button. Lists stay ink; only totals carry the colour. */
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&display=swap');
 :root:not(#lh),:root:not(#lh)[data-theme]{
-  --paper:#18201E; --card:#222C29; --card2:#2A3632; --ink:#E8ECE6; --soft:#A7B4AD; --faint:#7C8A84;
-  --rule:rgba(255,255,255,.07); --acc:#8FC0B6; --acc2:#D99A6C; --big:#E07A63; --rest:#9DB6C4; --done:#24332F;
+  --paper:#18201E; --card:#202926; --card2:#28322F; --ink:#E8ECE6; --soft:#A7B4AD; --faint:#7C8A84;
+  --rule:rgba(232,236,230,.08); --acc:#8FC0B6; --acc2:#D99A6C; --big:#E07A63; --rest:#9DB6C4; --done:#24332F;
   --sand:#E2D3BC; --clay:#C98B5E; --teal:#6E9A97; --mist:#B9C9C2;
-  --shadow:0 10px 28px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.045);
+  --shadow:0 0 0 1px rgba(232,236,230,.06);
+  --ease:cubic-bezier(.2,.8,.2,1);
   color-scheme:dark;
 }
-body{font-family:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif!important;
-  background:radial-gradient(1200px 600px at 85% -10%,rgba(201,139,94,.10),transparent 60%),
-             radial-gradient(900px 600px at -10% 20%,rgba(110,154,151,.13),transparent 60%),var(--paper)!important;
-  background-attachment:fixed!important}
+body{font-family:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif!important;background:var(--paper)!important}
 body::before{background:var(--paper)!important}
-.hero h1,.panel h3,.card-h h3,h2,h3{font-family:'Manrope',sans-serif!important;font-weight:800!important;letter-spacing:-.02em}
-.hero h1{font-size:clamp(34px,9vw,52px)!important;line-height:1!important}
-.hero .k{letter-spacing:.08em;text-transform:uppercase;font-size:11.5px!important;font-weight:700;color:var(--faint)!important}
-.panel{border:0!important;border-radius:22px!important;box-shadow:var(--shadow)!important;
-  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0) 40%),var(--card)!important;margin-top:16px!important}
-.panel h3{font-size:19px!important;padding-top:16px!important}
-.sec,.slot,nav button{font-family:'Manrope',sans-serif!important;font-weight:700!important}
-.sec{font-size:12px!important;letter-spacing:.07em;text-transform:uppercase;color:var(--faint)!important}
-.btn{border-radius:14px!important;background:var(--sand)!important;color:#1E2522!important;font-weight:700!important}
-.btn.ghost{background:rgba(255,255,255,.05)!important;color:var(--ink)!important;border:1px solid var(--rule)!important}
-nav:not(.hubnav){background:rgba(24,32,30,.85)!important;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--rule)!important}
+b,strong{font-weight:600}
+
+/* Headings */
+.hero h1,.panel h3,.card-h h3,h2,h3{font-family:'Manrope',sans-serif!important;font-weight:600!important;letter-spacing:-.01em}
+.hero h1{font-size:clamp(32px,9vw,44px)!important;line-height:1.05!important;letter-spacing:-.02em}
+.hero .k{letter-spacing:0;text-transform:none;font-size:13px!important;font-weight:500;color:var(--faint)!important}
+.panel h3{font-size:18px!important;padding-top:16px!important}
+
+/* Surfaces */
+.panel{border:0!important;border-radius:16px!important;box-shadow:var(--shadow)!important;background:var(--card)!important;margin-top:16px!important}
+.card,.mini a,.mini>div{border:0!important;border-radius:16px!important;box-shadow:var(--shadow)!important;background:var(--card)!important}
+
+/* Section labels: sentence case, quiet */
+.sec,.slot,nav button{font-family:'Manrope',sans-serif!important;font-weight:600!important}
+.sec{font-size:13px!important;letter-spacing:0;text-transform:none;color:var(--faint)!important}
+.day,.estat .l,.tot .l,.lh,.next span,.today-card .k,.bh-weight .k,.lhn-g h4,.badge{text-transform:none!important;letter-spacing:0!important}
+.day,.estat .l,.tot .l,.today-card .k,.bh-weight .k,.lhn-g h4{font-size:13px!important;font-weight:500!important}
+.lh{font-size:12px!important;font-weight:500!important}
+
+/* Buttons: sand stays the one primary action */
+.btn{border-radius:10px!important;background:var(--sand)!important;color:#1E2522!important;font-weight:600!important}
+.btn.ghost{background:transparent!important;color:var(--ink)!important;border:1px solid var(--rule)!important}
+nav:not(.hubnav){background:var(--paper)!important;border-bottom:1px solid var(--rule)!important}
 nav button[aria-selected="true"]{border-bottom-color:var(--acc2)!important}
-.mini a,.mini>div{border:0!important;border-radius:20px!important;box-shadow:var(--shadow)!important;background:var(--card)!important}
 input,select,textarea{border-radius:10px!important;background:var(--card2)!important;border:1px solid var(--rule)!important;color:var(--ink)!important}
-.note{border-left:0!important;border-radius:14px;background:rgba(217,154,108,.10)!important;box-shadow:inset 3px 0 0 var(--acc2)}
-.toast{border-radius:14px!important;background:var(--sand)!important;color:#1E2522!important}
-.box{border-radius:8px!important}
+.note{border-left:0!important;border-radius:12px;background:var(--card)!important;box-shadow:inset 2px 0 0 var(--acc2),var(--shadow)}
+.toast{border-radius:10px!important;background:var(--sand)!important;color:#1E2522!important;font-weight:500}
+.box{border-radius:6px!important}
 .pill,.need,.mods span{border-radius:12px!important}
-table th{color:var(--faint)!important}
+table th{color:var(--faint)!important;font-weight:500!important}
 tr.today td{background:rgba(143,192,182,.08)!important}
+
+/* Figures: one weight, tabular, size gives the hierarchy */
+.mbar b,.sum b,.mrow b,.dh b,.hrm b,.estat .v,.man .val,.tot .v,.no,.tclk,.live .big,.num,.ans .t,.dhd h3,.orb .t{
+  font-weight:600!important;font-variant-numeric:tabular-nums}
+.badge{font-weight:600!important}
+
+/* Money and Business: money in = sage, money out = terracotta, on totals only */
+.inc{color:var(--acc)!important}
+.ta.exp,.crow .v{color:var(--ink)!important}
+.ta.inc{color:var(--acc)!important}
+
+/* Floating Menu: a quiet raised surface instead of the brightest thing on every screen */
+.lhn-fab,.lhn-home{font-weight:600!important;padding:14px 20px!important;border-radius:24px!important;
+  background:var(--card2)!important;color:var(--ink)!important;box-shadow:var(--shadow),0 4px 16px rgba(0,0,0,.28)!important}
+.lhn-home[aria-current="page"],.lhn-l a[aria-current="page"]{background:var(--sand)!important;color:#1E2522!important}
+.lhn-l a{font-weight:600!important;box-shadow:var(--shadow)!important}
+.lhn .lhn-cur{font-weight:600!important}
+
 /* Season mountain chart (home) */
 .mtn{padding:4px 0 0}
 .mtn svg{display:block;width:100%;height:auto}
-.mtn .lg{display:flex;gap:12px;white-space:nowrap;padding:0 16px 14px;font-size:12px;color:var(--soft)}
-.mtn .lg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
+.mtn .lg{display:flex;gap:12px;white-space:nowrap;padding:0 16px 16px;font-size:12px;color:var(--soft)}
+.mtn .lg i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:0}
 /* App feel: no double-tap zoom, no text resize on rotate */
 html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* Tab bars scroll sideways only, never up and down */

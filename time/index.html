@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610310003"></script>
+<script src="../shared/auth.js?v=202610310101"></script>
 <title>Time — Life hub</title>
 <style>
 :root{--paper:#ECEAE4;--card:#FBFAF7;--ink:#1B1E1A;--soft:#5F665D;--faint:#8C9289;--rule:#D6D3CA;--acc:#3F6B3A;--acc2:#B5782B;--shadow:none;
@@ -31,10 +31,10 @@ button,input,select{font:inherit;color:inherit}
 .sec{margin:24px 0 2px}
 .btn{border:0;padding:9px 14px;cursor:pointer;font-weight:600;font-size:14px}
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.grid button{border:0;border-radius:14px;background:rgba(255,255,255,.05);padding:12px 6px;font-weight:700;font-size:13.5px;cursor:pointer;line-height:1.25}
+.grid button{border:0;border-radius:14px;background:rgba(255,255,255,.05);padding:12px 6px;font-weight:600;font-size:13.5px;cursor:pointer;line-height:1.25}
 .grid button:active{background:rgba(217,154,108,.25)}
 .live{display:flex;flex-direction:column;gap:6px}
-.live .big{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.live .big{font-size:30px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
 .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .steps{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;color:var(--soft)}
 .steps b{color:var(--ink);font-variant-numeric:tabular-nums}
@@ -42,10 +42,10 @@ button,input,select{font:inherit;color:inherit}
 .act:first-of-type{border-top:0}
 .act-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
 .act-h b{font-size:16px}
-.num{font-variant-numeric:tabular-nums;font-weight:800}
-.plan{font-size:13px;color:var(--acc2);font-weight:700}
+.num{font-variant-numeric:tabular-nums;font-weight:600}
+.plan{font-size:13px;color:var(--acc2);font-weight:600}
 .ans{margin-top:10px;font-size:15px;line-height:1.6}
-.ans .t{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.ans .t{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
 .trip{padding:10px 0;border-top:1px solid var(--rule)}
 .trip:first-child{border-top:0}
 .trip-h{display:flex;justify-content:space-between;gap:8px;align-items:center}
@@ -54,7 +54,7 @@ button,input,select{font:inherit;color:inherit}
 .marks{margin:8px 0 0;padding:0;list-style:none;font-size:13px}
 .marks li{display:flex;gap:8px;align-items:center;padding:3px 0}
 .marks input{width:96px;padding:4px 6px}
-.tag{font-size:11px;font-weight:700;padding:2px 7px;border-radius:9px;background:rgba(217,154,108,.18);color:var(--acc2)}
+.tag{font-size:11px;font-weight:600;padding:2px 7px;border-radius:9px;background:rgba(217,154,108,.18);color:var(--acc2)}
 .x{background:none;border:0;color:var(--faint);cursor:pointer;font-size:13px;padding:4px}
 .form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
 .form>div{min-width:0}
@@ -63,15 +63,15 @@ button,input,select{font:inherit;color:inherit}
 .foot{font-size:12.5px;color:var(--faint);margin-top:22px}
 .sheet{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
 .sheet-in{width:100%;max-width:520px;background:var(--card);border-radius:20px;padding:16px;box-shadow:var(--shadow)}
-.sheet-q{font-weight:700;margin-bottom:10px}
+.sheet-q{font-weight:600;margin-bottom:10px}
 .sheet-v{width:100%;padding:10px;font-size:16px}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);padding:8px 14px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:40;max-width:90vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610310003">
+<link rel="stylesheet" href="../shared/theme.css?v=202610310101">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610310003"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610310101"></script>
 <main class="wrap">
   <header class="hero"><div class="k">Home</div><h1>Time</h1></header>
   <div class="sub" id="upd">Loading…</div>
@@ -117,8 +117,8 @@ button,input,select{font:inherit;color:inherit}
   <p class="foot">How it measures: Overland sends your location in the background, and the back end finds every stop of 3 minutes or more. Name a stop once and every visit there, past and future, counts for it. Name your home first: leaving it and coming back is what makes a trip. Runs from your watch name their trip by themselves, even with the phone at home. The buttons at the top mark when you start getting ready, which no location can show. "Plan for" is the time you stay inside 4 times out of 5; with fewer than 3 trips it is the longest one so far.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610310003"></script>
-<script src="trips.js?v=202610310003"></script>
-<script src="app.js?v=202610310003"></script>
+<script src="../shared/sync.js?v=202610310101"></script>
+<script src="trips.js?v=202610310101"></script>
+<script src="app.js?v=202610310101"></script>
 </body>
 </html>

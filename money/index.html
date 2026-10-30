@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610310003"></script>
+<script src="../shared/auth.js?v=202610310101"></script>
 <title>Money — Life hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,14 +42,14 @@ button{font:inherit;color:inherit}
 .mods span.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .hero{padding:22px 0 16px}
 .hero .k{font-size:13px;color:var(--soft)}
-.hero h1{margin:2px 0 0;font:700 clamp(40px,11vw,64px)/.9 'Barlow Condensed',sans-serif;letter-spacing:-.01em}
+.hero h1{margin:2px 0 0;font:600 clamp(40px,11vw,64px)/.9 'Barlow Condensed',sans-serif;letter-spacing:-.01em}
 .dtype{display:inline-block;margin-top:10px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:3px;background:var(--card);border-left:3px solid var(--dc)}
 nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:1px solid var(--rule);display:flex;overflow-x:auto;scrollbar-width:none}
 nav::-webkit-scrollbar{display:none}
 nav button{background:none;border:0;border-bottom:2px solid transparent;font:600 18px 'Barlow Condensed',sans-serif;color:var(--soft);padding:12px 12px 9px;cursor:pointer;white-space:nowrap;margin-bottom:-1px}
 nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
 .panel{background:var(--card);border:1px solid var(--rule);border-radius:3px;margin-top:14px;box-shadow:var(--shadow);overflow:hidden}
-.panel h3{margin:0;padding:14px 16px 0;font:700 23px/1.1 'Barlow Condensed',sans-serif}
+.panel h3{margin:0;padding:14px 16px 0;font:600 23px/1.1 'Barlow Condensed',sans-serif}
 .panel .pc{padding:8px 16px 14px}
 .panel p{margin:6px 0}
 .sub{font-size:13px;color:var(--soft)}
@@ -95,71 +95,73 @@ ul.steps li{margin:5px 0}
 .pend .dh b{font-size:15px}
 </style><style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610310003">
-<link rel="stylesheet" href="../shared/year.css?v=202610310003">
+<link rel="stylesheet" href="../shared/theme.css?v=202610310101">
+<link rel="stylesheet" href="../shared/year.css?v=202610310101">
 <style>
 .mbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
-.mbar b{font-size:19px;font-weight:800}
+.mbar b{font-size:18px;font-weight:600}
 .mbar .btn{min-width:44px;font-size:18px;padding:6px 12px}
 .mbar .btn:disabled{opacity:.3;cursor:default}
-.sum{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;margin-top:14px;padding:12px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
-.sum span{display:block;font-size:12.5px;color:var(--soft)}
-.sum b{display:block;font-size:20px;font-weight:800;margin-top:2px}
-.sum i{display:block;font-size:11px;color:var(--soft);font-style:normal;margin-top:1px}
-.sum .g{border-top:1px solid var(--rule);margin-top:11px;padding-top:9px}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;margin-top:16px;padding:12px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.sum span{display:block;font-size:13px;color:var(--soft)}
+.sum b{display:block;font-size:20px;font-weight:600;margin-top:4px}
+.sum i{display:block;font-size:12px;color:var(--faint);font-style:normal;margin-top:2px}
+.sum .g{border-top:1px solid var(--rule);margin-top:12px;padding-top:8px}
 .sum .g b{font-size:15px}
-.inc{color:#7FB0E0}.exp{color:var(--big)}.mv{color:var(--faint)}
+.inc{color:var(--acc)}.exp{color:var(--big)}.mv{color:var(--faint)}
 #tabs{position:sticky;top:env(safe-area-inset-top,0px);margin-top:8px}
 #tabs button{flex:1;font-size:15px}
 #tabs button[hidden]{display:none}
 /* Five tabs do not fit at phone width at 15px, so shrink only in that case. */
 #tabs.five button{font-size:13px;padding-left:2px;padding-right:2px}
 .card{background:var(--card);border-radius:16px;margin-top:12px;overflow:hidden;box-shadow:var(--shadow)}
-.mrow,.crow{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:12px 14px;text-align:left;cursor:pointer}
+.mrow,.crow{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;padding:12px 16px;text-align:left;cursor:pointer}
 .mrow+.mrow,.crow+.crow{border-top:1px solid var(--rule)}
 .mrow>div:first-child{flex:1}
-.mrow b{display:block;font-size:17px;font-weight:800}
+.mrow b{display:block;font-size:16px;font-weight:600}
 .mrow span{font-size:12px;color:var(--faint)}
 .mrow .r{display:grid;grid-template-columns:auto auto;gap:2px 14px;text-align:right}
 .mrow .r span{font-size:14px;font-weight:600}
-.mrow .r .net{grid-column:2;color:var(--soft);font-weight:500;font-size:12.5px}
-.mrow .r .gb{grid-column:1;grid-row:2;color:var(--faint);font-weight:500;font-size:12.5px}
+.mrow .r .net{grid-column:2;color:var(--soft);font-weight:500;font-size:13px}
+.mrow .r .gb{grid-column:1;grid-row:2;color:var(--faint);font-weight:500;font-size:13px}
 .seg{display:flex;margin-top:12px;border-bottom:1px solid var(--rule)}
-.seg button{flex:1;background:none;border:0;border-bottom:2px solid transparent;padding:10px 4px;font-weight:700;color:var(--faint);cursor:pointer}
+.seg button{flex:1;background:none;border:0;border-bottom:2px solid transparent;padding:12px 4px;font-weight:600;color:var(--faint);cursor:pointer;transition:color .15s var(--ease)}
 .seg button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--acc2)}
 .crow b{flex:1;font-weight:600}
 .crow .v{font-weight:600}
-.badge{min-width:46px;text-align:center;font-size:12.5px;font-weight:800;color:#1E2522;border-radius:6px;padding:3px 6px}
+.pct{display:inline-flex;align-items:center;gap:8px;min-width:52px;font-size:13px;color:var(--soft)}
+.pct i{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.donut{display:block;width:176px;height:176px;margin:20px auto 12px}
 .dhd{display:flex;align-items:center;gap:12px;margin-top:12px}
 .dhd h3{margin:0;font-size:20px}
 .trend{display:block;width:100%;height:auto;padding:6px 4px}
 .trend .tv{font-size:11px;fill:var(--soft)}
 .trend .tm{font-size:11px;fill:var(--faint)}
-.arow{display:flex;justify-content:space-between;gap:10px;padding:9px 14px;font-size:14.5px}
+.arow{display:flex;justify-content:space-between;gap:12px;padding:10px 16px;font-size:15px}
 .arow+.arow{border-top:1px solid var(--rule)}
 .arow.tot{font-size:16px}
 .arow.zero{color:var(--faint)}
 .rdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#E05A4F;margin-left:6px;vertical-align:middle}
 .rdot.soft{background:var(--faint)}
-.asof{display:block;text-align:right;font-size:11.5px;color:var(--faint)}
+.asof{display:block;text-align:right;font-size:12px;color:var(--faint)}
 .arow span .asof{display:inline;text-align:left;margin-left:5px}
 .asof.warn{color:var(--big)}
-.arow.od{border-top:0;padding-top:0;font-size:12.5px;color:var(--faint)}
-.bk{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-right:7px;border-radius:50%;font-size:9.5px;font-weight:700;line-height:1;color:#fff;vertical-align:-3px;flex:0 0 auto}
+.arow.od{border-top:0;padding-top:0;font-size:13px;color:var(--faint)}
+.bk{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-right:7px;border-radius:50%;font-size:9.5px;font-weight:600;line-height:1;color:#fff;vertical-align:-3px;flex:0 0 auto}
 .bk.rev{background:#0075EB}
 .bk.uni{background:#E2001A}
 .bk.mps{background:#00B0F0}
-.note2{padding:8px 14px 12px;font-size:12.5px;color:var(--faint)}
+.note2{padding:8px 16px 12px;font-size:13px;color:var(--faint)}
 .empty{padding:20px 14px;color:var(--faint);text-align:center}
 .chips{display:flex;gap:6px;margin-top:14px}
-.chips button{border:1px solid var(--rule);background:rgba(255,255,255,.04);border-radius:12px;padding:4px 12px;font-size:13px;cursor:pointer;color:var(--soft)}
+.chips button{border:1px solid var(--rule);background:transparent;border-radius:12px;padding:4px 12px;font-size:13px;cursor:pointer;color:var(--soft)}
 .chips button[aria-pressed="true"]{background:var(--sand);color:#1E2522;border-color:var(--sand)}
-.warn{color:var(--acc2);font-weight:700}
+.warn{color:var(--acc2);font-weight:600}
 #tokIn{width:100%;padding:10px 12px;font:inherit}
 </style>
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610310003"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610310101"></script>
 <div class="wrap">
   <header class="hero"><div class="k">Life hub</div><h1>Money</h1><div class="sub" id="status"></div></header>
   <div id="setup" class="panel hidden"><h3>Connect</h3><div class="pc">
@@ -174,10 +176,10 @@ ul.steps li{margin:5px 0}
     <div id="view"></div>
   </div>
 </div>
-<script src="../shared/sync.js?v=202610310003"></script>
-<script src="../shared/catpick.js?v=202610310003"></script>
-<script src="../shared/charts.js?v=202610310003"></script>
-<script src="../shared/year.js?v=202610310003"></script>
-<script src="app.js?v=202610310003"></script>
+<script src="../shared/sync.js?v=202610310101"></script>
+<script src="../shared/catpick.js?v=202610310101"></script>
+<script src="../shared/charts.js?v=202610310101"></script>
+<script src="../shared/year.js?v=202610310101"></script>
+<script src="app.js?v=202610310101"></script>
 </body>
 </html>

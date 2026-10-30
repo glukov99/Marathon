@@ -6,8 +6,11 @@
    on reading a slice by eye.
 */
 (function (root) {
-  const PAL = ['#E07A63', '#D99A6C', '#E2C46B', '#B9C46B', '#7FB98A', '#6E9A97',
-    '#8FC0B6', '#9DB6C4', '#8A9BD0', '#B58AC9', '#C98BA0', '#A7B4AD'];
+  /* One lead colour, then quiet neutral steps (31 Oct 2026 craft pass). The biggest slice or
+     the top bar is the one that matters; the rest only need to be told apart, and their
+     figures are written out beside the chart anyway. */
+  const PAL = ['#E07A63', '#B7C2BC', '#97A49E', '#7C8A84', '#66736E', '#55605C',
+    '#4A5451', '#414A47', '#3A4240', '#343B39', '#2F3634', '#2B312F'];
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -17,7 +20,7 @@
     const segs = list.map(([, v], i) => {
       const len = total ? v / total * C : 0;
       const s = `<circle r="${R}" cx="100" cy="100" fill="none" stroke="${PAL[i % PAL.length]}" stroke-width="34"
-      stroke-dasharray="${len.toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`;
+      stroke-dasharray="${Math.max(0, len - (list.length > 1 ? 1.5 : 0)).toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}"/>`;
       off += len; return s;
     }).join('');
     return `<svg viewBox="0 0 200 200" class="donut" aria-hidden="true"><g transform="rotate(-90 100 100)">${segs}</g></svg>`;
@@ -34,7 +37,7 @@
     const two = list.some(x => x.length > 2 && x[2] != null);
     return `<div class="bars${two ? ' two' : ''}">` + list.map(([label, v, second], i) =>
       `<div class="bar"><span class="bl">${esc(label)}</span>
-        <span class="bt"><i style="width:${(v / max * 100).toFixed(1)}%;background:${o.flat || PAL[i % PAL.length]}"></i></span>
+        <span class="bt"><i style="width:${(v / max * 100).toFixed(1)}%;background:${o.flat || (i === 0 ? PAL[0] : PAL[3])}"></i></span>
         <span class="bv">${fmt(v)}</span>` +
         (two ? `<span class="bv b2">${second == null ? '' : fmt(second)}</span>` : '') +
       `</div>`).join('') + `</div>`;

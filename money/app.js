@@ -301,7 +301,7 @@ function renderStats(rows) {
     <button data-act="kind" data-k="exp" aria-pressed="${statKind === 'exp'}">Expenses ${fmt(s.exp)}</button></div>
     <div class="card">` + (list.length ? donut(list, total) + list.map(([k, v], i) => `
       <button class="crow" data-act="drill" data-c="${esc(k)}">
-        <span class="badge" style="background:${Charts.PAL[i % Charts.PAL.length]}">${Math.round(v / total * 100)}%</span>
+        <span class="pct"><i style="background:${Charts.PAL[i % Charts.PAL.length]}"></i>${Math.round(v / total * 100)}%</span>
         <b>${esc(k)}</b><span class="v">${fmt(v)}</span></button>`).join('')
       : '<div class="empty">Nothing this month.</div>') + `</div>`;
 }
@@ -462,7 +462,7 @@ function renderAccounts(rows) {
       ${Object.entries(tot).map(([c, v]) => `<div class="arow tot"><b>Total ${c}</b><b>${sfmt(v, c)}</b></div>`).join('')}
       ${accs.map(a => `<div class="arow${!a.amount ? ' zero' : ''}"><span>${bankMark(a)}${esc(a.account)}${ageNote(a)}${a.error ? warnDot(a) : ''}</span><span>${a.amount == null ? '—' : sfmt(a.amount, a.currency)}${a.error && a.as_of ? `<small class="asof">${new Date(a.as_of).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</small>` : ''}</span></div>` +
         (a.overdraft || a.credit ? odRow(a) : '')).join('')}
-      ${b ? `<div class="note2">As of ${new Date(b.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}.</div>` : ''}
+      ${b ? `<div class="note2">As of ${new Date(b.at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>` : ''}
       ${data.fund ? `<div class="note2">Flexible Cash Funds: statement ${new Date(data.fund.statement_date + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} plus moves since. Interest after that date shows when a new statement is added.</div>` : ''}
     </div>
     <div class="card">
