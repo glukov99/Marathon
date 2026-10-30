@@ -2,8 +2,9 @@
    Loaded after each page's own styles, so it wins. One file = one look everywhere.
 
    Craft pass, 31 Oct 2026 (unslop, after Damir Sokolovsky's "unslop" skill, @heydamir, CC BY 4.0):
-   - Surfaces are plain: no colour washes behind the page, no gloss on cards. Depth = a lighter
-     surface and a hairline (--shadow is now a 1px hairline ring, so every card that uses it gets one).
+   - Surfaces are plain: no colour washes behind the page, no gloss on cards, no drop shadows anywhere
+     (Georgi, 31 Oct: shadows read as AI slop). Depth = a lighter surface and a hairline
+     (--shadow is a 1px hairline ring, so every card that uses it gets one). Do not add drop shadows back.
    - Hierarchy from size and colour, not weight: headings 600, figures 600, nothing at 700-900.
    - Labels in sentence case, no wide letter spacing.
    - Colour has meaning: sage = money in / good, terracotta = money out / warning, sand = the one
@@ -44,7 +45,16 @@ b,strong{font-weight:600}
 nav:not(.hubnav){background:var(--paper)!important;border-bottom:1px solid var(--rule)!important}
 nav button[aria-selected="true"]{border-bottom-color:var(--acc2)!important}
 input,select,textarea{border-radius:10px!important;background:var(--card2)!important;border:1px solid var(--rule)!important;color:var(--ink)!important}
-.note{border-left:0!important;border-radius:12px;background:var(--card)!important;box-shadow:inset 2px 0 0 var(--acc2),var(--shadow)}
+.note,.banner,.tripnote,.bh-flag{border-left:0!important;border-radius:12px!important;background:var(--card)!important;box-shadow:var(--shadow)!important}
+/* Callouts: no coloured bar down a rounded edge. A small dot says what kind of note it is. */
+.note::before,.banner::before,.bh-flag::before,.dtype::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;
+  margin-right:8px;vertical-align:1px;background:var(--acc2)}
+.bh-flag::before{background:var(--big)}
+.banner::before{background:var(--rec,var(--acc2))}
+.dtype{border-left:0!important;border-radius:8px!important;box-shadow:var(--shadow)}
+.dtype::before{background:var(--dc,var(--acc2))}
+/* Plain links: the hub's sage, never the browser's purple */
+:where(a:not([class])),:where(a:not([class])):visited{color:var(--acc);text-underline-offset:3px;text-decoration-thickness:1px}
 .toast{border-radius:10px!important;background:var(--sand)!important;color:#1E2522!important;font-weight:500}
 .box{border-radius:6px!important}
 .pill,.need,.mods span{border-radius:12px!important}
@@ -63,7 +73,7 @@ tr.today td{background:rgba(143,192,182,.08)!important}
 
 /* Floating Menu: a quiet raised surface instead of the brightest thing on every screen */
 .lhn-fab,.lhn-home{font-weight:600!important;padding:14px 20px!important;border-radius:24px!important;
-  background:var(--card2)!important;color:var(--ink)!important;box-shadow:var(--shadow),0 4px 16px rgba(0,0,0,.28)!important}
+  background:var(--card2)!important;color:var(--ink)!important;box-shadow:var(--shadow)!important}
 .lhn-home[aria-current="page"],.lhn-l a[aria-current="page"]{background:var(--sand)!important;color:#1E2522!important}
 .lhn-l a{font-weight:600!important;box-shadow:var(--shadow)!important}
 .lhn .lhn-cur{font-weight:600!important}
