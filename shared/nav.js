@@ -41,7 +41,7 @@
 .lhn-upd{display:block;margin:14px 0 0;background:none;border:0;color:var(--faint);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:6px 0}
 .lhn-fab{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:59;
   font-family:inherit;font-size:15px;font-weight:600;line-height:1;color:var(--paper);background:var(--ink);border:0;border-radius:28px;
-  padding:17px 22px;box-shadow:0 0 0 1px rgba(232,236,230,.08);cursor:pointer}
+  padding:17px 22px;box-shadow:0 6px 20px rgba(0,0,0,.28);cursor:pointer}
 .lhn-pad{height:calc(84px + env(safe-area-inset-bottom,0px))}
 .lhn-ov{position:fixed;inset:0;z-index:60;background:var(--paper);overflow-y:auto;display:flex;flex-direction:column;
   padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 92px)}
@@ -63,7 +63,7 @@ body.lhn-open{overflow:hidden}
   .lhn-ov{display:block;padding:0;background:rgba(0,0,0,.28)}
   .lhn-in{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(84px + env(safe-area-inset-bottom,0px));
     width:380px;max-height:calc(100vh - 120px);overflow-y:auto;margin:0;padding:4px 14px 14px;border-radius:22px;
-    background:var(--paper);box-shadow:0 0 0 1px rgba(232,236,230,.08);transform-origin:bottom right;animation:lhnPop .16s ease-out}
+    background:var(--paper);box-shadow:0 18px 50px rgba(0,0,0,.35);transform-origin:bottom right;animation:lhnPop .16s ease-out}
   .lhn-g{margin-top:14px}
   .lhn-l a{min-height:48px}
   .lhn-home{position:static;display:block;margin-top:14px;text-align:center;box-shadow:none}

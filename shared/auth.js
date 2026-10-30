@@ -59,7 +59,7 @@
     '#lh-gate{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;' +
     'background:#18201E;' +
     'font-family:Manrope,system-ui,-apple-system,sans-serif;color:#E8ECE6}' +
-    '#lh-gate .card{width:100%;max-width:360px;text-align:center;padding:30px 24px;border-radius:26px;background:#222C29;box-shadow:0 0 0 1px rgba(232,236,230,.06)}' +
+    '#lh-gate .card{width:100%;max-width:360px;text-align:center;padding:30px 24px;border-radius:26px;background:#222C29;box-shadow:0 20px 50px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.05)}' +
     '#lh-gate .k{font-size:11.5px;letter-spacing:.1em;color:#7C8A84;font-weight:600}' +
     '#lh-gate h1{margin:6px 0 4px;font-size:34px;font-weight:600;letter-spacing:-.03em}' +
     '#lh-gate p{margin:0 0 20px;color:#A7B4AD;font-size:14px}' +

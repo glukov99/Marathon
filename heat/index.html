@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610310106"></script>
+<script src="../shared/auth.js?v=202610310108"></script>
 <title>Heating — Life hub</title>
 <style>
 :root{
@@ -44,7 +44,7 @@ button,input{font:inherit;color:inherit}
 .rooms{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;margin-top:16px}
 @media (min-width:640px){.rooms{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .room{position:relative;overflow:hidden;border-radius:20px;padding:20px 20px 16px;background:var(--card);
-  box-shadow:var(--shadow);isolation:isolate}
+  box-shadow:0 10px 28px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.05);isolation:isolate}
 .room::before{content:"";position:absolute;inset:-40%;z-index:-1;
   background:radial-gradient(closest-side,var(--glow),transparent 70%);opacity:calc(var(--gi,.35) * .5);transition:opacity .6s var(--ease)}
 .room .top{display:flex;justify-content:space-between;align-items:center;gap:8px}
@@ -135,10 +135,10 @@ button,input{font:inherit;color:inherit}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610310106">
+<link rel="stylesheet" href="../shared/theme.css?v=202610310108">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610310106"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610310108"></script>
 <main class="wrap">
   <header class="hero">
     <div><div class="k">Home</div><h1>Heating</h1></div>
@@ -198,8 +198,8 @@ button,input{font:inherit;color:inherit}
   <p class="foot">The brain runs every 10 minutes in Apps Script. It sets both heaters from the clock, the outside temperature in Plovdiv and these modes. Each heater gets a new command when its plan changes and once an hour, so a change made in the Adax app lasts up to an hour.</p>
 </main>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610310106"></script>
-<script src="icons.js?v=202610310106"></script>
-<script src="app.js?v=202610310106"></script>
+<script src="../shared/sync.js?v=202610310108"></script>
+<script src="icons.js?v=202610310108"></script>
+<script src="app.js?v=202610310108"></script>
 </body>
 </html>
