@@ -16,7 +16,7 @@
 (function () {
   const GROUPS = [
     ['Body', [['training/', 'Training'], ['meals/', 'Meals']]],
-    ['Money', [['money/', 'Money'], ['business/', 'Business'], ['invoice/', 'New invoice']]],
+    ['Money', [['money/', 'Money'], ['business/', 'Business'], ['invoice/', 'New invoice'], ['promo/', 'Promo codes']]],
     ['Home', [['heat/', 'Heating'], ['car/', 'Car'], ['holidays/', 'Holidays'], ['time/', 'Time']]],
     ['Mind', [['jar/', 'Ideas jar'], ['robotics/', 'Robotics']]],
   ];
