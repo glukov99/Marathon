@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610302351"></script>
+<script src="../shared/auth.js?v=202610310003"></script>
 <title>Promo codes — Life hub</title>
 <style>
 :root{
@@ -51,16 +51,17 @@ form input{width:100%;padding:10px 12px;border:1px solid var(--rule);border-radi
   font:600 18px/1.3 ui-monospace,Menlo,monospace;letter-spacing:.05em;cursor:pointer;word-break:break-all}
 .pnote{margin:6px 0 0;font-size:13px;color:var(--soft)}
 .acts{display:flex;gap:6px;margin-top:10px}
+.old{margin-top:12px}
 .empty{padding:28px 4px;text-align:center;color:var(--faint)}
 .foot{margin-top:24px;font-size:12.5px;color:var(--faint)}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:7px 14px;border-radius:3px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:40}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610302351">
+<link rel="stylesheet" href="../shared/theme.css?v=202610310003">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610302351"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610310003"></script>
 <div class="wrap">
   <header class="hero">
     <div class="k">Scan the card, keep the code</div>
@@ -83,7 +84,7 @@ form input{width:100%;padding:10px 12px;border:1px solid var(--rule);border-radi
   <div class="foot" id="store">Saved on this device</div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202610302351"></script>
-<script src="app.js?v=202610302351"></script>
+<script src="../shared/sync.js?v=202610310003"></script>
+<script src="app.js?v=202610310003"></script>
 </body>
 </html>

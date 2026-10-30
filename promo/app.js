@@ -47,6 +47,7 @@ if (typeof document !== 'undefined') (function () {
   let cards = [];
   try { cards = JSON.parse(localStorage.getItem(KEY) || 'null') || []; } catch (e) {}
   let editing = null; // id of the card in the form, or null for a new one
+  let showOld = false; // expired cards are hidden; kept so a wrong date can still be fixed
 
   const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(cards)); } catch (e) {} };
   const say = t => { $('#store').textContent = t; };
@@ -67,8 +68,10 @@ if (typeof document !== 'undefined') (function () {
 
   const nice = d => new Date(d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   function render() {
-    const today = localDay(), l = order(cards, today);
-    $('#list').innerHTML = l.length ? l.map(c => {
+    const today = localDay(), all = order(cards, today);
+    const old = all.filter(c => state(c, today) === 'expired').length;
+    const l = showOld ? all : all.filter(c => state(c, today) !== 'expired');
+    $('#list').innerHTML = (l.length ? l.map(c => {
       const s = state(c, today);
       const exp = s === 'none' ? 'No expiry' : s === 'expired' ? 'Expired ' + nice(c.exp) : 'Until ' + nice(c.exp);
       return `<div class="card ${s}"><div class="top"><b>${esc(c.vendor || 'Unknown shop')}</b><span class="exp">${esc(exp)}</span></div>
@@ -76,7 +79,8 @@ if (typeof document !== 'undefined') (function () {
         ${c.note ? `<p class="pnote">${esc(c.note)}</p>` : ''}
         <div class="acts"><button class="btn sm ghost" data-act="edit" data-id="${c.id}">Edit</button>
         <button class="btn sm ghost" data-act="del" data-id="${c.id}">Delete</button></div></div>`;
-    }).join('') : '<div class="empty">No promo codes yet. Scan a card or add one by hand.</div>';
+    }).join('') : '<div class="empty">No promo codes yet. Scan a card or add one by hand.</div>') +
+      (old ? `<button class="btn sm ghost old" data-act="old">${showOld ? 'Hide' : 'Show'} ${old} expired</button>` : '');
   }
 
   function openForm(c, msg) {
@@ -134,6 +138,7 @@ if (typeof document !== 'undefined') (function () {
 
   document.addEventListener('click', async e => {
     const b = e.target.closest('[data-act]'); if (!b) return;
+    if (b.dataset.act === 'old') { showOld = !showOld; render(); return; }
     const c = cards.find(x => x.id === b.dataset.id); if (!c) return;
     if (b.dataset.act === 'copy') {
       try { await navigator.clipboard.writeText(c.code); toast('Copied ' + c.code); } catch (err) { toast('Could not copy'); }
