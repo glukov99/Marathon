@@ -116,9 +116,13 @@ nav button,.tabs button{margin-bottom:0!important}
 /* 5. Ticking a box: the tick lands instead of blinking on */
 .box svg{transform:scale(.6);transition:opacity 120ms ease,transform 200ms var(--ease-out)}
 .it.on .box svg{transform:none}
+/* 6. Things you open (trip details, routines, Car edit forms, Heating holiday box) unfold
+   instead of snapping in: state indication, occasional, 200ms */
+:is(details[open]>:not(summary),.ed.open,#holbox:not(.hidden)){animation:lhUnfold 200ms var(--ease-out)}
+@keyframes lhUnfold{from{opacity:0;transform:translateY(-4px)}}
 /* Reduced motion: keep the fades, drop the movement */
 @media (prefers-reduced-motion:reduce){
-  .wrap>*,.lhn-ov:not([hidden]) .lhn-in{animation-name:lhFade!important}
+  .wrap>*,.lhn-ov:not([hidden]) .lhn-in,details[open]>:not(summary),.ed.open,#holbox:not(.hidden){animation-name:lhFade!important}
   :is(button,.btn,.lhn-l a,.lhn-home,.lhn-fab):active{transform:none!important}
   .box svg{transform:none}
 }
