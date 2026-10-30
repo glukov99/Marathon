@@ -88,3 +88,37 @@ html,body{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adju
 /* Tab bars scroll sideways only, never up and down */
 nav,.tabs{overflow-y:hidden!important;overscroll-behavior:contain;align-items:stretch}
 nav button,.tabs button{margin-bottom:0!important}
+
+/* Motion, 31 Oct 2026 (after Emil Kowalski's animation skills, MIT). Restraint first:
+   only feedback, spatial and "no teleporting" motion, transform and opacity only, all under 300ms.
+   Rejected on purpose: charts drawing in, figures counting up (data you read should not move),
+   hover lifts on cards, anything looping. */
+:root{--ease-out:cubic-bezier(.23,1,.32,1)}
+/* 1. Press feedback: the button heard you */
+:is(button,.btn,.lhn-l a,.lhn-home):not(nav button):not(.mrow):not(.crow):not(.arow):not(:disabled){
+  transition:transform 160ms var(--ease-out),background-color .2s ease,color .2s ease,border-color .2s ease,opacity .2s ease}
+:is(button,.btn,.lhn-l a,.lhn-home):not(nav button):not(.mrow):not(.crow):not(.arow):not(:disabled):active{transform:scale(.97)}
+.lhn-fab:active{transform:scale(.95)}
+/* Full-width rows dim a touch instead of shrinking */
+:is(.mrow,.crow):active{background:rgba(232,236,230,.04)}
+/* 2. Page opens: the main blocks settle in once, a short stagger, never blocks a tap */
+@keyframes lhRise{from{opacity:0;transform:translateY(8px)}}
+.wrap>*:not(.hidden){animation:lhRise 320ms var(--ease-out) backwards}
+.wrap>*:nth-child(2){animation-delay:40ms}.wrap>*:nth-child(3){animation-delay:80ms}
+.wrap>*:nth-child(4){animation-delay:120ms}.wrap>*:nth-child(n+5){animation-delay:160ms}
+/* 3. Menu grows from the Menu button instead of appearing from nowhere */
+.lhn-ov:not([hidden]){animation:lhFade 180ms var(--ease-out)}
+.lhn-ov:not([hidden]) .lhn-in{animation:lhPop 220ms var(--ease-out);transform-origin:bottom right}
+@keyframes lhFade{from{opacity:0}}
+@keyframes lhPop{from{opacity:0;transform:translateY(8px) scale(.97)}}
+/* 4. Toasts rise from the edge they sit on, and leave the same way */
+.toast{transition:opacity 200ms var(--ease-out),transform 260ms var(--ease-out)!important}
+/* 5. Ticking a box: the tick lands instead of blinking on */
+.box svg{transform:scale(.6);transition:opacity 120ms ease,transform 200ms var(--ease-out)}
+.it.on .box svg{transform:none}
+/* Reduced motion: keep the fades, drop the movement */
+@media (prefers-reduced-motion:reduce){
+  .wrap>*,.lhn-ov:not([hidden]) .lhn-in{animation-name:lhFade!important}
+  :is(button,.btn,.lhn-l a,.lhn-home,.lhn-fab):active{transform:none!important}
+  .box svg{transform:none}
+}

@@ -68,7 +68,7 @@ body.lhn-open{overflow:hidden}
   .lhn-l a{min-height:48px}
   .lhn-home{position:static;display:block;margin-top:14px;text-align:center;box-shadow:none}
 }
-@keyframes lhnPop{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+@keyframes lhnPop{from{opacity:0;transform:translateY(8px) scale(.97)}}
 @media(prefers-reduced-motion:reduce){.lhn-in{animation:none}}`;
   document.head.appendChild(css);
 
