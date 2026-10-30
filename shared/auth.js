@@ -13,7 +13,7 @@
   /* A family sign-in (Georgi's wife) reaches these pages only. The backend is what
      enforces it (Auth.js, authAllowed_); this only keeps her off pages that would
      show nothing but refusals. Sessions from before roles existed are Georgi's. */
-  const FAMILY_PAGES = ['heat/', 'car/', 'meals/', 'holidays/'];
+  const FAMILY_PAGES = ['heat/', 'car/', 'meals/', 'holidays/', 'promo/'];
   const ROOT = ((document.currentScript && document.currentScript.src) || '').replace(/shared\/auth\.js.*$/, '');
   const role = () => (ses() || {}).role || 'owner';
   const ls = {
