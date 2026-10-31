@@ -7,7 +7,8 @@ body{background:radial-gradient(700px 500px at 50% 8%,rgba(160,210,120,.10),tran
 .bh-hello{font-size:13px;color:var(--soft)}
 .bh-head{margin:4px 0 2px;font:600 clamp(24px,6.6vw,32px)/1.12 'Manrope',sans-serif;letter-spacing:-.02em}
 .bh-sub{font-size:13.5px;color:var(--soft)}
-.bh-stage{position:relative;margin-top:6px}
+/* Phone-sized on any screen: at full page width on a PC the map filled the window (31 Oct 2026). */
+.bh-stage{position:relative;margin:6px auto 0;max-width:460px}
 .bh-stage svg{display:block;width:100%;height:auto;overflow:visible}
 .bh-node{cursor:pointer}
 .bh-node text{font-family:'Manrope',sans-serif}
