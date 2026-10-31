@@ -39,6 +39,7 @@ const EX={
  pike:['Pike push-ups','PUSH_UP','PIKE_PUSH_UP','','chest shoulders|triceps'],
  row:['Rows: dumbbell or band','ROW','DUMBBELL_ROW','','lats traps|biceps lower_back shoulders'],
  bandrow:['Band rows','BANDED_EXERCISES','ROW','','lats traps|biceps lower_back shoulders'],
+ invrow:['Inverted rows under a sturdy table','ROW','INVERTED_ROW','No bar? Grip the table edge, body straight, chest to the edge. Check it will not tip.','lats traps|biceps lower_back shoulders'],
  ohp:['Overhead press: dumbbells, or pike push-ups at home','SHOULDER_PRESS','DUMBBELL_SHOULDER_PRESS','','shoulders|chest triceps traps'],
  hang:['Dead hang','PULL_UP','','','forearm|lats shoulders'], // * no Garmin exercise: the watch shows "Pull Up"
  facepull:['Band face pulls','ROW','BANDED_FACE_PULLS','','shoulders traps'],
@@ -69,6 +70,7 @@ const GYM={
  upper:[X(2,'pushup','max','light, stop well short'),X(2,'row',12,'light')],
  legs:[X(3,'stepup',10,'each leg'),X(3,'split',8,'each leg'),X(3,'calf',12,'each leg'),X(3,'tib',20)],
  hotelA:[X(4,'jumpsquat',6),X(3,'slrdl',10,'each leg, bodyweight or band'),X(3,'split',10,'each leg, band under the front foot for load'),X(3,'stepup',12,'each leg, bench or stairs'),X(3,'calf',20)],
+ hotelEasy:[[4,[['invrow',8],['pushup',10],['squat',15],['calf',15,'each leg, on a stair']],'Easy rounds, not timed. Stop 3 reps short.'],X(3,'plank','40 s')],
  hotelBaway:[X(4,'pushup','max','3 reps short of max'),X(4,'bandrow',15),X(3,'pike',8),X(3,'plank','40 s')],
 };
 /* A week's version: sets caps every block, drop removes exercises, set changes one exercise's [amount, how]. */
@@ -127,7 +129,7 @@ wk('base','Return to running','22 km','~200 m','<b>All easy.</b> You are 2 weeks
  [E(30),CORE()],
  [L('Long easy run 60 min','HR under 155. Time, not distance.',60)],
  [SWIM()],
- [GS('Rower + easy circuit','Easy. Not timed.',25,'easy')]
+ [GS('Bodyweight circuit (away, no equipment)','Easy. Not timed. Table rows replace pull-ups. No rower: the circuit is enough this week.',25,'hotelEasy')]
 ],{light:1});
 wk('base','Baseline tests','26 km','~300 m','<b>Test week.</b> These numbers set your challenge targets. Rest 5–10 min between tests on the same day.',[
  [E(30,'Easy, then 4×20 s strides.'),T('Test: broad jump + 2k row','Broad jump: best of 3, measure toe to heel. Then 2k row all-out (damper 4–5). Write both in Challenges.',30)],
