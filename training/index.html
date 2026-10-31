@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610311041"></script>
+<script src="../shared/auth.js?v=202610311043"></script>
 <title>Season 2027 — Plovdiv, Bairi, Vitosha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -112,6 +112,14 @@ nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)
 .day-h .hd{font-size:12px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;color:var(--st)}
 .day.today .day-h{color:var(--ink)}
 .day.today{background:linear-gradient(90deg,var(--card2),transparent)}
+.day.past{padding-bottom:10px}
+.day.past>summary{cursor:pointer;list-style:none}
+.day.past>summary::-webkit-details-marker{display:none}
+.day.past>summary .dsum{margin-left:auto;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;color:var(--easy)}
+.day.past>summary .dsum.miss{color:var(--faint)}
+.day.past>summary .dsum::after{content:" \25B8";color:var(--faint)}
+.day.past[open]>summary .dsum::after{content:" \25BE"}
+.day.past[open]{padding-bottom:6px}
 .it{display:flex;gap:11px;padding:8px 0 8px;align-items:flex-start}
 .box{flex-shrink:0;width:22px;height:22px;border:1.5px solid var(--rule);border-radius:3px;background:var(--card);cursor:pointer;
   display:grid;place-items:center;margin-top:1px;padding:0}
@@ -194,11 +202,11 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610311041">
-<link rel="stylesheet" href="body.css?v=202610311041">
+<link rel="stylesheet" href="../shared/theme.css?v=202610311043">
+<link rel="stylesheet" href="body.css?v=202610311043">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610311041"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610311043"></script>
 <div class="wrap">
   <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
@@ -245,12 +253,12 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="plan.js?v=202610311041"></script>
-<script src="../shared/sync.js?v=202610311041"></script>
-<script src="../holidays/holidays-data.js?v=202610311041"></script>
-<script src="../shared/travel.js?v=202610311041"></script>
-<script src="body-shapes.js?v=202610311041"></script>
-<script src="body.js?v=202610311041"></script>
+<script src="plan.js?v=202610311043"></script>
+<script src="../shared/sync.js?v=202610311043"></script>
+<script src="../holidays/holidays-data.js?v=202610311043"></script>
+<script src="../shared/travel.js?v=202610311043"></script>
+<script src="body-shapes.js?v=202610311043"></script>
+<script src="body.js?v=202610311043"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -306,6 +314,8 @@ function renderHero(){
 
 /* ============ render: week ============ */
 const CHECK='<svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4"><path d="M3 8.5l3 3 7-7"/></svg>';
+const openDays=new Set();
+document.addEventListener('toggle',e=>{const k=e.target.dataset&&e.target.dataset.day;if(k){e.target.open?openDays.add(k):openDays.delete(k)}},true);
 function renderWeek(){
   const w=W[wsel]; const t0=today0();
   document.getElementById('restBanner').classList.toggle('hidden',!(t0<START&&wsel===0));
@@ -317,6 +327,7 @@ function renderWeek(){
     const dt=dayDate(wsel,d); const isT=dt.getTime()===t0.getTime();
     const trip=Travel.tripOn(dt);
     const hard=!W[wsel].light&&!lt&&items.some(x=>x.key||x.long||x.z==='vert'||x.race);
+    const tot0=tot,done0=done;
     const rows=items.map((x0,i)=>{ const x=Travel.adapt(x0,trip,lt);
       const k=id(wsel,d,i); const on=!!state.checks[k]; tot++; if(on)done++; if(x.z==='yoga'){if(on)yd++}else pm+=x.m||0;
       const lg=state.logs[k]; const canLog=x.z!=='rest'&&x.z!=='yoga';
@@ -342,7 +353,12 @@ function renderWeek(){
           <div><label for="hr-${k}">Avg HR</label><input id="hr-${k}" inputmode="numeric" data-f="hr" data-lk="${k}" value="${esc(lg?.hr||'')}"></div>`}
           <textarea aria-label="Note" placeholder="${str?'Reps if different from the plan. How did it feel? Anything hurt?':'How did it feel? Anything hurt?'}" data-f="n" data-lk="${k}">${esc(lg?.n||'')}</textarea></div>`:''}
         </div></div>`}).join('');
-    return `<div class="day ${isT?'today':''}"><div class="day-h">${DN[d]}<span class="dt">${fd(dt)}${isT?', today':''}</span>${hard?'<span class="hd">Hard day</span>':''}${trip?`<span class="away">Away: ${esc(trip.n)}${trip.dest?', '+esc(trip.dest):''}</span>`:''}</div>${rows}</div>`;
+    const head=`${DN[d]}<span class="dt">${fd(dt)}${isT?', today':''}</span>${hard?'<span class="hd">Hard day</span>':''}${trip?`<span class="away">Away: ${esc(trip.n)}${trip.dest?', '+esc(trip.dest):''}</span>`:''}`;
+    /* Days already gone fold into one line, so today is near the top (his ask,
+       31 Oct 2026). A day opened stays open across ticks: openDays. */
+    if(dt<t0){const n=tot-tot0,dn=done-done0,key=wsel+'-'+d;
+      return `<details class="day past" data-day="${key}"${openDays.has(key)?' open':''}><summary class="day-h">${head}<span class="dsum${dn<n?' miss':''}">${dn} of ${n} done</span></summary>${rows}</details>`}
+    return `<div class="day ${isT?'today':''}"><div class="day-h">${head}</div>${rows}</div>`;
   }).join('');
   const hrs=(pm/60).toFixed(1).replace('.0','');
   document.getElementById('week').innerHTML=`<article class="week" style="--pc:${PH[w.p][1]}">
