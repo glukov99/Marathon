@@ -43,14 +43,16 @@ const light = Travel.adapt(gymA[3], null, true), away = Travel.adapt(gymA[3], { 
 assert(light.ex.every(b => b[0] <= 2) && light.ex.length === gymA[3].ex.length, 'a lighter week caps Gym A at 2 sets');
 assert(keys(away).includes('jumpsquat') && !keys(away).includes('trapbar'), 'away, Gym A becomes the hotel session');
 assert.notDeepStrictEqual(bhMuscles(gymA[0]), bhMuscles(gymA[1]), 'glow follows the exact sets: week 1 has no jumps');
-// The week's run km beside the plan (31 Oct 2026): every run counts, and over by >10% is marked.
+// The week's runs beside the plan (31 Oct 2026): compared in minutes, the plan's own unit.
 const html = fs.readFileSync(__dirname + '/index.html', 'utf8');
-const fn = html.match(/function runKmLine\(wi,w\)\{[\s\S]*?\n\}/);
+const fn = html.match(/const runPlanMin=[^\n]*\nfunction runKmLine\(wi,w\)\{[\s\S]*?\n\}/);
 assert(fn, 'runKmLine is on the Training page');
-const line = (km, plan) => new Function('state', fn[0] + '; return runKmLine(0, {km: ' + JSON.stringify(plan) + '});')({ runKm: km });
-assert.strictEqual(line({}, '22 km'), '', 'nothing shown before the first sync');
-assert(/30\.4 km run \(\+38%\)/.test(line({ 0: 30.4 }, '22 km')) && /wk-ran over/.test(line({ 0: 30.4 }, '22 km')), '30 of 22 km is marked over');
-assert(!/over|\(/.test(line({ 0: 23 }, '22 km')), 'within 10% is not marked');
-assert(/12 km run/.test(line({ 0: 12 }, '~30 km')) && !/over/.test(line({ 0: 12 }, '~30 km')), 'a week in progress is not flagged for being short');
-assert(/0 km run/.test(line({ 0: 0 }, '22 km')), 'a synced week with no runs says 0');
+const RUNZ = ['easy', 'rec', 'st', 'hard', 'mp', 'vert', 'race'];
+const line = (r, w) => new Function('state', 'RUNZ', fn[0] + '; return runKmLine(0, W);'.replace('W', JSON.stringify(w)))({ runKm: { 0: r } }, RUNZ);
+const w1 = { km: '22 km', days: [[{ z: 'easy', m: 30 }, { z: 'gym', m: 45 }], [{ z: 'easy', m: 35 }], [{ z: 'vert', m: 45 }], [{ z: 'easy', m: 30 }], [{ z: 'easy', m: 60 }], [], []] };
+assert.strictEqual(new Function('state', fn[0] + '; return runKmLine(0, {});')({}), '', 'nothing shown before the first sync');
+assert.strictEqual(line(30.4, w1), '', 'an old figure from before minutes were kept is not shown');
+assert(/31\.1 km run, 230 of 200 min \(\+15%\)/.test(line({ km: 31.1, min: 230 }, w1)) && /over/.test(line({ km: 31.1, min: 230 }, w1)), 'week 1 as run: 15% over in time is marked');
+assert(!/over|\(/.test(line({ km: 27, min: 210 }, w1)), 'within 10% is not marked, whatever the km');
+assert(!/over/.test(line({ km: 10, min: 80 }, w1)), 'a week in progress is not flagged for being short');
 console.log('training check ok');

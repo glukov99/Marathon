@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610311036"></script>
+<script src="../shared/auth.js?v=202610311039"></script>
 <title>Season 2027 — Plovdiv, Bairi, Vitosha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -194,11 +194,11 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610311036">
-<link rel="stylesheet" href="body.css?v=202610311036">
+<link rel="stylesheet" href="../shared/theme.css?v=202610311039">
+<link rel="stylesheet" href="body.css?v=202610311039">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610311036"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610311039"></script>
 <div class="wrap">
   <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
@@ -245,12 +245,12 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="plan.js?v=202610311036"></script>
-<script src="../shared/sync.js?v=202610311036"></script>
-<script src="../holidays/holidays-data.js?v=202610311036"></script>
-<script src="../shared/travel.js?v=202610311036"></script>
-<script src="body-shapes.js?v=202610311036"></script>
-<script src="body.js?v=202610311036"></script>
+<script src="plan.js?v=202610311039"></script>
+<script src="../shared/sync.js?v=202610311039"></script>
+<script src="../holidays/holidays-data.js?v=202610311039"></script>
+<script src="../shared/travel.js?v=202610311039"></script>
+<script src="body-shapes.js?v=202610311039"></script>
+<script src="body.js?v=202610311039"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -588,13 +588,16 @@ function importData(){
   save(); renderHero();renderWeek();renderRaces();renderCh();renderCI();
   document.getElementById('dataMsg').textContent='Imported and merged '+n+' entries.';
 }
-/* What the week's runs came to, beside the plan's km. Over by more than 10%
-   is marked: running well past the plan is the usual way to get hurt. */
+/* What the week's runs came to, beside the plan. The plan sets runs in
+   MINUTES, so time is what is compared: its km figure is only an estimate,
+   and a slow one (week 1: 22 km for 200 min is 9:05/km; Georgi's easy pace
+   was 7:24). Over by more than 10% is marked: running well past the plan is
+   the usual way to get hurt. Under is never marked: a week in progress. */
+const runPlanMin=w=>w.days.flat().filter(x=>RUNZ.includes(x.z)||(x.z==='test'&&/10k|5k|time trial/i.test(x.t))).reduce((a,x)=>a+(x.m||0),0);
 function runKmLine(wi,w){
-  const done=(state.runKm||{})[wi]; if(done==null)return '';
-  const plan=parseFloat((String(w.km).match(/(\d+(?:\.\d+)?)\s*km/)||[])[1]);
-  const over=plan?Math.round((done/plan-1)*100):0;
-  return `<span class="wk-ran${over>10?' over':''}">${done} km run${over>10?` (+${over}%)`:''}</span>`;
+  const r=(state.runKm||{})[wi]; if(r==null||typeof r!=='object')return '';
+  const plan=runPlanMin(w), over=plan?Math.round((r.min/plan-1)*100):0;
+  return `<span class="wk-ran${over>10?' over':''}">${r.km} km run, ${r.min} of ${plan} min${over>10?` (+${over}%)`:''}</span>`;
 }
 /* ============ Intervals.icu sync (via Apps Script) ============ */
 const SKEY='season-2027-sync';
@@ -626,14 +629,14 @@ async function runSync(manual){
      22 km week and the page could not say so). Worked out again from the
      whole list on every sync, so a deleted or edited run corrects itself. */
   const kmw={}, cur=Math.floor((Date.now()-START)/864e5/7);
-  for(let wi=0;wi<=Math.min(cur,W.length-1);wi++)kmw[wi]=0;
+  for(let wi=0;wi<=Math.min(cur,W.length-1);wi++)kmw[wi]={km:0,min:0};
   (data.activities||[]).forEach(a=>{
-    if(!/run/i.test(a.type||'')||!a.distance)return;
+    if(!/run/i.test(a.type||''))return;
     const ds=String(a.date).slice(0,10).split('-').map(Number); if(ds.length<3)return;
     const wi=Math.floor(Math.round((new Date(ds[0],ds[1]-1,ds[2])-START)/864e5)/7);
-    if(wi in kmw)kmw[wi]+=a.distance/1000;
+    if(wi in kmw){kmw[wi].km+=(a.distance||0)/1000;kmw[wi].min+=(a.moving_time||0)/60}
   });
-  Object.keys(kmw).forEach(k=>{kmw[k]=Math.round(kmw[k]*10)/10});
+  Object.values(kmw).forEach(v=>{v.km=Math.round(v.km*10)/10;v.min=Math.round(v.min)});
   const kmChanged=JSON.stringify(state.runKm||{})!==JSON.stringify(Object.assign({},state.runKm,kmw));
   state.runKm=Object.assign({},state.runKm,kmw);
   const byDay={};
