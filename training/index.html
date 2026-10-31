@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610311026"></script>
+<script src="../shared/auth.js?v=202610311036"></script>
 <title>Season 2027 — Plovdiv, Bairi, Vitosha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -96,6 +96,8 @@ nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)
 .wk-head .sub{font-size:13px;color:var(--soft);margin-top:5px}
 .wk-num{text-align:right;flex-shrink:0;font-size:12px;color:var(--soft);line-height:1.3}
 .wk-num b{display:block;font-family:'Barlow Condensed',sans-serif;font-size:23px;color:var(--ink);line-height:1}
+.wk-ran{display:block;margin:2px 0 3px;font-weight:600;color:var(--easy)}
+.wk-ran.over{color:var(--st)}
 .why{padding:10px 16px;background:var(--card2);font-size:13.5px;color:var(--soft);border-bottom:1px solid var(--rule)}
 .why b{color:var(--ink)}
 .prog{padding:10px 16px 0;font-size:12.5px;color:var(--soft);display:flex;justify-content:space-between}
@@ -192,11 +194,11 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610311026">
-<link rel="stylesheet" href="body.css?v=202610311026">
+<link rel="stylesheet" href="../shared/theme.css?v=202610311036">
+<link rel="stylesheet" href="body.css?v=202610311036">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610311026"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202610311036"></script>
 <div class="wrap">
   <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
@@ -243,12 +245,12 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="plan.js?v=202610311026"></script>
-<script src="../shared/sync.js?v=202610311026"></script>
-<script src="../holidays/holidays-data.js?v=202610311026"></script>
-<script src="../shared/travel.js?v=202610311026"></script>
-<script src="body-shapes.js?v=202610311026"></script>
-<script src="body.js?v=202610311026"></script>
+<script src="plan.js?v=202610311036"></script>
+<script src="../shared/sync.js?v=202610311036"></script>
+<script src="../holidays/holidays-data.js?v=202610311036"></script>
+<script src="../shared/travel.js?v=202610311036"></script>
+<script src="body-shapes.js?v=202610311036"></script>
+<script src="body.js?v=202610311036"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -346,7 +348,7 @@ function renderWeek(){
   document.getElementById('week').innerHTML=`<article class="week" style="--pc:${PH[w.p][1]}">
     <div class="wk-head"><div><h2>Week ${wsel+1}: ${esc(w.title)}</h2>
       <div class="sub">${fd(dayDate(wsel,0))} – ${fd(dayDate(wsel,6))}, ${PH[w.p][0]}${w.light?', lighter week':''}</div></div>
-      <div class="wk-num"><b>${esc(w.km)}</b>vert ${esc(w.vert)}<br>~${hrs} h planned</div></div>
+      <div class="wk-num"><b>${esc(w.km)}</b>${runKmLine(wsel,w)}vert ${esc(w.vert)}<br>~${hrs} h planned</div></div>
     <div class="why">${w.why}</div>
     ${TI.clash?`<div class="tripnote clash">${esc(TI.clash)}</div>`:''}
     ${TI.advice||lt?`<div class="tripnote">${esc(lt?'Lighter week (your choice): quality sessions are easy runs, everything is about 30% shorter. Your watch still shows the original workouts; follow this page.':TI.advice)} ${(TI.advice&&!/moved away/.test(TI.advice))||lt?`<button class="btn ghost" data-lighter="1" style="margin-top:8px">${lt?'Undo lighter week':'Make this a lighter week'}</button>`:''}</div>`:''}
@@ -586,6 +588,14 @@ function importData(){
   save(); renderHero();renderWeek();renderRaces();renderCh();renderCI();
   document.getElementById('dataMsg').textContent='Imported and merged '+n+' entries.';
 }
+/* What the week's runs came to, beside the plan's km. Over by more than 10%
+   is marked: running well past the plan is the usual way to get hurt. */
+function runKmLine(wi,w){
+  const done=(state.runKm||{})[wi]; if(done==null)return '';
+  const plan=parseFloat((String(w.km).match(/(\d+(?:\.\d+)?)\s*km/)||[])[1]);
+  const over=plan?Math.round((done/plan-1)*100):0;
+  return `<span class="wk-ran${over>10?' over':''}">${done} km run${over>10?` (+${over}%)`:''}</span>`;
+}
 /* ============ Intervals.icu sync (via Apps Script) ============ */
 const SKEY='season-2027-sync';
 function syncCfg(){try{return JSON.parse(localStorage.getItem(SKEY)||'{}')}catch(e){return {}}}
@@ -611,6 +621,21 @@ async function runSync(manual){
   }catch(e){syMsg('Sync failed: could not reach Apps Script. This works on the GitHub Pages version, not inside Claude.');return}
   if(!data||data.error){syMsg('Sync failed: '+((data&&data.error)||'no data'));return}
   state.synced=state.synced||{};
+  /* Every run counts towards the week's km, not only the ones that found a
+     slot in the plan: an extra run used to vanish (Georgi ran 30 km in a
+     22 km week and the page could not say so). Worked out again from the
+     whole list on every sync, so a deleted or edited run corrects itself. */
+  const kmw={}, cur=Math.floor((Date.now()-START)/864e5/7);
+  for(let wi=0;wi<=Math.min(cur,W.length-1);wi++)kmw[wi]=0;
+  (data.activities||[]).forEach(a=>{
+    if(!/run/i.test(a.type||'')||!a.distance)return;
+    const ds=String(a.date).slice(0,10).split('-').map(Number); if(ds.length<3)return;
+    const wi=Math.floor(Math.round((new Date(ds[0],ds[1]-1,ds[2])-START)/864e5)/7);
+    if(wi in kmw)kmw[wi]+=a.distance/1000;
+  });
+  Object.keys(kmw).forEach(k=>{kmw[k]=Math.round(kmw[k]*10)/10});
+  const kmChanged=JSON.stringify(state.runKm||{})!==JSON.stringify(Object.assign({},state.runKm,kmw));
+  state.runKm=Object.assign({},state.runKm,kmw);
   const byDay={};
   (data.activities||[]).forEach(a=>{
     if(state.synced[a.id])return;
@@ -632,7 +657,7 @@ async function runSync(manual){
     });
   });
   const now=new Date(); c.last=now.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+now.toTimeString().slice(0,5)+', '+n+' new'; setSyncCfg(c);
-  if(n){save();renderWeek()}
+  if(n||kmChanged){save();renderWeek()}
   syMsg('Last sync: '+c.last+'.');
 }
 function autoSync(){if(syncCfg().url)runSync(false)}
