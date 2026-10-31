@@ -43,6 +43,15 @@ const light = Travel.adapt(gymA[3], null, true), away = Travel.adapt(gymA[3], { 
 assert(light.ex.every(b => b[0] <= 2) && light.ex.length === gymA[3].ex.length, 'a lighter week caps Gym A at 2 sets');
 assert(keys(away).includes('jumpsquat') && !keys(away).includes('trapbar'), 'away, Gym A becomes the hotel session');
 assert.notDeepStrictEqual(bhMuscles(gymA[0]), bhMuscles(gymA[1]), 'glow follows the exact sets: week 1 has no jumps');
+// Week km labels come from the planned minutes at his own paces (31 Oct 2026), not a walking 9 min/km.
+assert.strictEqual(W[0].km, '~27 km', 'week 1: 200 planned minutes at 7:10 easy and 8:30 on the hill');
+W.forEach((w, i) => {
+  if (!w.kmHand) return;
+  const m = w.days.flat().filter(x => ['easy', 'rec', 'st', 'hard', 'mp', 'vert'].includes(x.z)).reduce((a, x) => a + (x.m || 0), 0);
+  const pace = m / parseFloat(w.km.slice(1));
+  assert(pace > 6 && pace < 8, `week ${i + 1}: ${w.km} for ${m} min is ${pace.toFixed(2)} min/km, not a running pace`);
+});
+assert(W.some(w => /race/.test(w.km)) && W.filter(w => / h$/.test(w.km)).length === 5, 'race weeks and the Vitosha hours are left alone');
 // The week's runs beside the plan (31 Oct 2026): compared in minutes, the plan's own unit.
 const html = fs.readFileSync(__dirname + '/index.html', 'utf8');
 const fn = html.match(/const runPlanMin=[^\n]*\nfunction runKmLine\(wi,w\)\{[\s\S]*?\n\}/);

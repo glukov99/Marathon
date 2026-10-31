@@ -647,3 +647,27 @@ W.forEach((w,wi)=>w.days.forEach((items,d)=>{
   items.push(S('yoga','PM yoga: '+R.t,(Y.why?Y.why+' ':'')+'Video: '+R.video,routineMin(rt),{yc:'var(--easy)',link:ylink(R.video),rt,slot:k}));
 }));
 
+
+/* ============ km labels from the planned minutes (31 Oct 2026) ============
+   The hand-written km per week assumed about 9 min/km, a brisk walk (Georgi:
+   "9/km pace is fast walking, not running"). The plan sets runs in minutes,
+   so the label is worked out from them at his own paces, measured in week 1
+   from Intervals.icu: easy 7:10/km (179 min, 25.1 km), the hill session
+   8:30/km (51 min, 6.0 km); marathon pace is the plan's own 6:24. Steady and
+   hard sessions carry an easy warm-up and cool-down, so they sit between.
+   A long run or rehearsal set by distance keeps its distance. Road weeks
+   only: race weeks show the race, and the Bairi and Vitosha weeks are trail
+   and mountain time, where week 1 says nothing about his pace. */
+const PACE={easy:7.17,rec:7.17,vert:8.5,mp:6.4,st:6.6,hard:6.4};
+const runKmOf=x=>{
+  const d=String(x.t).match(/^(?:Long (?:easy )?run|Dress rehearsal) (\d+(?:\.\d+)?) km\b/);
+  if(d)return +d[1];
+  if(x.z==='test')return 10+Math.max(0,(x.m||0)-50)/PACE.easy;
+  return (x.m||0)/(PACE[x.z]||PACE.easy);
+};
+W.forEach(w=>{
+  if(!['base','build','mara','taper'].includes(w.p)||/race| h\b/.test(w.km))return;
+  w.kmHand=w.km;
+  const km=w.days.flat().filter(x=>PACE[x.z]||(x.z==='test'&&/10k/i.test(x.t))).reduce((a,x)=>a+runKmOf(x),0);
+  w.km='~'+Math.round(km)+' km';
+});
