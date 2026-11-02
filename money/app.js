@@ -508,65 +508,76 @@ const pbar = (have, target) => `<div class="pbar"><i style="width:${(target > 0 
 const brow = (label, val, sub) => `<div class="arow"><span>${label}${sub ? `<small class="bsub">${sub}</small>` : ''}</span><b>${val}</b></div>`;
 const MLONG = m => new Date(m + '-01T12:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 function renderBudget() {
-  const R = Budget.run(data.tx, bset, month), s = R.s, c = R.cur;
-  // A month's savings at the usual income: the average of the three months before.
+  const D = d => new Date(d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  /* Card payments the bank has not booked yet. Ones with an amount have no
+     category yet, so they come out of Fun until booked. UniCredit sends its
+     unbooked card payments as "Card operation", date 0001-01-03, amount 0, so
+     those can only be counted and flagged, not taken from a budget. */
+  const allPend = ((data.pending || {}).tx || []).filter(t => t.own !== 'Business' && t.c === 'EUR');
+  const pBlind = allPend.filter(t => !t.a || !/^20\d\d-/.test(t.d || '')).length;
+  const R0 = Budget.run(data.tx, bset, month);
+  const open = R0.cur.period.open;
+  const pKnown = open ? allPend.filter(t => t.a < 0 && /^20\d\d-/.test(t.d) && t.d >= R0.cur.period.from) : [];
+  const R = pKnown.length ? Budget.run(data.tx, bset, month, pKnown) : R0, s = R.s, c = R.cur, p = c.period;
+  const when = `${D(p.from)} – ${p.to ? D(p.to) : 'next salary'}`;
+  const neg = v => (v < -0.004 ? 'exp' : '');
+  $('#sum').innerHTML =
+    `<div><span>Money in</span><b>${fmt(c.moneyIn)}</b><i>${when}</i></div>` +
+    `<div><span>Spent</span><b class="exp">${fmt(c.spent)}</b>${c.pending ? `<i>${fmt(c.pending)} not booked yet</i>` : ''}</div>` +
+    `<div><span>In budgets</span><b class="${c.total < 0 ? 'exp' : 'inc'}">${sfmt(c.total)}</b>${open && pBlind ? `<i>${pBlind} UniCredit payment${pBlind === 1 ? '' : 's'} still to come off</i>` : ''}</div>`;
+
+  // What happened to a budget this month, in one short line.
+  const note = l => {
+    const bits = [];
+    if (l.kind === 'unassigned') bits.push(l.added ? 'money no goal needed this month' : 'every euro has a budget');
+    else if (l.kind === 'savings') {
+      bits.push(`${s.savePct}% of income`);
+      if (l.spent > 0) bits.push(`${fmt(l.spent)} moved to savings`);
+      if (l.spent < 0) bits.push(`${fmt(-l.spent)} taken back from savings`);
+    } else {
+      bits.push(l.mode === 'top' ? 'tops up to its goal' : l.target ? `${fmt(l.saved)} of ${fmt(l.target)} saved` : 'adds up month to month');
+      if (l.spent) bits.push(`${fmt(l.spent)} spent`);
+    }
+    if (l.moved > 0) bits.push(`<span class="warn">${fmt(l.moved)} taken from others to cover overspending</span>`);
+    if (l.moved < 0) bits.push(`${fmt(-l.moved)} given to cover overspending`);
+    return bits.join(' · ');
+  };
+  const row = l => `<div class="env${l.kind === 'unassigned' ? ' un' : ''}"><span>${esc(l.name)}<small class="bsub">${note(l)}</small></span>` +
+    `<b>${l.kind === 'unassigned' ? '—' : fmt(l.goal)}</b><b>${fmt(l.added)}</b><b class="${neg(l.available)}">${sfmt(l.available)}</b></div>` +
+    (l.target ? pbar(l.saved, l.target) : '');
+  const L = n => c.list.find(l => l.name === n);
+  const wants = c.list.filter(l => l.kind === 'want');
+
+  // Emergency fund, Leica, company: unchanged ideas, fed from the budgets.
   let ai = 0; for (let m = Budget.prev(month), i = 0; i < 3; i++, m = Budget.prev(m)) ai += Budget.sums(data.tx, Object.assign({}, s, { _starts: null }), m).income;
   const monthlySave = ai / 3 * s.savePct / 100;
   const accs = (data.balances && data.balances.accounts ? data.balances.accounts : []).slice();
   const fb = fundBalance(data);
   if (fb != null) accs.push({ account: 'Flexible Cash Funds', amount: fb, currency: 'EUR' });
   const em = Budget.emergency(s, accs, monthlySave);
-  const lf = c.funds.find(f => f.name === s.business.fund);
+  const lf = L(s.business.fund);
   const biz = Budget.businessSince(data.tx, s, s.start, month), bm = Budget.business(data.tx, s, month);
   const lTarget = +s.business.target || (lf && lf.target) || 0;
-  const lHave = (lf ? Math.max(0, lf.bal) : 0) + Math.max(0, biz);
-  // A budget month runs payday to payday, so the top line shows that period, not the calendar month.
-  const D = d => new Date(d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  const p = c.period, neg = v => (v < 0 ? 'exp' : '');
-  const when = `${D(p.from)} – ${p.to ? D(p.to) : 'next salary'}`;
-  /* Card payments the bank has not booked yet. They have no category, so they
-     sit outside the envelopes, but they still lower what is left. UniCredit
-     sends them with no date and no amount ("Card operation", 0001-01-03), so
-     those can only be counted, not added up: the page says so. */
-  const pd = p.open ? ((data.pending || {}).tx || []).filter(t => t.own !== 'Business' && t.c === 'EUR') : [];
-  const pKnown = pd.filter(t => t.a < 0 && t.d >= p.from);
-  const pBlind = pd.filter(t => !t.a || !/^20\d\d-/.test(t.d || '')).length;
-  const pSum = Math.round(-pKnown.reduce((n, t) => n + t.a, 0) * 100) / 100;
-  const leftNow = Math.round((c.left - pSum) * 100) / 100;
-  $('#sum').innerHTML =
-    `<div><span>Had</span><b>${sfmt(c.had)}</b><i>${when}</i></div>` +
-    `<div><span>Spent</span><b class="exp">${fmt(c.spent + pSum)}</b>${pSum ? `<i>${fmt(pSum)} not booked yet</i>` : ''}</div>` +
-    `<div><span>Left</span><b class="${leftNow < 0 ? 'exp' : 'inc'}">${sfmt(leftNow)}</b>${pBlind ? `<i>before ${pBlind} unbooked card payment${pBlind === 1 ? '' : 's'}</i>` : ''}</div>`;
-  const pendRow = (pSum ? `<div class="env"><span>Not booked yet<small class="bsub">${pKnown.length} card payment${pKnown.length === 1 ? '' : 's'}; they move to their envelope once booked</small></span>` +
-      `<b>—</b><b>${fmt(pSum)}</b><b class="exp">${sfmt(-pSum)}</b></div>` : '') +
-    (pBlind ? `<div class="note2 warn2">UniCredit has ${pBlind} card payment${pBlind === 1 ? '' : 's'} it does not show yet: no amount, no date. They are not in these figures. They come in once the bank books them, usually in 1 to 3 days. Your bank app shows them now.</div>` : '');
-  const envRow = e => {
-    const f = e.fund;
-    const note = e.name === 'Needs' ? `fixed ${fmt(s.needsFixed)}${c.carried ? `, ${sfmt(c.carried)} from last month` : ''}`
-      : e.name === 'Fun' ? (c.funCarried ? `${sfmt(c.funCarried)} from last month` : 'what is left of Wants')
-      : f.target ? `${fmt(f.saved)} of ${fmt(f.target)} put aside`
-      : f.put ? `+${fmt(f.put)} this month` : 'nothing left for it this month';
-    return `<div class="env"><span>${esc(e.name)}<small class="bsub">${note}</small></span>` +
-      `<b>${sfmt(e.had)}</b><b>${e.spent ? sfmt(e.spent) : '—'}</b><b class="${neg(e.left)}">${sfmt(e.left)}</b></div>` +
-      (f && f.target ? pbar(f.saved, f.target) : '');
-  };
+  const lHave = (lf ? Math.max(0, lf.available) : 0) + Math.max(0, biz);
+
   $('#view').innerHTML =
-    (month < s.start ? `<div class="card"><div class="note2">The budget starts in ${MLONG(s.start)}. This month is a preview, as if it started here.</div></div>` : '') +
+    (month < s.start ? `<div class="card"><div class="note2">The budgets start in ${MLONG(s.start)}. This month is a preview, as if they started here.</div></div>` : '') +
     `<div class="card">
       <div class="bh">${MLONG(month)} · ${when}</div>
-      ${brow('Money in', fmt(c.income), p.salary ? 'the salary that started this month, plus any other income until the next one' : 'no salary found for it: counted from the 1st')}
-      ${brow(`Savings ${s.savePct}%`, `${fmt(c.saved)} <span class="of">of ${fmt(c.save)}</span>`,
-        c.saved < c.save ? `${fmt(c.save - c.saved)} still to put away` : 'done')}
-      ${pbar(c.saved, c.save)}
+      ${brow('Income', fmt(c.income), p.salary ? 'the salary that started this month, plus anything else that came in' : 'no salary found for it: counted from the 1st')}
+      ${c.moneyIn - c.income ? brow(month === s.start ? 'There before payday' : 'Unassigned from last month', fmt(c.moneyIn - c.income)) : ''}
+      ${brow('Split into budgets', fmt(c.added - L('Unassigned').added), `goals add up to ${fmt(c.goal)}${c.goal > c.moneyIn ? `, so ${fmt(c.goal - c.moneyIn)} of goals got nothing this month` : ''}`)}
     </div>
     <div class="card">
-      <div class="env eh"><span>Envelope</span><span>Had</span><span>Spent</span><span>Left</span></div>
-      ${envRow(c.env[0])}
-      <div class="bh">Wants · ${fmt(c.wantsIn)} this month</div>
-      ${c.env.slice(1).map(envRow).join('')}
-      ${pendRow}
-      <div class="env tot"><span>Total</span><b>${sfmt(c.had)}</b><b>${sfmt(c.spent + pSum)}</b><b class="${neg(leftNow)}">${sfmt(leftNow)}</b></div>
-      <div class="note2">Spending goes to an envelope by its category. Tap a payment in Daily to move it, for example sportswear to Clothes.</div>
+      <div class="env eh"><span>Budget</span><span>Goal</span><span>Added</span><span>Available</span></div>
+      ${row(L('Needs'))}
+      ${row(L('Savings'))}
+      <div class="bh">Wants</div>
+      ${wants.map(row).join('')}
+      ${row(L('Unassigned'))}
+      <div class="env tot"><span>All budgets</span><b>${fmt(c.goal)}</b><b>${fmt(c.added)}</b><b class="${neg(c.total)}">${sfmt(c.total)}</b></div>
+      <div class="note2">All budgets together are your money in UniCredit and Revolut. Overspending is covered at once: Unassigned, then Fun, Clothes, Entertainment, Eating out, then the saving budgets, then Needs, then Savings. Tap a payment in Daily to move it to another budget.${c.owed ? ` <span class="warn">Savings lent ${fmt(c.owed)}: the next income pays it back first.</span>` : ''}</div>
+      ${open && pBlind ? `<div class="note2 warn2">UniCredit has ${pBlind} card payment${pBlind === 1 ? '' : 's'} it does not show yet: no amount, no date. They are not in these figures, so your bank app shows less money. They come in once the bank books them, usually in 1 to 3 days.</div>` : ''}
     </div>
     <div class="card">
       <div class="bh">Emergency fund</div>
@@ -576,10 +587,10 @@ function renderBudget() {
       <div class="note2">Counts: ${esc(s.emergency.accounts.join(', '))}. Add the new savings account's name in the settings once it shows under Accounts.</div>
     </div>
     <div class="card">
-      <div class="bh">${esc(s.business.fund)} fund</div>
+      <div class="bh">${esc(s.business.fund)} goal</div>
       ${brow('Total', `${fmt(lHave)}${lTarget ? ` <span class="of">of ${fmt(lTarget)}</span>` : ''}`)}
       ${lTarget ? pbar(lHave, lTarget) : ''}
-      ${brow('From your Wants', sfmt(lf ? lf.bal : 0))}
+      ${brow('In the budget', sfmt(lf ? lf.available : 0))}
       ${brow('From the company', sfmt(biz), `free money since ${MLONG(s.start)}; a month with a loss lowers it`)}
     </div>
     <div class="card">
@@ -595,22 +606,24 @@ function renderBudget() {
 const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
 function budgetSettings(s) {
   const inp = (id, label, v, type, hint) => `<label class="bf"><span>${label}${hint ? `<small class="bsub">${hint}</small>` : ''}</span>` +
-    `<input id="${id}" type="${type || 'number'}" value="${esc(v)}"${!type || type === 'number' ? ' inputmode="decimal"' : ''}></label>`;
-  const funds = s.funds.concat([{ name: '', per: '', target: '', cats: [] }]);
+    `<input id="${id}" type="${type || 'number'}" value="${esc(v)}"${!type || type === 'number' ? ' inputmode="decimal" step="any"' : ''}></label>`;
+  const funds = s.funds.concat([{ name: '', per: '', target: '', mode: 'pile', cats: [] }]);
   return `<details class="card bset"${bset ? '' : ' open'}><summary>Budget settings</summary>
     ${inp('bStart', 'Start month', s.start, 'month')}
-    ${inp('bNeeds', 'Needs, fixed €', s.needsFixed, 'number', 'about 50% of a usual month')}
-    ${inp('bSave', 'Savings %', s.savePct)}
-    ${inp('bPay', 'Salary from day', s.payday, 'number', 'paid on or after this day: counts for next month')}
-    <div class="bh">Funds, filled in this order from Wants</div>
-    <div class="bfund bfh"><span>Name</span><span>€ a month</span><span>Target, 0 = none</span></div>
+    ${inp('bOpen', 'Money before the first payday €', s.opening, 'number', 'UniCredit + Revolut just before the start month’s salary')}
+    ${inp('bNeeds', 'Needs goal €', s.needsFixed, 'number', 'tops up to this each payday')}
+    ${inp('bSave', 'Savings % of income', s.savePct)}
+    ${inp('bPay', 'Salary from day', s.payday, 'number', 'paid on or after this day: starts next month’s budget')}
+    <div class="bh">Wants, filled in this order</div>
+    <div class="bfund bfh"><span>Name</span><span>Goal € a month</span><span>Target, 0 = none</span></div>
     ${funds.map((f, i) => `<div class="bfund" data-i="${i}">
-      <input data-f="name" type="text" placeholder="New fund" value="${esc(f.name)}">
-      <input data-f="per" type="number" inputmode="decimal" placeholder="€ a month" value="${esc(f.per)}">
-      <input data-f="target" type="number" inputmode="decimal" placeholder="Target (0 = none)" value="${esc(f.target)}">
+      <input data-f="name" type="text" placeholder="New budget" value="${esc(f.name)}">
+      <input data-f="per" type="number" inputmode="decimal" step="any" placeholder="€ a month" value="${esc(f.per)}">
+      <input data-f="target" type="number" inputmode="decimal" step="any" placeholder="Target" value="${esc(f.target)}">
+      <select data-f="mode"><option value="top"${f.mode === 'top' ? ' selected' : ''}>Tops up to goal</option><option value="pile"${f.mode !== 'top' ? ' selected' : ''}>Adds up each month</option></select>
       <input data-f="cats" type="text" placeholder="Categories it pays for" value="${esc((f.cats || []).join(', '))}">
     </div>`).join('')}
-    <div class="note2">Clear a fund's name to remove it. To pay something from a fund, set the transaction's category (tap it in Daily) to one of the fund's categories.</div>
+    <div class="note2">Clear a name to remove a budget. Spending with no budget of its own comes out of ${esc(s.catchAll)}.</div>
     <div class="bh">Emergency fund</div>
     ${inp('bEmM', 'Months of Needs', s.emergency.months)}
     ${inp('bEmX', 'House payment € a month', s.emergency.extra, 'number', 'set 0 once Mortgage is a Needs category')}
@@ -624,7 +637,6 @@ function budgetSettings(s) {
     ${inp('bNeedC', 'Needs', s.needsCats.join(', '), 'text')}
     ${inp('bIncC', 'Income', s.incomeCats.join(', '), 'text')}
     ${inp('bSaveC', 'Counts as saving', s.saveCats.join(', '), 'text')}
-    <div class="note2">Any other spending is Wants and comes out of Fun.</div>
     <div class="bar"><button class="btn" data-act="bsave">Save</button><button class="btn ghost" data-act="breset">Defaults</button></div>
   </details>`;
 }
@@ -632,14 +644,16 @@ function readBudgetForm() {
   const v = id => ($('#' + id) || {}).value, n = id => +v(id) || 0;
   const funds = [...document.querySelectorAll('.bfund[data-i]')].map(el => {
     const f = k => el.querySelector(`[data-f="${k}"]`).value;
-    return { name: f('name').trim(), per: +f('per') || 0, target: +f('target') || 0, cats: list(f('cats')) };
+    return { name: f('name').trim(), per: +f('per') || 0, target: +f('target') || 0, mode: f('mode') === 'top' ? 'top' : 'pile', cats: list(f('cats')) };
   }).filter(f => f.name).map(f => (f.cats.length ? f : Object.assign(f, { cats: [f.name] })));
-  return {
-    v: Budget.DEF.v, start: v('bStart') || Budget.DEF.start, needsFixed: n('bNeeds'), savePct: n('bSave'), payday: n('bPay') || 25, funds,
+  const keep = bset || {};
+  return Object.assign({}, keep, {
+    v: Budget.DEF.v, start: v('bStart') || Budget.DEF.start, opening: n('bOpen'), needsFixed: n('bNeeds'), savePct: n('bSave'),
+    payday: n('bPay') || 25, funds,
     emergency: { months: n('bEmM'), extra: n('bEmX'), accounts: list(v('bEmA')) },
     business: { fund: (v('bBizF') || '').trim(), target: n('bBizT'), vatShare: n('bVat') / 100, taxPct: n('bTax') },
     needsCats: list(v('bNeedC')), incomeCats: list(v('bIncC')), saveCats: list(v('bSaveC'))
-  };
+  });
 }
 
 // ===== Events =====

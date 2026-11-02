@@ -38,10 +38,12 @@ ctx.setData(Object.assign({}, data, { pending: { tx: [
   { d: '2026-03-03', a: -20, c: 'EUR', own: 'Personal', acc: 'Main', pending: true },
   { d: '0001-01-03', a: 0, c: 'EUR', own: 'Personal', acc: 'UniCredit', desc: 'Card operation', pending: true }] } }));
 ctx.render();
-assert.ok(/Not booked yet/.test(out.view) && /€20\.00/.test(out.view), 'a known unbooked payment is counted');
+assert.ok(/€20\.00 not booked yet/.test(out.sum), 'a known unbooked payment is counted');
 assert.ok(/1 card payment it does not show yet/.test(out.view), 'a blind UniCredit one is flagged');
 ctx.setData(data); ctx.setMonth('2026-02'); ctx.render();
-assert.ok(/Emergency fund/.test(out.view) && /Leica fund/.test(out.view) && /data-act="bsave"/.test(out.view), 'the Budget tab shows the envelopes and its settings');
+assert.ok(/Emergency fund/.test(out.view) && /Leica goal/.test(out.view) && /data-act="bsave"/.test(out.view), 'the Budget tab shows the budgets and its settings');
+assert.ok(/<span>Goal<\/span><span>Added<\/span><span>Available<\/span>/.test(out.view), 'each budget shows goal, added and available');
+assert.ok(/Unassigned/.test(out.view) && /All budgets/.test(out.view), 'with Unassigned and a total');
 assert.ok(/is a preview/.test(out.view), 'a month before the start says it is a preview');
 ['accounts', 'daily', 'monthly', 'stats', 'budget'].forEach(t => {
   ctx.tabs(t); out.view = '';
