@@ -11,6 +11,8 @@ const donut = (list, total) => Charts.donut(list, total);
 const MON = m => new Date(m + '-01T12:00').toLocaleDateString('en-GB', { month: 'short' });
 let data = null, month = null, owner = 'All', tab = 'accounts', statKind = 'exp', drill = null, yearCat = null, yearCell = null, yearKind = 'exp';
 const OWNERS = ['All', 'Personal', 'Joint'];
+// money/#budget opens that tab, so a home-screen link or shortcut can go straight there.
+{ const h = typeof location !== 'undefined' ? location.hash.slice(1) : ''; if (['accounts', 'daily', 'monthly', 'stats', 'budget', 'business'].includes(h)) tab = h; }
 // The company is a separate entity, so it gets its own tab rather than being a
 // filter over personal money. "All" above never includes it.
 const businessRows = () => data.tx.filter(t => t.own === 'Business');
@@ -210,10 +212,13 @@ function render() {
   const hasBusiness = businessRows().length > 0;
   const bTab = document.querySelector('#tabs button[data-t="business"]');
   if (bTab) bTab.hidden = !hasBusiness;
-  $('#tabs').classList.toggle('five', hasBusiness);
+  const nTabs = [...document.querySelectorAll('#tabs button')].filter(b => !b.hidden).length;
+  $('#tabs').classList.toggle('five', nTabs === 5);
+  $('#tabs').classList.toggle('six', nTabs >= 6);
   if (!hasBusiness && tab === 'business') tab = 'accounts';
 
   if (tab === 'business') renderBusiness(period);
+  else if (tab === 'budget') renderBudget();
   else if (tab === 'daily') renderDaily(period);
   else if (tab === 'monthly') renderMonthly(year);
   else if (tab === 'stats') drill ? renderDrill(period) : renderStats(period);
@@ -483,7 +488,129 @@ function renderAccounts(rows) {
     <p class="foot"><button class="btn ghost" data-act="forget">Forget token on this device</button></p>`;
 }
 
+// ===== Budget =====
+// The envelopes live in shared/budget.js. Here: settings, and showing a month.
+// Settings sync between devices through HubSync (Drive), like the other pages.
+const BKEY = 'lifehub-budget';
+let bset = null;
+try { bset = JSON.parse(localStorage.getItem(BKEY) || 'null'); } catch (e) {}
+function bSave(s) {
+  bset = s;
+  try { localStorage.setItem(BKEY, JSON.stringify(s)); } catch (e) {}
+  if (window.HubSync) HubSync.push('budget', s);
+}
+const pbar = (have, target) => `<div class="pbar"><i style="width:${(target > 0 ? Math.max(0, Math.min(100, have / target * 100)) : 0).toFixed(1)}%"></i></div>`;
+const brow = (label, val, sub) => `<div class="arow"><span>${label}${sub ? `<small class="bsub">${sub}</small>` : ''}</span><b>${val}</b></div>`;
+const MLONG = m => new Date(m + '-01T12:00').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+function renderBudget() {
+  const R = Budget.run(data.tx, bset, month), s = R.s, c = R.cur;
+  // A month's savings at the usual income: the average of the three months before.
+  let ai = 0; for (let m = Budget.prev(month), i = 0; i < 3; i++, m = Budget.prev(m)) ai += Budget.sums(data.tx, s, m).income;
+  const monthlySave = ai / 3 * s.savePct / 100;
+  const accs = (data.balances && data.balances.accounts ? data.balances.accounts : []).slice();
+  const fb = fundBalance(data);
+  if (fb != null) accs.push({ account: 'Flexible Cash Funds', amount: fb, currency: 'EUR' });
+  const em = Budget.emergency(s, accs, monthlySave);
+  const lf = c.funds.find(f => f.name === s.business.fund);
+  const biz = Budget.businessSince(data.tx, s, s.start, month), bm = Budget.business(data.tx, s, month);
+  const lTarget = +s.business.target || (lf && lf.target) || 0;
+  const lHave = (lf ? Math.max(0, lf.bal) : 0) + Math.max(0, biz);
+  const fundRow = f => brow(esc(f.name), sfmt(f.bal),
+    `+${fmt(f.put)} in${f.spent ? `, ${fmt(f.spent)} spent` : ''}${f.target ? ` · ${fmt(f.saved)} of ${fmt(f.target)} put aside` : ''}`) +
+    (f.target ? pbar(f.saved, f.target) : '');
+  $('#view').innerHTML =
+    (month < s.start ? `<div class="card"><div class="note2">The budget starts in ${MLONG(s.start)}. This month is a preview, as if it started here.</div></div>` : '') +
+    `<div class="card">
+      ${brow('Money for this month', fmt(c.income), `salary from the ${s.payday}th of last month on, plus other income this month`)}
+      <div class="bh">Savings ${s.savePct}%</div>
+      ${brow('Put away', `${fmt(c.saved)} <span class="of">of ${fmt(c.save)}</span>`, 'into the savings account or Flexible Cash Funds')}
+      ${pbar(c.saved, c.save)}
+      <div class="bh">Needs, fixed ${fmt(s.needsFixed)}</div>
+      ${brow('Left from last month', fmt(c.carried))}
+      ${brow('Topped up', fmt(c.topUp), 'only up to the fixed amount')}
+      ${brow('Spent', fmt(c.needsSpent))}
+      ${brow('Left', `<span class="${c.needsBal < 0 ? 'exp' : ''}">${sfmt(c.needsBal)}</span>`, c.needsBal < 0 ? 'over: next month tops this up first' : '')}
+      <div class="bh">Wants ${fmt(c.wantsIn)}</div>
+      ${c.funds.map(fundRow).join('')}
+      ${brow('Fun', `<span class="${c.funBal < 0 ? 'exp' : ''}">${sfmt(c.funBal)}</span>`,
+        `${fmt(c.funIn)} in${c.funCarried ? `, ${sfmt(c.funCarried)} from before` : ''}, ${fmt(c.funSpent)} spent`)}
+    </div>
+    <div class="card">
+      <div class="bh">Emergency fund</div>
+      ${brow('Saved', `${fmt(em.have)} <span class="of">of ${fmt(em.target)}</span>`,
+        `${s.emergency.months} months of Needs + ${fmt(+s.emergency.extra || 0)} house payment${em.gap ? (em.months ? ` · about ${em.months} months to go` : '') : ' · done'}`)}
+      ${pbar(em.have, em.target)}
+      <div class="note2">Counts: ${esc(s.emergency.accounts.join(', '))}. Add the new savings account's name in the settings once it shows under Accounts.</div>
+    </div>
+    <div class="card">
+      <div class="bh">${esc(s.business.fund)} fund</div>
+      ${brow('Total', `${fmt(lHave)}${lTarget ? ` <span class="of">of ${fmt(lTarget)}</span>` : ''}`)}
+      ${lTarget ? pbar(lHave, lTarget) : ''}
+      ${brow('From your Wants', sfmt(lf ? lf.bal : 0))}
+      ${brow('From the company', sfmt(biz), `free money since ${MLONG(s.start)}; a month with a loss lowers it`)}
+    </div>
+    <div class="card">
+      <div class="bh">Company this month</div>
+      ${brow('Received', fmt(bm.received), bm.vat ? `${fmt(bm.vat)} of it is VAT: keep it in the account until it is paid` : '')}
+      ${brow('Costs', sfmt(-bm.costs), 'rent, accounting, fees, gear')}
+      ${brow('Taxes paid', sfmt(-bm.taxes), 'VAT, social and health payments')}
+      ${bm.tax ? brow(`Corporate tax ${s.business.taxPct}%, keep back`, '−' + fmt(bm.tax)) : ''}
+      ${brow('Free', `<span class="${bm.free < 0 ? 'exp' : 'inc'}">${sfmt(bm.free)}</span>`)}
+    </div>
+    ${budgetSettings(s)}`;
+}
+const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
+function budgetSettings(s) {
+  const inp = (id, label, v, type, hint) => `<label class="bf"><span>${label}${hint ? `<small class="bsub">${hint}</small>` : ''}</span>` +
+    `<input id="${id}" type="${type || 'number'}" value="${esc(v)}"${!type || type === 'number' ? ' inputmode="decimal"' : ''}></label>`;
+  const funds = s.funds.concat([{ name: '', per: '', target: '', cats: [] }]);
+  return `<details class="card bset"${bset ? '' : ' open'}><summary>Budget settings</summary>
+    ${inp('bStart', 'Start month', s.start, 'month')}
+    ${inp('bNeeds', 'Needs, fixed €', s.needsFixed, 'number', 'about 50% of a usual month')}
+    ${inp('bSave', 'Savings %', s.savePct)}
+    ${inp('bPay', 'Salary from day', s.payday, 'number', 'paid on or after this day: counts for next month')}
+    <div class="bh">Funds, filled in this order from Wants</div>
+    <div class="bfund bfh"><span>Name</span><span>€ a month</span><span>Target, 0 = none</span></div>
+    ${funds.map((f, i) => `<div class="bfund" data-i="${i}">
+      <input data-f="name" type="text" placeholder="New fund" value="${esc(f.name)}">
+      <input data-f="per" type="number" inputmode="decimal" placeholder="€ a month" value="${esc(f.per)}">
+      <input data-f="target" type="number" inputmode="decimal" placeholder="Target (0 = none)" value="${esc(f.target)}">
+      <input data-f="cats" type="text" placeholder="Categories it pays for" value="${esc((f.cats || []).join(', '))}">
+    </div>`).join('')}
+    <div class="note2">Clear a fund's name to remove it. To pay something from a fund, set the transaction's category (tap it in Daily) to one of the fund's categories.</div>
+    <div class="bh">Emergency fund</div>
+    ${inp('bEmM', 'Months of Needs', s.emergency.months)}
+    ${inp('bEmX', 'House payment € a month', s.emergency.extra, 'number', 'set 0 once Mortgage is a Needs category')}
+    ${inp('bEmA', 'Accounts', s.emergency.accounts.join(', '), 'text', 'names as under Accounts')}
+    <div class="bh">Company</div>
+    ${inp('bBizF', 'Free money goes to', s.business.fund, 'text')}
+    ${inp('bBizT', 'Goal €', s.business.target)}
+    ${inp('bVat', 'VAT share of received %', Math.round(s.business.vatShare * 10000) / 100, 'number', '16.67 = 20% VAT on top')}
+    ${inp('bTax', 'Tax to put aside %', s.business.taxPct)}
+    <div class="bh">Categories</div>
+    ${inp('bNeedC', 'Needs', s.needsCats.join(', '), 'text')}
+    ${inp('bIncC', 'Income', s.incomeCats.join(', '), 'text')}
+    ${inp('bSaveC', 'Counts as saving', s.saveCats.join(', '), 'text')}
+    <div class="note2">Any other spending is Wants and comes out of Fun.</div>
+    <div class="bar"><button class="btn" data-act="bsave">Save</button><button class="btn ghost" data-act="breset">Defaults</button></div>
+  </details>`;
+}
+function readBudgetForm() {
+  const v = id => ($('#' + id) || {}).value, n = id => +v(id) || 0;
+  const funds = [...document.querySelectorAll('.bfund[data-i]')].map(el => {
+    const f = k => el.querySelector(`[data-f="${k}"]`).value;
+    return { name: f('name').trim(), per: +f('per') || 0, target: +f('target') || 0, cats: list(f('cats')) };
+  }).filter(f => f.name).map(f => (f.cats.length ? f : Object.assign(f, { cats: [f.name] })));
+  return {
+    start: v('bStart') || Budget.DEF.start, needsFixed: n('bNeeds'), savePct: n('bSave'), payday: n('bPay') || 25, funds,
+    emergency: { months: n('bEmM'), extra: n('bEmX'), accounts: list(v('bEmA')) },
+    business: { fund: (v('bBizF') || '').trim(), target: n('bBizT'), vatShare: n('bVat') / 100, taxPct: n('bTax') },
+    needsCats: list(v('bNeedC')), incomeCats: list(v('bIncC')), saveCats: list(v('bSaveC'))
+  };
+}
+
 // ===== Events =====
+
 function step(dir) { // dir: -1 older, +1 newer
   const months = allMonths();
   if (tab === 'monthly') {
@@ -517,6 +644,8 @@ $('#view').addEventListener('click', e => {
   else if (act === 'ykind') { yearKind = b.dataset.k; yearCat = null; yearCell = null; }
   else if (act === 'approve') { startApproval(b.dataset.bank, b.dataset.psu, b); return; }
   else if (act === 'sync') { syncNow(b); return; }
+  else if (act === 'bsave') { bSave(readBudgetForm()); setStatus('Budget saved'); }
+  else if (act === 'breset') { bSave(JSON.parse(JSON.stringify(Budget.DEF))); setStatus('Budget back to the defaults'); }
   else if (act === 'forget') { if (confirm('Remove the Money token and saved data from this device?')) forget(); return; }
   render();
 });
@@ -526,11 +655,21 @@ $('#tokSave').addEventListener('click', () => {
   $('#tokIn').value = ''; load();
 });
 
+// Budget settings from the other devices. The newest save wins.
+function syncBudget() {
+  if (!window.HubSync) return;
+  HubSync.sync('budget', bset, d => {
+    bset = d;
+    try { localStorage.setItem(BKEY, JSON.stringify(d)); } catch (e) {}
+    if (data && tab === 'budget') render();
+  });
+}
 /* index.html carries no version of its own, so a cached copy of it can sit
    beside a fresh app.js and be missing a shared file this code needs. Fetch
    whatever is absent rather than dying on the first line that touches it. */
 function boot() {
-  const need = { Year: 'year.js', Charts: 'charts.js', CatPick: 'catpick.js' };
+  syncBudget();
+  const need = { Year: 'year.js', Charts: 'charts.js', CatPick: 'catpick.js', Budget: 'budget.js' };
   const missing = Object.keys(need).filter(k => !window[k]);
   if (!missing.length) return load();
   let left = missing.length;

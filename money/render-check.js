@@ -4,9 +4,9 @@
    Run: node money/render-check.js */
 const fs = require('fs'), assert = require('assert'), path = require('path');
 const shared = {};
-['year', 'charts'].forEach(f => new Function('window',
+['year', 'charts', 'budget'].forEach(f => new Function('window',
   fs.readFileSync(path.join(__dirname, '../shared/' + f + '.js'), 'utf8'))(shared));
-const { Year, Charts } = shared;
+const { Year, Charts, Budget } = shared;
 
 const src = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
 const body = src.slice(src.indexOf('const esc = '), src.indexOf("$('#mPrev').addEventListener"));
@@ -14,10 +14,10 @@ const out = {};
 const node = sel => { const id = String(sel).replace('#', ''); return ({ set innerHTML(v) { out[id] = v; }, set textContent(v) { out[id] = v; },
   classList: { toggle() {} }, querySelectorAll: () => [] }); };
 const ctx = {};
-new Function('ctx', 'Year', 'Charts', '$', 'document', 'localStorage', 'window',
+new Function('ctx', 'Year', 'Charts', 'Budget', '$', 'document', 'localStorage', 'window',
   body + '\nctx.render=render;ctx.prep=prep;ctx.setData=d=>{data=d};' +
   'ctx.tabs=t=>{tab=t};ctx.setMonth=m=>{month=m};')
-  (ctx, Year, Charts, node, { querySelectorAll: () => [], querySelector: node },
+  (ctx, Year, Charts, Budget, node, { querySelectorAll: () => [], querySelector: node },
    { getItem: () => null, setItem() {} }, {});
 
 const row = (d, a, cat, acc) => ({ k: 'k' + d + a, d, a, c: 'EUR', cat, acc: acc || 'Main',
@@ -31,7 +31,10 @@ const data = ctx.prep({ ok: true, tx: [
 ] }, fund: null });
 ctx.setData(data);
 ctx.setMonth('2026-02');
-['accounts', 'daily', 'monthly', 'stats'].forEach(t => {
+ctx.tabs('budget'); ctx.render();
+assert.ok(/Emergency fund/.test(out.view) && /Leica fund/.test(out.view) && /data-act="bsave"/.test(out.view), 'the Budget tab shows the envelopes and its settings');
+assert.ok(/is a preview/.test(out.view), 'a month before the start says it is a preview');
+['accounts', 'daily', 'monthly', 'stats', 'budget'].forEach(t => {
   ctx.tabs(t); out.view = '';
   ctx.render();
   assert.ok(out.view && out.view.length > 20, t + ' rendered nothing');
