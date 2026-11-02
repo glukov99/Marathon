@@ -40,6 +40,11 @@ ctx.setData(Object.assign({}, data, { pending: { tx: [
 ctx.render();
 assert.ok(/€20\.00 not booked yet/.test(out.sum), 'a known unbooked payment is counted');
 assert.ok(/1 card payment it does not show yet/.test(out.view), 'a blind UniCredit one is flagged');
+// A payment added by hand counts in its budget and can be removed.
+ctx.setData(Object.assign({}, data, { manual: [{ id: 'm1', d: '2026-03-04', a: -30, cat: 'Clothes', who: 'Shoes' }] }));
+ctx.render();
+assert.ok(/Shoes/.test(out.view) && /data-act="pdel" data-id="m1"/.test(out.view) && /data-act="padd"/.test(out.view), 'hand-added list and form');
+assert.ok(/incl\. 1 added by hand/.test(out.sum), 'the summary says so');
 ctx.setData(data); ctx.setMonth('2026-02'); ctx.render();
 assert.ok(/Emergency fund/.test(out.view) && /Leica goal/.test(out.view) && /data-act="bsave"/.test(out.view), 'the Budget tab shows the budgets and its settings');
 assert.ok(/<span>Goal<\/span><span>Added<\/span><span>Available<\/span>/.test(out.view), 'each budget shows goal, added and available');

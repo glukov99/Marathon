@@ -518,13 +518,18 @@ function renderBudget() {
   const R0 = Budget.run(data.tx, bset, month);
   const open = R0.cur.period.open;
   const pKnown = open ? allPend.filter(t => t.a < 0 && /^20\d\d-/.test(t.d) && t.d >= R0.cur.period.from) : [];
-  const R = pKnown.length ? Budget.run(data.tx, bset, month, pKnown) : R0, s = R.s, c = R.cur, p = c.period;
+  // Payments added by hand (the bank hides them). The server drops each one the
+  // moment a booked row of the same amount lands, so they never count twice.
+  const handAll = data.manual || [];
+  const hand = open ? handAll.filter(e => e.d >= R0.cur.period.from) : [];
+  const extra = pKnown.concat(hand.map(e => ({ d: e.d, a: e.a, c: 'EUR', _cat: e.cat || '' })));
+  const R = extra.length ? Budget.run(data.tx, bset, month, extra) : R0, s = R.s, c = R.cur, p = c.period;
   const when = `${D(p.from)} – ${p.to ? D(p.to) : 'next salary'}`;
   const neg = v => (v < -0.004 ? 'exp' : '');
   $('#sum').innerHTML =
     `<div><span>Money in</span><b>${fmt(c.moneyIn)}</b><i>${when}</i></div>` +
     `<div><span>Spent</span><b class="exp">${fmt(c.spent)}</b>${c.pending ? `<i>${fmt(c.pending)} not booked yet</i>` : ''}</div>` +
-    `<div><span>In budgets</span><b class="${c.total < 0 ? 'exp' : 'inc'}">${sfmt(c.total)}</b>${open && pBlind ? `<i>${pBlind} UniCredit payment${pBlind === 1 ? '' : 's'} still to come off</i>` : ''}</div>`;
+    `<div><span>In budgets</span><b class="${c.total < 0 ? 'exp' : 'inc'}">${sfmt(c.total)}</b>${open && pBlind && !hand.length ? `<i>${pBlind} UniCredit payment${pBlind === 1 ? '' : 's'} still to come off</i>` : hand.length ? `<i>incl. ${hand.length} added by hand</i>` : ''}</div>`;
 
   // What happened to a budget this month, in one short line.
   const note = l => {
@@ -577,8 +582,9 @@ function renderBudget() {
       ${row(L('Unassigned'))}
       <div class="env tot"><span>All budgets</span><b>${fmt(c.goal)}</b><b>${fmt(c.added)}</b><b class="${neg(c.total)}">${sfmt(c.total)}</b></div>
       <div class="note2">All budgets together are your money in UniCredit and Revolut. Overspending is covered at once: Unassigned, then Fun, Clothes, Entertainment, Eating out, then the saving budgets, then Needs, then Savings. Tap a payment in Daily to move it to another budget.${c.owed ? ` <span class="warn">Savings lent ${fmt(c.owed)}: the next income pays it back first.</span>` : ''}</div>
-      ${open && pBlind ? `<div class="note2 warn2">UniCredit has ${pBlind} card payment${pBlind === 1 ? '' : 's'} it does not show yet: no amount, no date. They are not in these figures, so your bank app shows less money. They come in once the bank books them, usually in 1 to 3 days.</div>` : ''}
+      ${open && pBlind ? `<div class="note2 warn2">UniCredit has ${pBlind} card payment${pBlind === 1 ? '' : 's'} it does not show yet: no amount, no date. Add them below from your bank app and the budgets are right today; each one clears itself once the bank books it.</div>` : ''}
     </div>
+    ${open ? handCard(hand, s) : ''}
     <div class="card">
       <div class="bh">Emergency fund</div>
       ${brow('Saved', `${fmt(em.have)} <span class="of">of ${fmt(em.target)}</span>`,
@@ -603,6 +609,40 @@ function renderBudget() {
     </div>
     ${budgetSettings(s)}`;
 }
+// The payments added by hand, and a small form to add one.
+function handCard(hand, s) {
+  const names = ['Needs'].concat(s.funds.map(f => f.name));
+  const today = new Date().toISOString().slice(0, 10);
+  const D = d => new Date(d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  return `<div class="card">
+    <div class="bh">Not booked yet, added by hand</div>
+    ${hand.length ? hand.map(e => `<div class="arow"><span>${esc(e.who || 'Payment')}<small class="bsub">${D(e.d)} · ${esc(Budget.budgetOf(s, e.cat))}</small></span>` +
+      `<span class="hr"><b>${fmt(e.a)}</b><button class="btn ghost sm" data-act="pdel" data-id="${esc(e.id)}" aria-label="Remove">✕</button></span></div>`).join('')
+      : '<div class="note2">None. Add a card payment your bank app shows but this page does not have yet.</div>'}
+    <div class="hadd">
+      <input id="hWho" type="text" placeholder="What (e.g. BestSecret)">
+      <input id="hAmt" type="number" inputmode="decimal" step="any" placeholder="€">
+      <select id="hCat">${names.map(n => `<option>${esc(n)}</option>`).join('')}</select>
+      <input id="hDay" type="date" value="${today}">
+      <button class="btn" data-act="padd">Add</button>
+    </div>
+    <div class="note2">Each one drops off by itself once the bank books a payment of the same amount within a few days. Do not add moves between your own accounts.</div>
+  </div>`;
+}
+async function handCall(q, btn) {
+  if (btn) btn.disabled = true;
+  setStatus('Saving…');
+  try {
+    const r = await fetch(apiUrl() + (apiUrl().includes('?') ? '&' : '?') + 'action=money&mt=' + encodeURIComponent(token()) + q);
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'failed');
+    data.manual = j.manual || [];
+    try { const cch = JSON.parse(localStorage.getItem(CKEY) || 'null'); if (cch) { cch.manual = data.manual; localStorage.setItem(CKEY, JSON.stringify(cch)); } } catch (e) {}
+    setStatus('Saved');
+    render();
+  } catch (e) { setStatus('Could not save: ' + e.message); if (btn) btn.disabled = false; }
+}
+
 const list = v => String(v || '').split(',').map(x => x.trim()).filter(Boolean);
 function budgetSettings(s) {
   const inp = (id, label, v, type, hint) => `<label class="bf"><span>${label}${hint ? `<small class="bsub">${hint}</small>` : ''}</span>` +
@@ -693,6 +733,14 @@ $('#view').addEventListener('click', e => {
   else if (act === 'ykind') { yearKind = b.dataset.k; yearCat = null; yearCell = null; }
   else if (act === 'approve') { startApproval(b.dataset.bank, b.dataset.psu, b); return; }
   else if (act === 'sync') { syncNow(b); return; }
+  else if (act === 'padd') {
+    const amt = +String($('#hAmt').value || '').replace(',', '.');
+    if (!amt) { setStatus('Type the amount first'); return; }
+    handCall(`&addpend=go&amt=${encodeURIComponent(Math.abs(amt))}&cat=${encodeURIComponent($('#hCat').value)}` +
+      `&who=${encodeURIComponent($('#hWho').value.trim())}&d=${encodeURIComponent($('#hDay').value)}`, b);
+    return;
+  }
+  else if (act === 'pdel') { handCall('&delpend=' + encodeURIComponent(b.dataset.id), b); return; }
   else if (act === 'bsave') { bSave(readBudgetForm()); setStatus('Budget saved'); }
   else if (act === 'breset') { bSave(JSON.parse(JSON.stringify(Budget.DEF))); setStatus('Budget back to the defaults'); }
   else if (act === 'forget') { if (confirm('Remove the Money token and saved data from this device?')) forget(); return; }

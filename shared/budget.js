@@ -104,7 +104,7 @@
   }
   // Which budget a spending category comes out of.
   function budgetOf(s, cat) {
-    if (s.needsCats.includes(cat)) return 'Needs';
+    if (cat === 'Needs' || s.needsCats.includes(cat)) return 'Needs';
     const f = s.funds.find(x => (x.cats || []).includes(cat) || x.name === cat);
     return f ? f.name : s.catchAll;
   }
@@ -115,7 +115,8 @@
     return true;
   }
   /* One month: income, money moved to the savings account, and spending per budget.
-     `extra` are unbooked card payments (no category yet): they come out of Fun. */
+     `extra` are payments the bank has not booked yet: ones added by hand carry a
+     category (`_cat`) and come out of its budget; the rest come out of Fun. */
   function sums(rows, s, m, extra) {
     if (!s._starts) s = Object.assign({}, s, { _starts: starts(rows, s, m, m) });
     const o = { income: 0, saved: 0, spend: {}, pending: 0 };
@@ -128,7 +129,7 @@
       if (s.saveCats.includes(t._cat)) { o.saved -= t.a; return; }
       add(budgetOf(s, t._cat), -t.a);
     });
-    (extra || []).forEach(t => { if (t.a < 0) { add(s.catchAll, -t.a); o.pending -= t.a; } });
+    (extra || []).forEach(t => { if (t.a < 0) { add(t._cat ? budgetOf(s, t._cat) : s.catchAll, -t.a); o.pending -= t.a; } });
     o.income = r2(o.income); o.saved = r2(o.saved); o.pending = r2(o.pending);
     return o;
   }
