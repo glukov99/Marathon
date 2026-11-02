@@ -32,6 +32,15 @@ const data = ctx.prep({ ok: true, tx: [
 ctx.setData(data);
 ctx.setMonth('2026-02');
 ctx.tabs('budget'); ctx.render();
+// Unbooked card payments: known ones lower what is left; blind UniCredit ones are flagged.
+ctx.setMonth('2026-03');
+ctx.setData(Object.assign({}, data, { pending: { tx: [
+  { d: '2026-03-03', a: -20, c: 'EUR', own: 'Personal', acc: 'Main', pending: true },
+  { d: '0001-01-03', a: 0, c: 'EUR', own: 'Personal', acc: 'UniCredit', desc: 'Card operation', pending: true }] } }));
+ctx.render();
+assert.ok(/Not booked yet/.test(out.view) && /€20\.00/.test(out.view), 'a known unbooked payment is counted');
+assert.ok(/1 card payment it does not show yet/.test(out.view), 'a blind UniCredit one is flagged');
+ctx.setData(data); ctx.setMonth('2026-02'); ctx.render();
 assert.ok(/Emergency fund/.test(out.view) && /Leica fund/.test(out.view) && /data-act="bsave"/.test(out.view), 'the Budget tab shows the envelopes and its settings');
 assert.ok(/is a preview/.test(out.view), 'a month before the start says it is a preview');
 ['accounts', 'daily', 'monthly', 'stats', 'budget'].forEach(t => {

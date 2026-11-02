@@ -524,10 +524,22 @@ function renderBudget() {
   const D = d => new Date(d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   const p = c.period, neg = v => (v < 0 ? 'exp' : '');
   const when = `${D(p.from)} – ${p.to ? D(p.to) : 'next salary'}`;
+  /* Card payments the bank has not booked yet. They have no category, so they
+     sit outside the envelopes, but they still lower what is left. UniCredit
+     sends them with no date and no amount ("Card operation", 0001-01-03), so
+     those can only be counted, not added up: the page says so. */
+  const pd = p.open ? ((data.pending || {}).tx || []).filter(t => t.own !== 'Business' && t.c === 'EUR') : [];
+  const pKnown = pd.filter(t => t.a < 0 && t.d >= p.from);
+  const pBlind = pd.filter(t => !t.a || !/^20\d\d-/.test(t.d || '')).length;
+  const pSum = Math.round(-pKnown.reduce((n, t) => n + t.a, 0) * 100) / 100;
+  const leftNow = Math.round((c.left - pSum) * 100) / 100;
   $('#sum').innerHTML =
     `<div><span>Had</span><b>${sfmt(c.had)}</b><i>${when}</i></div>` +
-    `<div><span>Spent</span><b class="exp">${fmt(c.spent)}</b></div>` +
-    `<div><span>Left</span><b class="${c.left < 0 ? 'exp' : 'inc'}">${sfmt(c.left)}</b></div>`;
+    `<div><span>Spent</span><b class="exp">${fmt(c.spent + pSum)}</b>${pSum ? `<i>${fmt(pSum)} not booked yet</i>` : ''}</div>` +
+    `<div><span>Left</span><b class="${leftNow < 0 ? 'exp' : 'inc'}">${sfmt(leftNow)}</b>${pBlind ? `<i>before ${pBlind} unbooked card payment${pBlind === 1 ? '' : 's'}</i>` : ''}</div>`;
+  const pendRow = (pSum ? `<div class="env"><span>Not booked yet<small class="bsub">${pKnown.length} card payment${pKnown.length === 1 ? '' : 's'}; they move to their envelope once booked</small></span>` +
+      `<b>—</b><b>${fmt(pSum)}</b><b class="exp">${sfmt(-pSum)}</b></div>` : '') +
+    (pBlind ? `<div class="note2 warn2">UniCredit has ${pBlind} card payment${pBlind === 1 ? '' : 's'} it does not show yet: no amount, no date. They are not in these figures. They come in once the bank books them, usually in 1 to 3 days. Your bank app shows them now.</div>` : '');
   const envRow = e => {
     const f = e.fund;
     const note = e.name === 'Needs' ? `fixed ${fmt(s.needsFixed)}${c.carried ? `, ${sfmt(c.carried)} from last month` : ''}`
@@ -552,7 +564,8 @@ function renderBudget() {
       ${envRow(c.env[0])}
       <div class="bh">Wants · ${fmt(c.wantsIn)} this month</div>
       ${c.env.slice(1).map(envRow).join('')}
-      <div class="env tot"><span>Total</span><b>${sfmt(c.had)}</b><b>${sfmt(c.spent)}</b><b class="${neg(c.left)}">${sfmt(c.left)}</b></div>
+      ${pendRow}
+      <div class="env tot"><span>Total</span><b>${sfmt(c.had)}</b><b>${sfmt(c.spent + pSum)}</b><b class="${neg(leftNow)}">${sfmt(leftNow)}</b></div>
       <div class="note2">Spending goes to an envelope by its category. Tap a payment in Daily to move it, for example sportswear to Clothes.</div>
     </div>
     <div class="card">
