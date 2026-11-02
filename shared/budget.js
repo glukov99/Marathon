@@ -23,6 +23,8 @@
     saveCats: ['Investments'],
     funds: [
       { name: 'Gifts', per: 50, target: 0, cats: ['Gifts', 'Gift'] },
+      { name: 'Eating out', per: 150, target: 0, cats: ['Eating out'] },
+      { name: 'Entertainment', per: 70, target: 0, cats: ['Entertainment'] },
       { name: 'Giulietta', per: 300, target: 600, cats: ['Giulietta'] },
       { name: 'Leica', per: 250, target: 2000, cats: ['Leica'] }
     ],
