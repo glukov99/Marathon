@@ -176,7 +176,12 @@ function forget() {
   data = null; show('setup');
 }
 
-function allMonths() { return [...new Set(data.tx.map(t => t.d.slice(0, 7)))].sort().reverse(); }
+// On the Budget tab a month exists once its salary is in, even before the 1st.
+function allMonths() {
+  const ms = new Set(data.tx.map(t => t.d.slice(0, 7)));
+  if (tab === 'budget' && window.Budget) Budget.salaryMonths(data.tx, bset).forEach(m => ms.add(m));
+  return [...ms].sort().reverse();
+}
 
 function render() {
   show('main');
@@ -505,7 +510,7 @@ const MLONG = m => new Date(m + '-01T12:00').toLocaleDateString('en-GB', { month
 function renderBudget() {
   const R = Budget.run(data.tx, bset, month), s = R.s, c = R.cur;
   // A month's savings at the usual income: the average of the three months before.
-  let ai = 0; for (let m = Budget.prev(month), i = 0; i < 3; i++, m = Budget.prev(m)) ai += Budget.sums(data.tx, s, m).income;
+  let ai = 0; for (let m = Budget.prev(month), i = 0; i < 3; i++, m = Budget.prev(m)) ai += Budget.sums(data.tx, Object.assign({}, s, { _starts: null }), m).income;
   const monthlySave = ai / 3 * s.savePct / 100;
   const accs = (data.balances && data.balances.accounts ? data.balances.accounts : []).slice();
   const fb = fundBalance(data);
@@ -515,25 +520,40 @@ function renderBudget() {
   const biz = Budget.businessSince(data.tx, s, s.start, month), bm = Budget.business(data.tx, s, month);
   const lTarget = +s.business.target || (lf && lf.target) || 0;
   const lHave = (lf ? Math.max(0, lf.bal) : 0) + Math.max(0, biz);
-  const fundRow = f => brow(esc(f.name), sfmt(f.bal),
-    `+${fmt(f.put)} in${f.spent ? `, ${fmt(f.spent)} spent` : ''}${f.target ? ` · ${fmt(f.saved)} of ${fmt(f.target)} put aside` : ''}`) +
-    (f.target ? pbar(f.saved, f.target) : '');
+  // A budget month runs payday to payday, so the top line shows that period, not the calendar month.
+  const D = d => new Date(d + 'T12:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const p = c.period, neg = v => (v < 0 ? 'exp' : '');
+  const when = `${D(p.from)} – ${p.to ? D(p.to) : 'next salary'}`;
+  $('#sum').innerHTML =
+    `<div><span>Had</span><b>${sfmt(c.had)}</b><i>${when}</i></div>` +
+    `<div><span>Spent</span><b class="exp">${fmt(c.spent)}</b></div>` +
+    `<div><span>Left</span><b class="${c.left < 0 ? 'exp' : 'inc'}">${sfmt(c.left)}</b></div>`;
+  const envRow = e => {
+    const f = e.fund;
+    const note = e.name === 'Needs' ? `fixed ${fmt(s.needsFixed)}${c.carried ? `, ${sfmt(c.carried)} from last month` : ''}`
+      : e.name === 'Fun' ? (c.funCarried ? `${sfmt(c.funCarried)} from last month` : 'what is left of Wants')
+      : f.target ? `${fmt(f.saved)} of ${fmt(f.target)} put aside`
+      : f.put ? `+${fmt(f.put)} this month` : 'nothing left for it this month';
+    return `<div class="env"><span>${esc(e.name)}<small class="bsub">${note}</small></span>` +
+      `<b>${sfmt(e.had)}</b><b>${e.spent ? sfmt(e.spent) : '—'}</b><b class="${neg(e.left)}">${sfmt(e.left)}</b></div>` +
+      (f && f.target ? pbar(f.saved, f.target) : '');
+  };
   $('#view').innerHTML =
     (month < s.start ? `<div class="card"><div class="note2">The budget starts in ${MLONG(s.start)}. This month is a preview, as if it started here.</div></div>` : '') +
     `<div class="card">
-      ${brow('Money for this month', fmt(c.income), `salary from the ${s.payday}th of last month on, plus other income this month`)}
-      <div class="bh">Savings ${s.savePct}%</div>
-      ${brow('Put away', `${fmt(c.saved)} <span class="of">of ${fmt(c.save)}</span>`, 'into the savings account or Flexible Cash Funds')}
+      <div class="bh">${MLONG(month)} · ${when}</div>
+      ${brow('Money in', fmt(c.income), p.salary ? 'the salary that started this month, plus any other income until the next one' : 'no salary found for it: counted from the 1st')}
+      ${brow(`Savings ${s.savePct}%`, `${fmt(c.saved)} <span class="of">of ${fmt(c.save)}</span>`,
+        c.saved < c.save ? `${fmt(c.save - c.saved)} still to put away` : 'done')}
       ${pbar(c.saved, c.save)}
-      <div class="bh">Needs, fixed ${fmt(s.needsFixed)}</div>
-      ${brow('Left from last month', fmt(c.carried))}
-      ${brow('Topped up', fmt(c.topUp), 'only up to the fixed amount')}
-      ${brow('Spent', fmt(c.needsSpent))}
-      ${brow('Left', `<span class="${c.needsBal < 0 ? 'exp' : ''}">${sfmt(c.needsBal)}</span>`, c.needsBal < 0 ? 'over: next month tops this up first' : '')}
-      <div class="bh">Wants ${fmt(c.wantsIn)}</div>
-      ${c.funds.map(fundRow).join('')}
-      ${brow('Fun', `<span class="${c.funBal < 0 ? 'exp' : ''}">${sfmt(c.funBal)}</span>`,
-        `${fmt(c.funIn)} in${c.funCarried ? `, ${sfmt(c.funCarried)} from before` : ''}, ${fmt(c.funSpent)} spent`)}
+    </div>
+    <div class="card">
+      <div class="env eh"><span>Envelope</span><span>Had</span><span>Spent</span><span>Left</span></div>
+      ${envRow(c.env[0])}
+      <div class="bh">Wants · ${fmt(c.wantsIn)} this month</div>
+      ${c.env.slice(1).map(envRow).join('')}
+      <div class="env tot"><span>Total</span><b>${sfmt(c.had)}</b><b>${sfmt(c.spent)}</b><b class="${neg(c.left)}">${sfmt(c.left)}</b></div>
+      <div class="note2">Spending goes to an envelope by its category. Tap a payment in Daily to move it, for example sportswear to Clothes.</div>
     </div>
     <div class="card">
       <div class="bh">Emergency fund</div>
@@ -602,7 +622,7 @@ function readBudgetForm() {
     return { name: f('name').trim(), per: +f('per') || 0, target: +f('target') || 0, cats: list(f('cats')) };
   }).filter(f => f.name).map(f => (f.cats.length ? f : Object.assign(f, { cats: [f.name] })));
   return {
-    start: v('bStart') || Budget.DEF.start, needsFixed: n('bNeeds'), savePct: n('bSave'), payday: n('bPay') || 25, funds,
+    v: Budget.DEF.v, start: v('bStart') || Budget.DEF.start, needsFixed: n('bNeeds'), savePct: n('bSave'), payday: n('bPay') || 25, funds,
     emergency: { months: n('bEmM'), extra: n('bEmX'), accounts: list(v('bEmA')) },
     business: { fund: (v('bBizF') || '').trim(), target: n('bBizT'), vatShare: n('bVat') / 100, taxPct: n('bTax') },
     needsCats: list(v('bNeedC')), incomeCats: list(v('bIncC')), saveCats: list(v('bSaveC'))
@@ -627,7 +647,9 @@ $('#mPrev').addEventListener('click', () => step(-1));
 $('#mNext').addEventListener('click', () => step(1));
 $('#tabs').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
-  tab = b.dataset.t; drill = null; render();
+  tab = b.dataset.t; drill = null;
+  if (tab === 'budget') month = null;   // open on the budget month running now
+  render();
 });
 $('#view').addEventListener('click', e => {
   const r = e.target.closest('.tr[data-k]');
@@ -656,11 +678,15 @@ $('#tokSave').addEventListener('click', () => {
 });
 
 // Budget settings from the other devices. The newest save wins.
+// Settings saved by an older version get the new funds (Clothes, Travel) added.
+const upgrade = () => { if (bset && window.Budget && Budget.migrate(bset)) bSave(bset); };
 function syncBudget() {
+  upgrade();
   if (!window.HubSync) return;
   HubSync.sync('budget', bset, d => {
     bset = d;
     try { localStorage.setItem(BKEY, JSON.stringify(d)); } catch (e) {}
+    upgrade();
     if (data && tab === 'budget') render();
   });
 }

@@ -1,6 +1,7 @@
 /* Self-check for shared/budget.js. Run: node money/budget-check.js */
 const a = require('assert');
 const B = require('../shared/budget.js');
+const r = n => Math.round(n * 100) / 100;
 const T = (d, amt, k, cat, own) => ({ d, a: amt, c: 'EUR', _k: k, _cat: cat, own: own || 'Personal' });
 const S = { start: '2026-11', needsFixed: 900, savePct: 20,
   funds: [{ name: 'Gifts', per: 50, target: 0, cats: ['Gifts'] }, { name: 'Giulietta', per: 300, target: 600, cats: ['Giulietta'] },
@@ -15,7 +16,7 @@ const rows = [
   // December: salary on 29 Nov pays for it; Needs overspent, Giulietta fix paid.
   T('2026-11-29', 2000, 'inc', 'Income'), T('2026-12-02', -1000, 'exp', 'Groceries'), T('2026-12-03', -600, 'exp', 'Giulietta')
 ];
-a.strictEqual(B.bmonth(rows[0], B.settings(S)), '2026-11');
+a.strictEqual(B.run(rows, S, '2026-11').cur.period.from, '2026-10-30');
 const nov = B.run(rows, S, '2026-11').cur;
 a.strictEqual(nov.income, 2000);
 a.strictEqual(nov.save, 400);
@@ -41,6 +42,30 @@ a.strictEqual(dec.funBal, 20 + 1100 - 50 - 300 - 250);
 const jan = B.run(rows.concat([T('2026-12-30', 2000, 'inc', 'Income')]), S, '2027-01').cur;
 a.strictEqual(jan.funds.find(f => f.name === 'Giulietta').put, 0);
 a.strictEqual(jan.topUp, 1000);              // refills the 100 overspend too
+
+// Payday to payday: spending after the salary lands belongs to the month it pays for.
+const pp = [T('2026-10-20', -40, 'exp', 'Shopping'), T('2026-10-29', 1700, 'inc', 'Income'),
+  T('2026-10-31', -138, 'exp', 'Sport'), T('2026-11-02', -60, 'exp', 'Clothes'),
+  T('2026-11-27', 1600, 'inc', 'Income'), T('2026-11-28', -10, 'exp', 'Sport'),
+  T('2026-11-10', 300, 'inc', 'Income')];          // a small mid-month payment is income, not a payday
+const P = B.run(pp, { start: '2026-11' }, '2026-11').cur;
+a.deepStrictEqual(P.period, { from: '2026-10-29', to: '2026-11-26', open: false, salary: true });
+a.strictEqual(P.income, 2000);
+a.strictEqual(P.funSpent, 138);
+const cl = P.env.find(e => e.name === 'Clothes');
+a.deepStrictEqual([cl.had, cl.spent, cl.left], [80, 60, 20]);
+a.strictEqual(P.had, r(P.env.reduce((n, e) => n + e.had, 0)));
+a.strictEqual(P.left, r(P.had - P.spent));
+// The month whose next salary is not in yet runs on.
+a.strictEqual(B.run(pp, { start: '2026-11' }, '2026-12').cur.period.open, true);
+a.deepStrictEqual(B.salaryMonths(pp, null), ['2026-11', '2026-12']);
+
+// Old saved settings gain the new funds, keeping his own values.
+const old = { start: '2026-11', funds: [{ name: 'Gifts', per: 40, target: 0, cats: ['Gifts'] }, { name: 'Bike', per: 20, target: 0, cats: ['Bike'] }] };
+a.strictEqual(B.migrate(old), true);
+a.deepStrictEqual(old.funds.map(f => f.name), ['Gifts', 'Eating out', 'Entertainment', 'Clothes', 'Travel', 'Giulietta', 'Leica', 'Bike']);
+a.strictEqual(old.funds[0].per, 40);
+a.strictEqual(B.migrate(old), false);
 
 // Business, on cash: taxes paid count; VAT inside the money received is shown.
 const b = [T('2026-11-04', 1200, 'inc', 'Income', 'Business'), T('2026-11-05', -270, 'exp', 'Rent', 'Business'),

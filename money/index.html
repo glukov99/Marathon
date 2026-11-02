@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202611022149"></script>
+<script src="../shared/auth.js?v=202611022216"></script>
 <title>Money — Life hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -95,8 +95,8 @@ ul.steps li{margin:5px 0}
 .pend .dh b{font-size:15px}
 </style><style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202611022149">
-<link rel="stylesheet" href="../shared/year.css?v=202611022149">
+<link rel="stylesheet" href="../shared/theme.css?v=202611022216">
+<link rel="stylesheet" href="../shared/year.css?v=202611022216">
 <style>
 .mbar{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .mbar b{font-size:18px;font-weight:600}
@@ -129,6 +129,16 @@ ul.steps li{margin:5px 0}
 .bfund input[data-f="cats"]{grid-column:1/-1}
 .bfund+.bfund{border-top:1px solid var(--rule);padding-top:10px}
 .bfund.bfh{font-size:12px;color:var(--faint);padding-bottom:0}
+.env{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,minmax(62px,auto));gap:2px 12px;align-items:baseline;padding:9px 16px;font-size:15px}
+.env b{text-align:right;font-weight:600;white-space:nowrap}
+.env b:nth-of-type(1),.env b:nth-of-type(2){font-weight:500;color:var(--soft)}
+.env+.env{border-top:1px solid var(--rule)}
+.env.eh{font-size:12px;color:var(--faint);padding-top:12px;padding-bottom:6px}
+.env.eh span+span{text-align:right}
+.env.tot{border-top:1px solid var(--ink);font-size:16px}
+.env.tot b{color:var(--ink)}
+.env+.pbar{margin-top:-2px}
+@media (max-width:420px){.env{grid-template-columns:minmax(0,1fr) repeat(3,minmax(54px,auto));gap:2px 8px;font-size:14px}}
 .bfund.bfh+.bfund{border-top:0;padding-top:4px}
 .card{background:var(--card);border-radius:16px;margin-top:12px;overflow:hidden;box-shadow:var(--shadow)}
 .mrow,.crow{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;padding:12px 16px;text-align:left;cursor:pointer}
@@ -177,7 +187,7 @@ ul.steps li{margin:5px 0}
 </style>
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202611022149"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202611022216"></script>
 <div class="wrap">
   <header class="hero"><div class="k">Life hub</div><h1>Money</h1><div class="sub" id="status"></div></header>
   <div id="setup" class="panel hidden"><h3>Connect</h3><div class="pc">
@@ -192,11 +202,11 @@ ul.steps li{margin:5px 0}
     <div id="view"></div>
   </div>
 </div>
-<script src="../shared/sync.js?v=202611022149"></script>
-<script src="../shared/catpick.js?v=202611022149"></script>
-<script src="../shared/charts.js?v=202611022149"></script>
-<script src="../shared/year.js?v=202611022149"></script>
-<script src="../shared/budget.js?v=202611022149"></script>
-<script src="app.js?v=202611022149"></script>
+<script src="../shared/sync.js?v=202611022216"></script>
+<script src="../shared/catpick.js?v=202611022216"></script>
+<script src="../shared/charts.js?v=202611022216"></script>
+<script src="../shared/year.js?v=202611022216"></script>
+<script src="../shared/budget.js?v=202611022216"></script>
+<script src="app.js?v=202611022216"></script>
 </body>
 </html>
