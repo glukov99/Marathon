@@ -132,7 +132,7 @@ wk('base','Return to running','22 km','~200 m','<b>All easy.</b> You are 2 weeks
  [GS('Bodyweight circuit (away, no equipment)','Easy. Not timed. Table rows replace pull-ups. No rower: the circuit is enough this week.',25,'hotelEasy')]
 ],{light:1});
 wk('base','Baseline tests','26 km','~300 m','<b>Test week.</b> These numbers set your challenge targets. Rest 5–10 min between tests on the same day.',[
- [E(30,'Easy, then 4×20 s strides.'),T('Test: broad jump + 2k row','Broad jump: best of 3, measure toe to heel. Then 2k row all-out (damper 4–5). Write both in Challenges.',30)],
+ [E(30,'Easy, then 4×20 s strides.'),T('Test: 2k row','Warm up 5–8 min easy rowing with 3 pickups of 10 strokes. Then 2k all-out, damper 4–5. Write the time and average split in Challenges.',20)],
  [E(35),T('Test: dead hang, max pull-ups, Bring Sally Up','In this order, 5–10 min rest between. Strict pull-ups, full hang.',30)],
  [V(300,50,'3 laps.')],
  [E(35),T('Test: max push-ups','One set, chest to fist height, no rest at the top.',5),CORE()],
@@ -242,7 +242,7 @@ wk('build','Build','54 km','~900 m','Biggest week so far. If the morning HR is h
  [GC('C1')]
 ]);
 wk('build','Lighter week + retest','40 km','~500 m','<b>Deload and full retest.</b> Fresh legs give honest numbers.',[
- [E(40,EZ+' Add 4×20 s strides.'),T('Retest: broad jump + 2k row','Same order as November.',30)],
+ [E(40,EZ+' Add 4×20 s strides.'),T('Retest: 2k row','Same warm-up as November. 2k all-out, damper 4–5.',20)],
  [E(40),T('Retest: dead hang, max pull-ups, Bring Sally Up','',30)],
  [V(500,60,'4 laps, easy.')],
  [E(40),T('Retest: max push-ups','',5),CORE()],

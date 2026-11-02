@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202610311045"></script>
+<script src="../shared/auth.js?v=202611022100"></script>
 <title>Season 2027 — Plovdiv, Bairi, Vitosha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -144,6 +144,16 @@ nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)
 .exl span{color:var(--soft)}
 .rt{border-top:1px solid var(--rule);padding:8px 0}.rt summary{cursor:pointer}.rt p{font-size:13.5px;color:var(--soft)}
 .logged{font-size:12.5px;color:var(--easy);margin-top:3px}
+/* skip, move, away days (2 Nov 2026) */
+.it.gone{opacity:.55}
+.it.gone .box{visibility:hidden}
+.it.gone .ib .t{text-decoration:line-through;text-decoration-thickness:1px}
+.ovnote{font-size:12.5px;color:var(--test);margin-top:3px;font-weight:600}
+.ovf{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px;align-items:center}
+.ovf input{font:inherit;font-size:14px;padding:6px 8px;border:1px solid var(--rule);border-radius:3px;background:var(--paper);color:var(--ink)}
+.ovf .btn{padding:6px 10px;font-size:13px}
+.awayctl{padding:10px 16px;font-size:13.5px;border-bottom:1px solid var(--rule)}
+.awayctl .ar{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:2px 0}
 
 /* panels */
 .panel{background:var(--card);border:1px solid var(--rule);border-radius:3px;margin-top:14px;box-shadow:var(--shadow)}
@@ -202,11 +212,11 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202610311045">
-<link rel="stylesheet" href="body.css?v=202610311045">
+<link rel="stylesheet" href="../shared/theme.css?v=202611022100">
+<link rel="stylesheet" href="body.css?v=202611022100">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202610311045"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202611022100"></script>
 <div class="wrap">
   <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
@@ -253,12 +263,13 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="plan.js?v=202610311045"></script>
-<script src="../shared/sync.js?v=202610311045"></script>
-<script src="../holidays/holidays-data.js?v=202610311045"></script>
-<script src="../shared/travel.js?v=202610311045"></script>
-<script src="body-shapes.js?v=202610311045"></script>
-<script src="body.js?v=202610311045"></script>
+<script src="plan.js?v=202611022100"></script>
+<script src="../shared/sync.js?v=202611022100"></script>
+<script src="../holidays/holidays-data.js?v=202611022100"></script>
+<script src="../shared/travel.js?v=202611022100"></script>
+<script src="overrides.js?v=202611022100"></script>
+<script src="body-shapes.js?v=202611022100"></script>
+<script src="body.js?v=202611022100"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -316,7 +327,34 @@ function renderHero(){
 const CHECK='<svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="2.4"><path d="M3 8.5l3 3 7-7"/></svg>';
 const openDays=new Set();
 document.addEventListener('toggle',e=>{const k=e.target.dataset&&e.target.dataset.day;if(k){e.target.open?openDays.add(k):openDays.delete(k)}},true);
+/* ============ skip, move, away days (2 Nov 2026, Georgi's ask): training/overrides.js ============ */
+let openOv=null; // {k, m:'skip'|'move'}
+const ownDay=(k,plus=0)=>{const m=/^w(\d+)-(\d)/.exec(k);const d=dayDate(+m[1]-1,+m[2]);d.setDate(d.getDate()+plus);return OV.iso(d)};
+const nextDay=k=>ownDay(k,1);
+const ovButtons=r=>{const k=r.k, o=openOv&&openOv.k===k?openOv.m:'';
+  return `<button class="lg-t" data-ovs="${k}">${o==='skip'?'Close':'Skip'}</button>${r.x.z!=='yoga'?`<button class="lg-t" data-ovm="${k}">${o==='move'?'Close':'Move'}</button>`:''}
+  ${(r.from&&!r.auto)?`<button class="lg-t" data-undo="${k}">Undo move</button>`:''}
+  ${o==='skip'?`<div class="ovf">${OV.reasons.map(t=>`<button class="btn ghost" data-skipr="${esc(t)}" data-sk="${k}">${esc(t)}</button>`).join('')}</div>`:''}
+  ${o==='move'?`<div class="ovf"><input type="date" id="mv-${k}" value="${nextDay(k)}" aria-label="New date"><button class="btn" data-mvgo="${k}">Move</button></div>`:''}`};
+function goneRow(r){
+  const x=r.x;
+  const why=r.skip?'Skipped: '+r.skip:`Moved to ${OV.label(r.out)}${r.auto?' (first gym day after the trip)':''}`;
+  return `<div class="it gone"><span class="box"></span><span class="zbar" style="--zc:var(--rule)"></span>
+    <div class="ib"><div class="t">${esc(x.t)}</div><div class="ovnote">${esc(why)}</div>
+    ${r.auto?`<button class="lg-t" data-ovm="${r.k}">${openOv&&openOv.k===r.k?'Close':'Move'}</button>${openOv&&openOv.k===r.k?`<div class="ovf"><input type="date" id="mv-${r.k}" value="${r.out}" aria-label="New date"><button class="btn" data-mvgo="${r.k}">Move</button></div>`:''}`
+      :`<button class="lg-t" data-undo="${r.k}">Undo</button>`}</div></div>`;
+}
+/* Away days that touch the week on screen, with a form to add more. */
+let awayForm=false;
+function awayCtl(){
+  const a0=OV.iso(dayDate(wsel,0)), a6=OV.iso(dayDate(wsel,6));
+  const here=(state.away||[]).map((a,i)=>[a,i]).filter(([a])=>a.from<=a6&&a.to>=a0);
+  return `<div class="awayctl">${here.map(([a,i])=>`<div class="ar"><span><b>Away: ${esc(a.n||'Away')}</b>, ${esc(OV.label(a.from))} – ${esc(OV.label(a.to))}. Runs stay, gym is bodyweight, tests move to the first gym day back.</span><button class="lg-t" data-awaydel="${i}">Remove</button></div>`).join('')}
+    ${awayForm?`<div class="ovf"><input id="awN" placeholder="Where (optional)" aria-label="Where"><input type="date" id="awF" value="${a0}" aria-label="From"><input type="date" id="awT" value="${a6}" aria-label="To"><button class="btn" id="awGo">Save</button><button class="btn ghost" id="awX">Cancel</button></div>`
+      :`<button class="lg-t" id="awAdd">Add away days</button>`}</div>`;
+}
 function renderWeek(){
+  OV.set(state);
   const w=W[wsel]; const t0=today0();
   document.getElementById('restBanner').classList.toggle('hidden',!(t0<START&&wsel===0));
   document.getElementById('prev').disabled=wsel===0;
@@ -328,8 +366,10 @@ function renderWeek(){
     const trip=Travel.tripOn(dt);
     const hard=!W[wsel].light&&!lt&&items.some(x=>x.key||x.long||x.z==='vert'||x.race);
     const tot0=tot,done0=done;
-    const rows=items.map((x0,i)=>{ const x=Travel.adapt(x0,trip,lt);
-      const k=id(wsel,d,i); const on=!!state.checks[k]; tot++; if(on)done++; if(x.z==='yoga'){if(on)yd++}else pm+=x.m||0;
+    const L=OV.day(wsel,d);
+    const rows=L.map((r,i)=>{ const x=r.x, k=r.k;
+      if(r.skip||r.out)return goneRow(r);
+      const on=!!state.checks[k]; tot++; if(on)done++; if(x.z==='yoga'){if(on)yd++}else pm+=x.m||0;
       const lg=state.logs[k]; const canLog=x.z!=='rest'&&x.z!=='yoga';
       const str=x.z==='gym'||(x.z==='test'&&!/10k|5k|time trial/i.test(x.t)); // strength: effort and loads, not distance
       const lgTxt=lg?[...lgParts(lg),lg.n&&'“'+lg.n+'”'].filter(Boolean).join(', '):'';
@@ -340,10 +380,12 @@ function renderWeek(){
         <div class="d">${esc(x.d)}</div>
         ${x.ex?exList(x.ex):''}
         ${x.rt?`<div class="d">Follow the video. On the watch, start the day's yoga workout and press Lap when the video ends.</div>`:''}
-        ${x.then&&!items.slice(i+1).some(y=>y.then===x.then)?`<div class="d">${ROUTINE[x.then].then}: ${ROUTINE[x.then].t.toLowerCase()}, ${routineMin(x.then)} min. Follow the video, the watch records it.</div><a class="lg-t" href="${ylink(ROUTINE[x.then].video)}" target="_blank" rel="noopener">Open the video</a>`:''}
+        ${x.then&&!L.slice(i+1).some(y=>!y.skip&&!y.out&&y.x.then===x.then)?`<div class="d">${ROUTINE[x.then].then}: ${ROUTINE[x.then].t.toLowerCase()}, ${routineMin(x.then)} min. Follow the video, the watch records it.</div><a class="lg-t" href="${ylink(ROUTINE[x.then].video)}" target="_blank" rel="noopener">Open the video</a>`:''}
         ${lgTxt?`<div class="logged">Logged: ${esc(lgTxt)}</div>`:''}
         ${x.link?`<a class="lg-t" href="${x.link}" target="_blank" rel="noopener">Open on YouTube</a>`:''}
+        ${r.from?`<div class="ovnote">Moved here from ${esc(OV.label(r.from))}${r.auto?': first gym day after the trip':''}</div>`:''}
         ${canLog?`<button class="lg-t" data-lg="${k}">${openLog===k?'Close':(lg?'Edit log':'Log it')}</button>`:''}
+        ${ovButtons(r)}
         ${openLog===k?`<div class="lg">
           <div><label for="t-${k}">Time (min)</label><input id="t-${k}" inputmode="decimal" data-f="t" data-lk="${k}" value="${esc(lg?.t||'')}"></div>
           ${str?`<div><label for="rpe-${k}">Effort (RPE 1–10)</label><input id="rpe-${k}" inputmode="numeric" data-f="rpe" data-lk="${k}" value="${esc(lg?.rpe||'')}"></div>
@@ -367,7 +409,8 @@ function renderWeek(){
       <div class="wk-num"><b>${esc(w.km)}</b>${runKmLine(wsel,w)}vert ${esc(w.vert)}<br>~${hrs} h planned</div></div>
     <div class="why">${w.why}</div>
     ${TI.clash?`<div class="tripnote clash">${esc(TI.clash)}</div>`:''}
-    ${TI.advice||lt?`<div class="tripnote">${esc(lt?'Lighter week (your choice): quality sessions are easy runs, everything is about 30% shorter. Your watch still shows the original workouts; follow this page.':TI.advice)} ${(TI.advice&&!/moved away/.test(TI.advice))||lt?`<button class="btn ghost" data-lighter="1" style="margin-top:8px">${lt?'Undo lighter week':'Make this a lighter week'}</button>`:''}</div>`:''}
+    ${TI.advice||lt?`<div class="tripnote">${esc(lt?'Lighter week (your choice): quality sessions are easy runs, everything is about 30% shorter. The watch gets this version at the next push.':TI.advice)} ${(TI.advice&&!/moved away/.test(TI.advice))||lt?`<button class="btn ghost" data-lighter="1" style="margin-top:8px">${lt?'Undo lighter week':'Make this a lighter week'}</button>`:''}</div>`:''}
+    ${awayCtl()}
     <div class="prog"><span>${done} of ${tot} done</span><span>Yoga ${yd} of 7 days</span></div>
     <div class="pbar"><i style="width:${tot?done/tot*100:0}%"></i></div>
     ${days}</article>`;
@@ -447,7 +490,6 @@ const TESTS=[
  {k:'cindy',n:'Cindy',u:'rounds + reps',goal:'20 rounds',lower:false},
  {k:'fran',n:'Fran',u:'time + bar kg',goal:'Sub-10 min at 43 kg',lower:true},
  {k:'row',n:'2k row',u:'time (m:ss)',goal:'Sub-8:00',lower:true},
- {k:'jump',n:'Broad jump',u:'cm',goal:'Beat baseline by 15 cm',lower:false},
  {k:'hang',n:'Dead hang',u:'time (m:ss)',goal:'2:00',lower:false},
  {k:'pull',n:'Max pull-ups',u:'reps',goal:'15 strict',lower:false},
  {k:'push',n:'Max push-ups',u:'reps',goal:'50',lower:false},
@@ -685,6 +727,21 @@ function renderAll(){if(window.renderBody)renderBody();renderHero();renderWeek()
 /* ============ events ============ */
 document.addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b)return;
+  /* skip, move, away days */
+  const ovOpen=(k,m)=>{openOv=openOv&&openOv.k===k&&openOv.m===m?null:{k,m};renderWeek()};
+  if(b.dataset.ovs){ovOpen(b.dataset.ovs,'skip');return}
+  if(b.dataset.ovm){ovOpen(b.dataset.ovm,'move');return}
+  if(b.dataset.sk){state.skips=state.skips||{};state.skips[b.dataset.sk]=b.dataset.skipr;if(state.moves)delete state.moves[b.dataset.sk];openOv=null;renderWeek();save();return}
+  if(b.dataset.mvgo){const k=b.dataset.mvgo,v=document.getElementById('mv-'+k).value;if(!/^\d{4}-\d\d-\d\d$/.test(v))return;
+    state.moves=state.moves||{};if(v===ownDay(k))delete state.moves[k];else state.moves[k]=v;
+    openOv=null;renderWeek();save();toast('Moved to '+OV.label(v));return}
+  if(b.dataset.undo){const k=b.dataset.undo;if(state.skips)delete state.skips[k];if(state.moves)delete state.moves[k];renderWeek();save();return}
+  if(b.id==='awAdd'){awayForm=true;renderWeek();return}
+  if(b.id==='awX'){awayForm=false;renderWeek();return}
+  if(b.id==='awGo'){const f=document.getElementById('awF').value,t=document.getElementById('awT').value,n=document.getElementById('awN').value.trim();
+    if(!f||!t)return;state.away=state.away||[];state.away.push({from:f<t?f:t,to:f<t?t:f,n:n||'Away'});state.away.sort((a,c)=>a.from.localeCompare(c.from));
+    awayForm=false;renderWeek();save();return}
+  if(b.dataset.awaydel!=null){if(!confirm('Remove these away days?'))return;state.away.splice(+b.dataset.awaydel,1);renderWeek();save();return}
   if(b.dataset.k){const k=b.dataset.k;state.checks[k]=!state.checks[k];if(!state.checks[k])delete state.checks[k];renderWeek();save();return}
   if(b.dataset.lighter){state.lighter=state.lighter||{};state.lighter[wsel]=!state.lighter[wsel];if(!state.lighter[wsel])delete state.lighter[wsel];renderWeek();save();return}
   if(b.dataset.lg){openLog=openLog===b.dataset.lg?null:b.dataset.lg;renderWeek();if(openLog){const i=document.getElementById('t-'+openLog);i&&i.focus()}return}

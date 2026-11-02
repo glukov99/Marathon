@@ -154,9 +154,11 @@ function renderBody(){
   // Today card
   let today='';
   const n=Math.floor((t0-START)/864e5);
-  if(n>=0&&n<W.length*7){const w=Math.floor(n/7),d=n%7,xs=W[w].days[d];
-    const main=xs.find(x=>!['yoga','gym','rest'].includes(x.z))||xs.find(x=>x.z!=='yoga')||xs[0];
-    const tot=xs.filter(x=>x.z!=='rest').length,done=xs.filter((x,i)=>x.z!=='rest'&&state.checks[id(w,d,i)]).length,p=tot?done/tot:0;
+  if(n>=0&&n<W.length*7){const w=Math.floor(n/7),d=n%7;
+    // skipped and moved sessions leave the day, moved-in ones join it (training/overrides.js, 2 Nov 2026)
+    const rs=(typeof OV!=='undefined'?(OV.set(state),OV.day(w,d)):W[w].days[d].map((x,i)=>({k:id(w,d,i),x}))).filter(r=>!r.skip&&!r.out),xs=rs.map(r=>r.x);
+    const main=xs.find(x=>!['yoga','gym','rest'].includes(x.z))||xs.find(x=>x.z!=='yoga')||xs[0]||{t:'Rest',d:'',m:0};
+    const tot=xs.filter(x=>x.z!=='rest').length,done=rs.filter(r=>r.x.z!=='rest'&&state.checks[r.k]).length,p=tot?done/tot:0;
     const A=Math.PI*42;
     today=`<div class="today-card"><svg viewBox="0 0 108 70" aria-hidden="true">
       <path d="M12,62 A42,42 0 0 1 96,62" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="9" stroke-linecap="round"/>

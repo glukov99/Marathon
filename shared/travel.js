@@ -2,7 +2,8 @@
    Needs training/plan.js and holidays/holidays-data.js loaded first. */
 const Travel=(()=>{
   const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
-  const list=()=>typeof H_list==='function'?H_list():[];
+  let extra=()=>[]; // away days from the Training page (training/overrides.js)
+  const list=()=>(typeof H_list==='function'?H_list():[]).concat(extra());
   function tripOn(date){const s=iso(date);return list().find(t=>s>=t.from&&s<=t.to)||null}
   const r5=m=>Math.max(15,Math.round(m*0.7/5)*5);
   const HOTEL={
@@ -45,5 +46,5 @@ const Travel=(()=>{
     if(w.light&&/trip/i.test(w.title)&&!trip)out.advice='The trip moved away from this week. You can train it as a normal week: repeat the sessions from the week before.';
     return out;
   }
-  return {tripOn,adapt,week};
+  return {tripOn,adapt,week,setExtra:f=>{extra=f}};
 })();

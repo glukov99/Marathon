@@ -11,21 +11,28 @@ session ("LH Gym A · W1") and one per yoga routine ("LH Post-training stretch":
 Running it again changes only what is wrong. Exercises done per leg or per side get a Left and a Right step, so the
 watch counts each leg's set. The login lives in ~/.garminconnect, never in this repo.
 Needs: pip install "garminconnect[workout]". Weekly run: ~/Library/LaunchAgents/com.lifehub.garmin-push.plist.
-Known gap: trips and lighter weeks are decided in the browser, so for those weeks the watch gets the base plan.
+Skips, moves, away days, lighter weeks and trips come from the Apps Script (money token in the Keychain), through
+training/overrides.js, so the watch matches the page. A skipped or moved session is unscheduled from its old day.
 """
 import argparse, datetime as dt, getpass, hashlib, json, re, subprocess
 from pathlib import Path
 
 TOKENS = '~/.garminconnect'
 PLAN = Path(__file__).with_name('plan.js')
+EXEC = 'https://script.google.com/macros/s/AKfycbw1gz9r2XR6JdtRvGySrBb4BfVKQ8wvruuey-dezUL65oNtJyjxkhjYQDCw6yEoDWd4/exec'  # public, see CLAUDE.md
 PREFIX = 'LH '
 YOGA_POSES = Path(__file__).with_name('garmin-yoga-poses.json')  # keys from connect.garmin.com/web-data/exercises/Yoga.json, Oct 2026
 EXPORT = r"""
-const P=new Function(require('fs').readFileSync(process.argv[1],'utf8')+';return {W,EX,START,ROUTINE}')();
+const fs=require('fs'), dir=process.argv[1], S=JSON.parse(fs.readFileSync(0,'utf8')||'{}');
+const hol=JSON.stringify(S.holidays||{}), localStorage={getItem:k=>k==='lifehub-holidays'?hol:null};
+const src=['plan.js','../holidays/holidays-data.js','../shared/travel.js','overrides.js'].map(f=>fs.readFileSync(dir+'/'+f,'utf8')).join(';\n');
+const P=new Function('localStorage',src+';return {W,EX,START,ROUTINE,OV}')(localStorage);
+P.OV.set(S.season||{});  // skips, moves, away days and lighter weeks, as the page shows them
 const RUNZ=['easy','rec','st','hard','mp','vert'];
-const out=[];P.W.forEach((w,wi)=>w.days.forEach((xs,d)=>xs.forEach(x=>{const run=RUNZ.includes(x.z)&&x.m>0;if(!x.ex&&!x.then&&!x.rt&&!run)return;
+const out=[];P.W.forEach((w,wi)=>w.days.forEach((_,d)=>P.OV.day(wi,d).forEach(r=>{if(r.skip||r.out)return;const x=r.x;
+  const run=RUNZ.includes(x.z)&&x.m>0;if(!x.ex&&!x.then&&!x.rt&&!run)return;
   const t=new Date(P.START);t.setDate(t.getDate()+wi*7+d);
-  out.push({date:t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'),week:wi+1,t:x.t,d:x.d,m:x.m,z:x.z,ex:x.ex,then:x.then,rt:x.rt,run:run?(x.run||null):undefined})})));
+  out.push({date:t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'),week:+r.k.split('-')[0].slice(1),t:x.t,d:x.d,m:x.m,z:x.z,ex:x.ex,then:x.then,rt:x.rt,run:run?(x.run||null):undefined})})));
 process.stdout.write(JSON.stringify({sessions:out,EX:P.EX,ROUTINE:P.ROUTINE}));
 """
 YOGA_BUILD = 2  # bump when build_yoga() changes
@@ -41,8 +48,29 @@ END = {'reps': {'conditionTypeId': 10, 'conditionTypeKey': 'reps', 'displayOrder
        'time': {'conditionTypeId': 2, 'conditionTypeKey': 'time', 'displayOrder': 2, 'displayable': True}}
 
 
-def plan():
-    return json.loads(subprocess.check_output(['node', '-e', EXPORT, str(PLAN)]))
+def plan(state=None):
+    """The plan as the page shows it. state = {'season', 'holidays'} from overrides(); {} = the base plan."""
+    return json.loads(subprocess.check_output(['node', '-e', EXPORT, str(PLAN.parent)], input=json.dumps(state or {}), text=True))
+
+
+def overrides():
+    """Skips, moves, away days, lighter weeks and trips, read from the Apps Script with the money token in the
+    Keychain (2 Nov 2026). The token is never printed. On any failure: the base plan, and a line in the log."""
+    import urllib.parse, urllib.request
+    try:
+        tok = subprocess.check_output(['security', 'find-generic-password', '-a', 'lifehub', '-s', 'lifehub-money-token', '-w'], text=True).strip()
+        with urllib.request.urlopen(f'{EXEC}?action=money&season=1&mt={urllib.parse.quote(tok)}', timeout=60) as r:
+            j = json.load(r)
+        if not j.get('ok'):
+            raise RuntimeError(j.get('error'))
+        st = {'season': (j.get('season') or {}).get('data') or {}, 'holidays': (j.get('holidays') or {}).get('data') or {}}
+        se = st['season']
+        print(f"overrides: {len(se.get('skips') or {})} skipped, {len(se.get('moves') or {})} moved, "
+              f"{len(se.get('away') or [])} away ranges, {len(se.get('lighter') or {})} lighter weeks")
+        return st
+    except Exception as e:
+        print('overrides: not loaded, the watch gets the base plan:', str(e)[:200])
+        return {}
 
 
 def amount(a):
@@ -218,7 +246,7 @@ def login():
 
 
 def push(start, days, dry):
-    p = plan()
+    p = plan(overrides())
     end = (dt.date.fromisoformat(start) + dt.timedelta(days=days - 1)).isoformat()
     vs = versions(p['sessions'], p['EX'], p['ROUTINE'])
     want = {}  # date -> [version]

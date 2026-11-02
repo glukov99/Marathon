@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="shared/icons/apple-touch-icon.png">
-<script src="shared/auth.js?v=202610311045"></script>
+<script src="shared/auth.js?v=202611022100"></script>
 <title>Life hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -129,10 +129,10 @@ ul.steps li{margin:5px 0}
 :root{--rec:#6E9DC2;--easy:#2F7F60;--mp:#B98A22;--st:#C9702A;--hard:#8E2521;--vert:#6B4E8F;--gym:#4F5F69;--test:#1F6F8B;--swim:#3C8FA6;--race:#1B1E1A}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rec:#7FB0D6;--easy:#4FAE88;--mp:#D9AA45;--st:#E08A45;--hard:#D2584F;--vert:#A68BD0;--gym:#93A6B2;--test:#4FAACB;--swim:#5BB4CC;--race:#E8EBE5}}
 </style>
-<link rel="stylesheet" href="shared/theme.css?v=202610311045">
+<link rel="stylesheet" href="shared/theme.css?v=202611022100">
 </head>
 <body>
-<div id="lhn"></div><script src="shared/nav.js?v=202610311045"></script>
+<div id="lhn"></div><script src="shared/nav.js?v=202611022100"></script>
 <div class="wrap">
   <div class="panel hidden" id="ebCard"><div class="card-h"><h3>Bank approval</h3></div><div class="pc">
     <p class="sub" id="ebMsg"></p>
@@ -172,14 +172,15 @@ ul.steps li{margin:5px 0}
     <p class="sub">Same URL and token as the Intervals.icu sync. Enter them once on each device.</p></div></div>
   <div class="foot">Ticks here are the same as in Training.</div>
 </div>
-<script src="shared/invoices.js?v=202610311045"></script>
-<script src="training/plan.js?v=202610311045"></script>
-<script src="shared/sync.js?v=202610311045"></script>
-<script src="meals/meals-data.js?v=202610311045"></script>
-<script src="holidays/holidays-data.js?v=202610311045"></script>
-<script src="shared/travel.js?v=202610311045"></script>
-<script src="heat/icons.js?v=202610311045"></script>
-<script src="car/car-data.js?v=202610311045"></script>
+<script src="shared/invoices.js?v=202611022100"></script>
+<script src="training/plan.js?v=202611022100"></script>
+<script src="shared/sync.js?v=202611022100"></script>
+<script src="meals/meals-data.js?v=202611022100"></script>
+<script src="holidays/holidays-data.js?v=202611022100"></script>
+<script src="shared/travel.js?v=202611022100"></script>
+<script src="training/overrides.js?v=202611022100"></script>
+<script src="heat/icons.js?v=202611022100"></script>
+<script src="car/car-data.js?v=202611022100"></script>
 <script>
 const TKEY='season-2027-gl';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -243,9 +244,11 @@ function train(){
     el.innerHTML=`<div class="card-h"><h3>Training</h3><a href="training/">Open</a></div><div class="pc">`+
       (t0<START?`<p><b>Rest until Sun 25 Oct.</b> Yoga and easy swims only. Base starts Mon 26 Oct.</p>`:`<p>The season is over. Time to plan the next one.</p>`)+`</div>`;return;}
   const w=W[wI], s=tGet();
-  const lt=!!(s.lighter&&s.lighter[wI]), trip=Travel.tripOn(t0);
-  const rows=w.days[dI].map((x0,i)=>{const x=Travel.adapt(x0,trip,lt);
-    const k=`w${wI+1}-${dI}-${i}`, on=!!s.checks[k], lg=s.logs[k];
+  OV.set(s); const lt=!!(s.lighter&&s.lighter[wI]), trip=Travel.tripOn(t0);
+  const rows=OV.day(wI,dI).map(r=>{const x=r.x, k=r.k;
+    if(r.skip||r.out)return `<div class="tr" style="opacity:.5"><span class="box" style="visibility:hidden"></span><span class="zb" style="--zc:var(--rule)"></span>
+      <div class="nm"><b style="text-decoration:line-through">${esc(x.t)}</b><span>${r.skip?'Skipped: '+esc(r.skip):'Moved to '+esc(OV.label(r.out))}</span></div></div>`;
+    const on=!!s.checks[k], lg=s.logs[k];
     const sub=x.z==='yoga'?esc(x.d):(lg&&(lg.t||lg.km)?'Logged: '+[lg.t&&lg.t+' min',lg.km&&lg.km+' km',lg.hr&&'HR '+lg.hr].filter(Boolean).join(', '):esc(x.d));
     return `<div class="tr ${on?'on':''}"><button class="box" data-k="${k}" aria-pressed="${on}" aria-label="Done: ${esc(x.t)}">${CHK}</button>
       <span class="zb" style="--zc:${x.yc||'var(--'+x.z+', var(--acc))'}"></span>
@@ -265,7 +268,7 @@ function meals(){
 function week(){
   const rows=[0,1,2,3,4,5,6].map(d=>{
     let tr='Rest';
-    if(inSeason){const it=W[wI].days[d].filter(x=>x.z!=='yoga'&&x.z!=='gym'&&x.z!=='rest');tr=it.length?it.map(x=>x.t).join(' + '):(W[wI].days[d].some(x=>x.z==='gym')?'Strength':'Rest');}
+    if(inSeason){OV.set(tGet());const all=OV.day(wI,d).filter(r=>!r.skip&&!r.out).map(r=>r.x);const it=all.filter(x=>x.z!=='yoga'&&x.z!=='gym'&&x.z!=='rest');tr=it.length?it.map(x=>x.t).join(' + '):(all.some(x=>x.z==='gym')?'Strength':'Rest');}
     return `<tr class="${d===dI?'today':''}"><td>${M_DN[d]}</td><td>${esc(tr)}</td><td>${esc(MW[d].l.n)}</td></tr>`;}).join('');
   document.getElementById('week').innerHTML=`<div class="card-h"><h3>This week</h3></div>
     <div class="tw wk" style="padding:4px 16px 12px"><table><tr><th>Day</th><th>Training</th><th>Lunch</th></tr>${rows}</table></div>`;
