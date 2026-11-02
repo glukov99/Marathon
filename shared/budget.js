@@ -22,7 +22,7 @@
    Unassigned, the flexible Wants, the pile Wants, then Needs, then Savings. */
 (function (root) {
   const DEF = {
-    v: 3,
+    v: 4,
     start: '2026-11',
     payday: 25,
     salaryCat: 'Income',
@@ -40,12 +40,15 @@
       { name: 'Entertainment', per: 70, target: 0, mode: 'top', cats: ['Entertainment'] },
       { name: 'Clothes', per: 80, target: 0, mode: 'top', cats: ['Clothes', 'Shopping'] },
       { name: 'Travel', per: 100, target: 0, mode: 'pile', cats: ['Travel', 'Holiday'] },
+      // Running and training: shoes, kit, gels, race fees, sports shops (Decathlon).
+      // Adds up, so the next pair of shoes is already saved when it is due.
+      { name: 'Sport', per: 50, target: 0, mode: 'pile', cats: ['Sport'] },
       { name: 'Fun', per: 30, target: 0, mode: 'top', cats: ['Fun'] },
       { name: 'Giulietta', per: 300, target: 600, mode: 'pile', cats: ['Giulietta'] },
       { name: 'Leica', per: 250, target: 2000, mode: 'pile', cats: ['Leica'] }
     ],
     catchAll: 'Fun',          // spending with no budget of its own
-    cover: ['Unassigned', 'Fun', 'Clothes', 'Entertainment', 'Eating out', 'Leica', 'Giulietta', 'Travel', 'Gifts', 'Needs', 'Savings'],
+    cover: ['Unassigned', 'Fun', 'Clothes', 'Entertainment', 'Eating out', 'Leica', 'Giulietta', 'Sport', 'Travel', 'Gifts', 'Needs', 'Savings'],
     jointManualOnly: true,
     emergency: { months: 6, extra: 600, accounts: ['Flexible Cash Funds'] },
     // The company's free money also goes to `fund`; `target` is the whole goal.
@@ -259,6 +262,9 @@
       return f ? Object.assign({}, d, { per: f.per, target: f.target }) : JSON.parse(JSON.stringify(d));
     }).concat(mine.filter(f => !DEF.funds.some(d => d.name === f.name)).map(f => Object.assign({ mode: 'pile' }, f)));
     if (s.payday == null) s.payday = DEF.payday;
+    // A saved cover order gains any new budget at its default place.
+    if (Array.isArray(s.cover)) s.cover = DEF.cover.filter(n => s.cover.includes(n) || !mine.some(f => f.name === n))
+      .concat(s.cover.filter(n => !DEF.cover.includes(n)));
     s.v = DEF.v;
     return true;
   }

@@ -87,8 +87,12 @@ a.deepStrictEqual(e, { target: 9000, have: 3000, gap: 6000, months: 15 });
 // Older saved settings gain the new funds and modes, keeping his amounts.
 const old = { v: 2, funds: [{ name: 'Gifts', per: 40, target: 0, cats: ['Gifts'] }, { name: 'Bike', per: 20, target: 0, cats: ['Bike'] }] };
 a.strictEqual(B.migrate(old), true);
-a.deepStrictEqual(old.funds.map(f => f.name), ['Gifts', 'Eating out', 'Entertainment', 'Clothes', 'Travel', 'Fun', 'Giulietta', 'Leica', 'Bike']);
-a.strictEqual(old.funds[0].per, 40); a.strictEqual(old.funds[0].mode, 'pile'); a.strictEqual(old.funds[8].mode, 'pile');
+a.deepStrictEqual(old.funds.map(f => f.name), ['Gifts', 'Eating out', 'Entertainment', 'Clothes', 'Travel', 'Sport', 'Fun', 'Giulietta', 'Leica', 'Bike']);
+a.strictEqual(old.funds[0].per, 40); a.strictEqual(old.funds[0].mode, 'pile'); a.strictEqual(old.funds[9].mode, 'pile');
+// Sport pays for the Sport category; Clothes keeps clothes and shopping.
+const sp = B.run([T('2026-10-30', 2000, 'inc', 'Income'), T('2026-11-02', -138.29, 'exp', 'Sport')], { start: '2026-11', opening: 0 }, '2026-11').cur;
+a.strictEqual(get(sp, 'Sport').spent, 138.29);
+a.strictEqual(get(sp, 'Clothes').spent, 0);
 a.strictEqual(B.migrate(old), false);
 
 console.log('budget: all cases pass');
