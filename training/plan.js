@@ -41,6 +41,7 @@ const EX={
  bandrow:['Band rows','BANDED_EXERCISES','ROW','','lats traps|biceps lower_back shoulders'],
  invrow:['Inverted rows under a sturdy table','ROW','INVERTED_ROW','No bar? Grip the table edge, body straight, chest to the edge. Check it will not tip.','lats traps|biceps lower_back shoulders'],
  ohp:['Overhead press: dumbbells, or pike push-ups at home','SHOULDER_PRESS','DUMBBELL_SHOULDER_PRESS','','shoulders|chest triceps traps'],
+ negpull:['Negative pull-ups','PULL_UP','PULL_UP','Jump or step to the top, then lower over 5 s. Builds the pull-up past a low max.','lats|biceps forearm shoulders'], // * the watch shows "Pull Up"
  hang:['Dead hang','PULL_UP','','','forearm|lats shoulders'], // * no Garmin exercise: the watch shows "Pull Up"
  facepull:['Band face pulls','ROW','BANDED_FACE_PULLS','','shoulders traps'],
  squat:['Air squats','SQUAT','AIR_SQUAT','','quads glutes|hamstrings'],
@@ -56,14 +57,17 @@ const EX={
 const X=(n,k,a,h)=>[n,[[k,a,h||'']]];
 const GYM={
  A:[X(4,'boxjump',3),X(4,'kbswing',15,'16 kg, then 20 kg when easy'),X(4,'trapbar',5,'3 s down'),X(3,'split',8,'each leg, 3 s down'),
-    X(3,'slrdl',8,'each leg, 3 s down'),X(3,'stepdown',8,'each leg, 5 s down'),X(4,'calf',8,'each leg, 3 s up, 3 s down')],
+    X(3,'slrdl',8,'each leg, 3 s down'),X(3,'stepdown',8,'each leg, 5 s down'),X(4,'calf',8,'each leg, 3 s up, 3 s down'),
+    // A second pull day (3 Nov 2026): baseline 6 pull-ups and a 0:45 hang, and Gym B alone is once a week.
+    X(3,'negpull',3,'5 s down'),X(1,'hang','max','stop a few seconds short')],
  B:[X(5,'pullup','max','2 reps short of max'),X(4,'pushup','max','3 reps short of max'),X(3,'row',12),X(3,'ohp',8),X(3,'hang','max'),X(2,'facepull',15)],
  core:[X(3,'spanish','45 s'),X(3,'sidewalk',15,'steps each way'),X(3,'cossack',8,'each side'),X(3,'tib',20),X(3,'seatedcalf',12,'slow'),
     X(3,'deadbug',8,'each side'),X(3,'pallof',10,'each side')],
- C1:[[10,[['pullup',5],['pushup',10],['squat',15]],'As many rounds as you can in 15 min at a steady pace. Stop at 15 min.']],
+ // Pull-ups 3 a round, not 5, until the max is 10 (baseline 6, 3 Nov 2026): 5 a round turned round 3 on into failed reps.
+ C1:[[10,[['pullup',3,'5 once your max is 10'],['pushup',10],['squat',15]],'As many rounds as you can in 15 min at a steady pace. Stop at 15 min.']],
  C2:[X(5,'rower','500 m','1 min rest between'),X(3,'farmer','40 m')],
  C3:[X(1,'sally','3:30'),X(1,'rower','15 min','easy, or ski erg')],
- easy:[X(1,'rower','10 min','easy'),[3,[['pullup',5],['pushup',10],['squat',15]],'Easy rounds, not timed.']],
+ easy:[X(1,'rower','10 min','easy'),[3,[['pullup',3,'5 once your max is 10'],['pushup',10],['squat',15]],'Easy rounds, not timed.']],
  hotelB1:[X(1,'sally','3:30'),[3,[['bandrow',15],['pike',8],['plank','40 s']],'']],
  hotelC:[[5,[['bandrow',10],['pushup',10],['squat',15]],'15 min, steady, not hard. Stop at 15 min.']],
  activation:[X(3,'boxjump',3,'no weights')],
@@ -90,7 +94,7 @@ const V=(vert,m,x)=>S('vert',`Mladezhki Halm vert, ~${vert} m`,x||'Run up slowly
 const ST=(t,d,m,run)=>S('st',t,d,m,{key:1,then:'stretch',run});
 const HD=(t,d,m,run)=>S('hard',t,d,m,{key:1,then:'stretch',run});
 const MPS=(t,d,m,run)=>S('mp',t,d,m,{key:1,then:'stretch',run});
-const GA=(x,o)=>S('gym','Gym A: lower body and power',x||'45 min, after the run. Slow lowering on every lift.',45,{g:'A',ex:gym('A',o),then:'stretch'});
+const GA=(x,o)=>S('gym','Gym A: lower body and power',x||'50 min, after the run. Slow lowering on every lift. Pull block at the end.',50,{g:'A',ex:gym('A',o),then:'stretch'});
 const GB=(x,o)=>S('gym','Gym B: upper body',x||'30 min, home or gym.',30,{g:'B',ex:gym('B',o)});
 const GC=(v)=>S('gym','Hybrid session '+v,'25–30 min, low leg load. RPE 6–7.',28,{g:'C',ex:gym(v)});
 const CORE=()=>S('gym','Core + hips 25 min','Holds and control only. Light: legs must be fresh for Friday.',25,{ex:gym('core')});

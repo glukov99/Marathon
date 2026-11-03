@@ -33,7 +33,7 @@ const ls = () => { const m = {}; return { getItem: k => m[k] || null, setItem() 
   assert.doesNotThrow(() => {
     new Function('window', 'document', 'localStorage', 'fetch', 'location', 'history',
       'confirm', 'prompt', 'alert', 'Year', 'Charts', 'Invoices', 'CatPick', 'HubSync',
-      code)({}, d, ls(), () => new Promise(() => {}), { search: '', pathname: '/' },
+      code)({}, d, ls(), () => new Promise(() => {}), { search: '', hash: '', pathname: '/' },
       { replaceState() {} }, () => true, () => null, () => null);
   }, app + ' must evaluate with no shared file present');
   // And it must then go and get them, not simply give up quietly.
