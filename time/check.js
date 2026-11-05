@@ -176,7 +176,43 @@ assert.ok(pf.readyFromAll && (d + 600 * M - pf.startBy) / M === 50);
   assert.equal(tt.parts.ready / M, 68);
   assert.deepEqual(tt.legs.map(l => [l.what, Math.round(l.parts.total / M)]), [['Nursery drop-off', 83], ['Fuel', 12], ['Run', 94]]);
   assert.equal(tt.legs[0].parts.ready / M, 68);
-  assert.ok(!tt.parts.there && tt.legs[2].parts.there / M === 52);
+  // there = from reaching the run spot (09:01) to the end of the stop the run ended in (10:09): warm-up included (5 Nov 2026)
+  assert.ok(!tt.parts.there && tt.legs[2].parts.there / M === 68);
+}
+
+// 13b. 5 Nov 2026: nursery 09:01–09:14, the track 09:19–10:27 (watch 09:48–10:24), a stop 10:34–10:46 near it, home 10:51.
+// Arrival at the track is 09:19, not the watch start; both stops read as Run, not as unnamed stops.
+{
+  const P = [{ name: 'Nursery', lat: 42.14, lon: 24.75, r: 150 }], a0 = d + 87 * M; // 08:27
+  const V = [{ id: 'n', start: a0 + 34 * M, end: a0 + 47 * M, lat: 42.14, lon: 24.75 }, { id: 't', start: a0 + 52 * M, end: a0 + 120 * M, lat: 42.15, lon: 24.70 },
+    { id: 'c', start: a0 + 127 * M, end: a0 + 139 * M, lat: 42.151, lon: 24.70 }];
+  const all = T.merge([{ id: 'w', at: a0, mark: 'ready', what: 'Nursery drop-off', place: '', end: 0 }, { id: 'o', at: a0 + 26 * M, mark: 'out', what: '', place: '', end: 0 },
+    { id: 'b', at: a0 + 144 * M, mark: 'back', what: '', place: '', end: 0 }], V, P, null, [{ id: 'R', start: a0 + 81 * M, end: a0 + 117 * M }]);
+  assert.ok(all.filter(m => m.src === 'gps' && m.lat === 42.15).every(m => m.place === 'Run'));
+  assert.ok(all.filter(m => m.src === 'gps' && m.lat === 42.151).every(m => m.place === 'Run')); // 10 min after the run
+  const tt = T.build(all, a0 + 300 * M).find(x => x.legs);
+  assert.equal(tt.what, 'Nursery drop-off → Run');
+  const run = tt.legs[1].parts;
+  assert.deepEqual([run.travel, run.there, run.home].map(x => x / M), [5, 68, 24]);
+  assert.equal(T.unnamed(V, P, [{ id: 'R', start: a0 + 81 * M, end: a0 + 117 * M }]).length, 0);
+}
+
+// 13c. 31 Oct–2 Nov 2026: a weekend away. Left Sat 13:40, stayed 70 km off (two long stays), home Mon 11:59 = one trip,
+// and it stays out of the averages.
+{
+  const a0 = Date.parse('2026-10-31T11:40:00Z'), Hm = 60 * M;
+  const V = [{ id: 'h0', start: a0 - Hm, end: a0, lat: 42.1, lon: 24.7 }, { id: 's1', start: a0 + 3 * M, end: a0 + 22 * Hm, lat: 42.6, lon: 25.4 },
+    { id: 's2', start: a0 + 22 * Hm + 4 * M, end: a0 + 46 * Hm, lat: 42.61, lon: 25.4 }, { id: 'h1', start: a0 + 46 * Hm + 19 * M, end: 0, lat: 42.1, lon: 24.7 }];
+  const P = [{ name: 'Home', lat: 42.1, lon: 24.7, r: 150 }];
+  const ts = T.build(T.merge([], V, P, null, []), a0 + 50 * Hm).filter(t => !t.task);
+  assert.equal(ts.length, 1);
+  assert.equal(ts[0].start, a0); assert.equal(ts[0].end, a0 + 46 * Hm + 19 * M);
+  assert.ok(!ts[0].legs);
+  const named = Object.assign({}, ts[0], { what: 'Away', legs: null });
+  assert.deepEqual(T.stats([named]), {});
+  // still away now: the trip is open, not "no end"
+  const live = T.build(T.merge([], V.slice(0, 2).map(v => v.id === 's1' ? { ...v, end: 0 } : v), P, null, []), a0 + 20 * Hm).filter(t => !t.task);
+  assert.ok(live.length === 1 && live[0].open && !live[0].unfinished);
 }
 
 // 14. One stay alone (unnamed home, no taps) is not a trip
@@ -194,16 +230,17 @@ console.log('time check ok');
   const tr = T.build(T.merge([{ id: 'x', at: d, mark: 'ready', what: 'Nursery drop-off', place: '', end: 0 }], vis, pl, null, runs), d + 1000 * M);
   assert.equal(tr.length, 1);
   assert.equal(tr[0].what, 'Nursery drop-off → Run');                 // no unnamed leg, the run is back
-  assert.deepEqual(tr[0].legs.map(l => l.parts.total / M), [68, 61]);    // drop-off until the run starts; the run home
+  assert.deepEqual(tr[0].legs.map(l => l.parts.total / M), [55, 74]);    // drop-off until you reach the track; the run (warm-up included) home
   assert.ok(T.stats(tr).Run && T.stats(tr)['Nursery drop-off'] && !T.stats(tr)['Nursery drop-off → Run']); // legs count, the chain does not
   // a chain with an unnamed stop in it is not its own activity in the stats
   assert.ok(!T.stats([{ what: 'Run → ?42.1,24.7', parts: { total: 1 }, legs: [] }])['Run → ?42.1,24.7']);
 }
 console.log('track check ok');
 
-// 29 Oct 2026: a stop at the spot named Run, then the watch's 37-min run: the run is 37 min, not from the stop.
+// 29 Oct 2026, again after the place named Run was deleted (5 Nov 2026: it had caught the drop-off stop): the 8-min stop
+// before the track is a short unnamed stop, so it is not a leg; the run counts from reaching the track, warm-up included.
 {
-  const pl = [{ name: 'Home', lat: 42.1354, lon: 24.7453, r: 150 }, { name: 'Run', lat: 42.1459, lon: 24.7274, r: 150 }];
+  const pl = [{ name: 'Home', lat: 42.1354, lon: 24.7453, r: 150 }];
   const vis = [{ id: 'h1', start: d - 600 * M, end: d + 38 * M, lat: 42.1354, lon: 24.7453 },
     { id: 'rs', start: d + 42 * M, end: d + 50 * M, lat: 42.1459, lon: 24.7274 },
     { id: 'tr', start: d + 55 * M, end: d + 109 * M, lat: 42.1517, lon: 24.7183 },
@@ -211,9 +248,9 @@ console.log('track check ok');
   const tr = T.build(T.merge([{ id: 'x', at: d, mark: 'ready', what: 'Nursery drop-off', place: '', end: 0 }], vis, pl, null,
     [{ id: 'r', start: d + 68 * M, end: d + 105 * M }]), d + 1000 * M);
   const run = tr[0].legs.find(l => l.what === 'Run');
-  assert.equal(run.parts.there / M, 37);
-  assert.equal(T.stats(tr).Run.parts.there.med / M, 37);
-  assert.deepEqual(tr[0].legs.map(l => l.parts.total / M), [42, 87]); // drop-off ends at the spot; the run is door to door
+  assert.equal(tr[0].what, 'Nursery drop-off → Run');
+  assert.equal(run.parts.there / M, 54);
+  assert.deepEqual(tr[0].legs.map(l => l.parts.total / M), [55, 74]);
 }
 console.log('run spot check ok');
 

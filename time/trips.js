@@ -23,10 +23,13 @@
     const open = () => ({ marks: [], visits: [], ready: 0, out: 0, back: 0, what: '' });
     const last = t => t.marks.length ? t.marks[t.marks.length - 1].at : 0;
     const close = () => { if (cur) { trips.push(cur); cur = null; } };
+    // Away overnight (a weekend at a place 70 km off, 31 Oct 2026): GPS shows one long stay, so the marks fall silent
+    // for 12 h+ without you coming home. While the last mark is an arrival, the trip is still going on.
+    const staying = t => t.marks.length > 0 && t.marks[t.marks.length - 1].mark === 'in';
     for (const m of ms) {
       if (m.mark === 'start' || m.mark === 'stop') continue; // home timers, see tasks()
       if (m.mark === 'manual') { trips.push({ manual: true, marks: [m], what: m.what, start: m.at, end: m.end }); continue; }
-      if (cur && m.at - last(cur) > 12 * H) close();
+      if (cur && m.at - last(cur) > 12 * H && !staying(cur)) close();
       if (m.mark === 'back' && !cur) continue; // home again with nothing open: nothing to measure
       if (m.mark === 'ready' && cur && (cur.out || cur.visits.length)) close(); // getting ready for the next thing
       if (!cur) cur = open();
@@ -41,7 +44,7 @@
       cur.marks.push(m);
       if (m.mark === 'back') { cur.back = m.at; close(); }
     }
-    if (cur) { cur.open = true; trips.push(cur); }
+    if (cur) { cur.open = true; cur.away = staying(cur); trips.push(cur); }
     const t0 = now || Date.now();
     // Just being at one place (one stay, no tap, no leaving or coming home) is not a trip: an unnamed home looked like
     // "out at an unnamed stop since 07:04".
@@ -91,8 +94,8 @@
     if (end) p.total = end - start;
     const real = t.visits.find(v => v.in && !UNNAMED.test(v.place)) || t.visits.find(v => v.in && v.off - v.in >= 10 * 60e3) || v0; // skip traffic stops
     const what = t.what || (real ? actFor(real.place, real.in) : t.visits[0] ? actFor(t.visits[0].place, t.visits[0].off) : '');
-    const live = !end && now - start < 12 * H;
-    const legs = splitLegs(t, start, end);
+    const live = !end && (now - start < 12 * H || !!t.away);
+    const legs = (end || now) - start > 24 * H ? null : splitLegs(t, start, end); // days away: one trip, not a leg per stop
     if (legs) { delete p.there; delete p.arrive; } // a chain's "time at stops" adds up unlike things; its legs carry those
     return { what: legs ? legs.map(l => l.what).join(' → ') : what, start, end, open: live, unfinished: !end && !live, parts: p, legs,
       visits: t.visits, ids: t.marks.map(m => m.id), marks: t.marks };
@@ -103,7 +106,15 @@
      the last leg also takes the way home. Things: each stop, and each run from the watch
      (a stop during a run belongs to the run). The menu tap names the leg it matches, otherwise the first. */
   function splitLegs(t, start, end) {
-    const runs = t.marks.filter(m => m.src === 'run' && m.mark === 'out' && m.end).map(m => ({ act: 'Run', a: m.at, b: m.end, watch: true }));
+    // The stop a run sits in (the track, the warm-up before the watch starts): you got there when the stop began,
+    // and you were there until it ended (5 Nov 2026: arrived 09:19, watch 09:48, read as 34 min of travel).
+    const runs = t.marks.filter(m => m.src === 'run' && m.mark === 'out' && m.end).map(m => {
+      const ov = t.visits.filter(v => v.in && v.in <= m.end && (v.off || Infinity) >= m.at);
+      const r = { act: 'Run', a: m.at, b: Math.max(m.end, ...ov.map(v => v.off || 0)), watch: true };
+      const s = Math.min(m.at, ...ov.map(v => v.in));
+      if (s < m.at) r.s = s;
+      return r;
+    });
     const near = 15 * 60e3, allIn = t.visits.filter(v => v.in);
     // The parking or warm-up spot: you are there just before a run (ending ≤ 15 min before it) and back at the
     // same spot just after it (≤ 15 min after; the car). Both belong to the run. A stop you do not come back to
@@ -114,6 +125,11 @@
       const pre = before[before.length - 1], post = after[0];
       const ok = pre && post && pre.off && r.a - pre.off <= near && post.in - r.b <= near && same(pre, post);
       return ok && (v === pre || (same(v, post) && v.in > r.b && v.in - r.b <= near + 30 * 60e3));
+    });
+    // you got to the run when you reached its parking or warm-up spot
+    runs.forEach(r => {
+      const sp = allIn.filter(v => v.in < r.a && r.a - v.in < 3 * H && runSpot(v)).map(v => v.in);
+      if (sp.length) r.s = Math.min(r.s || r.a, ...sp);
     });
     // a stop that overlaps the run at all is the run (the track you circled, the warm-up there before the watch started)
     const stops = t.visits.filter(v => v.in && !runs.some(r => v.in <= r.b && (v.off || Infinity) >= r.a) && !runSpot(v))
@@ -145,7 +161,7 @@
         const got = x.s || x.a; // at a run spot, travel ends when you get there, not when the watch starts
         if (got > go) p.travel = got - go;
         if (got > from) p.arrive = got - from;
-        if (x.b > x.a) p.there = x.b - x.a;
+        if (x.b > got) p.there = x.b - got; // a run: from getting to the spot, warm-up included
       }
       if (last && end && x.b && end > x.b) p.home = end - x.b;
       if (legEnd > from) p.total = legEnd - from;
@@ -167,7 +183,8 @@
     const by = {};
     // Each thing counts once: a chain (drop-off → run) adds its legs, not itself; Georgi wants an average per thing (29 Oct 2026)
     const add = t => { if (t.what && !UNNAMED.test(t.what)) (by[t.what] = by[t.what] || []).push(t); };
-    trips.filter(t => !t.open).forEach(t => { if (t.legs) t.legs.forEach(add); else add(t); });
+    // A weekend away is not how long a thing takes: trips over 24 h stay out of the averages.
+    trips.filter(t => !t.open && !(t.end - t.start > 24 * H)).forEach(t => { if (t.legs) t.legs.forEach(add); else add(t); });
     const out = {};
     for (const [what, ts] of Object.entries(by)) {
       const o = { n: ts.length, parts: {} };
@@ -215,7 +232,9 @@
   const spotKey = v => '?' + v.lat.toFixed(3) + ',' + v.lon.toFixed(3);
   /* Visits become marks: Home = back (arrived) and out (left); any other place = in and off.
      A place not named yet gets a "?lat,lon" key, so its trips can be named later from the Places list. */
-  function visitMarks(visits, places, current) {
+  // A stop during a run from the watch, or in the 20 min after it (the cool-down, back to the car), is the run.
+  const ranIn = (v, runs) => (runs || []).some(r => v.start <= r.end + 20 * 60e3 && (v.end || Infinity) >= r.start);
+  function visitMarks(visits, places, current, runs) {
     const all = (visits || []).concat(current ? [{ id: 'vnow', start: current.start, end: 0, lat: current.lat, lon: current.lon }] : []);
     const out = [];
     all.forEach(v => {
@@ -226,7 +245,7 @@
         out.push({ ...base, id: v.id + ':b', at: v.start, mark: 'back', place: '' });
         if (v.end) out.push({ ...base, id: v.id + ':o', at: v.end, mark: 'out', place: '' });
       } else {
-        const pl = name || spotKey(v);
+        const pl = name || (ranIn(v, runs) ? 'Run' : spotKey(v));
         out.push({ ...base, id: v.id + ':i', at: v.start, mark: 'in', place: pl });
         if (v.end) out.push({ ...base, id: v.id + ':f', at: v.end, mark: 'off', place: pl });
       }
@@ -237,7 +256,7 @@
      same leave or arrive within 45 min. Before 28 Oct any GPS stay nearby dropped it: Overland paused at the office,
      sent nothing from home, and the 16:35 arrive-home was lost, so the trip stayed open until a tap. */
   function merge(marks, visits, places, current, runs) {
-    const vm = visitMarks(visits, places, current), gm = vm.concat(runMarks(runs, visits, places, marks));
+    const vm = visitMarks(visits, places, current, runs), gm = vm.concat(runMarks(runs, visits, places, marks));
     const near = (m, at) => Math.abs(m.at - at) <= 45 * 60e3;
     let keep = marks.filter(m => m.src !== 'heat' || !vm.some(g => g.mark === m.mark && near(g, m.at)));
     /* Driving past home (31 Oct 2026, Georgi: "I passed close by"): the office-to-nursery road crosses the heating's
@@ -291,7 +310,7 @@
      20 min after it, is the run (a track, a hill, the cool-down), so it is not asked about. */
   function unnamed(visits, places, runs) {
     const groups = [];
-    const inRun = v => (runs || []).some(r => v.start <= r.end + 20 * 60e3 && v.end >= r.start); // + the cool-down after
+    const inRun = v => ranIn(v, runs);
     (visits || []).filter(v => !placeOf(v, places) && !inRun(v)).forEach(v => {
       const g = groups.find(g => dist(g, v) <= 150);
       if (g) { g.vs.push(v); g.lat = g.vs.reduce((s, x) => s + x.lat, 0) / g.vs.length; g.lon = g.vs.reduce((s, x) => s + x.lon, 0) / g.vs.length; }
