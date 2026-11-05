@@ -172,13 +172,14 @@
     $('gps-st').innerHTML = lp ? `Overland last sent a location <b>${ago(now - lp)}</b>.` + (now - lp > 6 * 3600e3 ? ' <span class="plan">Check that tracking is on in Overland.</span>' : '')
       : 'No locations from Overland yet.';
     $('gps-st').innerHTML += gps.ovUrl ? ` <div class="row" style="margin-top:8px"><button class="btn ghost" data-ovcopy="1">Copy the Overland server address</button><span class="sub">Paste it in Overland → Settings → Server URL. It holds the key, so don't share it.</span></div>` : '';
-    const names = ['Home'].concat(Trips.PLACES);
-    $('pl-names').innerHTML = [...new Set(names.concat(gps.places.map(p => p.name)))].map(n => `<option value="${esc(n)}">`).join('');
+    // Pick a name already in use, so the same place is not named twice two ways ("Nursery drop-off" next to "Nursery")
+    const names = [...new Set(['Home'].concat(Trips.PLACES, gps.places.map(p => p.name)))].filter(n => n !== Trips.IGNORED).sort((a, b) => a.localeCompare(b));
+    const pick = `<option value="">Choose a place…</option>${names.map(n => `<option>${esc(n)}</option>`).join('')}<option value="__new">+ New name…</option>`;
     const un = Trips.unnamed(gps.visits, gps.places, gps.runs).slice(0, 12);
     const map = (a, b) => `https://maps.apple.com/?ll=${a},${b}&q=Stop`;
     $('pl-un').innerHTML = un.length ? un.map(u => `<div class="trip"><div class="trip-h"><div><b>${u.n} visit${u.n > 1 ? 's' : ''}</b> <span class="sub">usually ${dur(u.med)} · last ${day(u.last)} ${hm(u.last)}</span></div>
         <a class="sub" href="${map(u.lat, u.lon)}" target="_blank" rel="noopener">Map</a></div>
-        <div class="row" style="margin-top:6px"><input list="pl-names" placeholder="Name it (Home, Gym…)" data-pl="${u.lat},${u.lon}" style="flex:1;padding:8px"><button class="btn" data-plsave="${u.lat},${u.lon}">Save</button><button class="btn ghost" data-plign="${u.lat},${u.lon}">Ignore</button></div></div>`).join('')
+        <div class="row" style="margin-top:6px"><select data-plsel="${u.lat},${u.lon}" style="flex:1;min-width:0;padding:8px">${pick}</select><input class="hidden" placeholder="New name" data-pl="${u.lat},${u.lon}" maxlength="40" style="flex:1;min-width:0;padding:8px"><button class="btn" data-plsave="${u.lat},${u.lon}">Save</button><button class="btn ghost" data-plign="${u.lat},${u.lon}">Ignore</button></div></div>`).join('')
       : `<span class="sub">${gps.visits.length ? 'Every stop has a name.' : 'Stops appear here after the first day with Overland.'}</span>`;
     const count = p => gps.visits.filter(v => Trips.placeOf(v, gps.places) === p).length;
     const named = gps.places.filter(p => p.name !== Trips.IGNORED), ign = gps.places.length - named.length;
@@ -194,8 +195,9 @@
     if (b.dataset.m) return mark(b.dataset.m);
     if (b.dataset.ovcopy) { try { await navigator.clipboard.writeText(gps.ovUrl); say('Copied. Paste it in Overland.'); } catch (x) { say('Could not copy. Try again.'); } return; }
     if (b.dataset.plsave) {
-      const inp = document.querySelector(`input[data-pl="${b.dataset.plsave}"]`), name = inp && inp.value.trim();
-      if (!name) return say('Type a name first.');
+      const sel = document.querySelector(`select[data-plsel="${b.dataset.plsave}"]`), inp = document.querySelector(`input[data-pl="${b.dataset.plsave}"]`);
+      const name = sel && sel.value && sel.value !== '__new' ? sel.value : inp && inp.value.trim();
+      if (!name) return say(sel && sel.value === '__new' ? 'Type a name first.' : 'Choose a place first.');
       const [la, lo] = b.dataset.plsave.split(','); const r = await call(`&cmd=place&name=${encodeURIComponent(name)}&lat=${la}&lon=${lo}`); if (r) say(r.msg); return;
     }
     if (b.dataset.plign) { const [la, lo] = b.dataset.plign.split(','); const r = await call(`&cmd=place&name=${Trips.IGNORED}&lat=${la}&lon=${lo}&r=60`); if (r) say('Ignored. It will not be asked about again.'); return; }
@@ -208,6 +210,11 @@
     if (b.dataset.del) { if (!(await sure('Delete this?'))) return; const r = await call('&cmd=del&id=' + encodeURIComponent(b.dataset.del)); if (r) say(r.msg); }
   });
   document.addEventListener('change', async e => {
+    if (e.target.dataset.plsel) { // "+ New name…" opens the box for a name not used yet
+      const inp = document.querySelector(`input[data-pl="${e.target.dataset.plsel}"]`), isNew = e.target.value === '__new';
+      inp.classList.toggle('hidden', !isNew); if (isNew) inp.focus();
+      return;
+    }
     const el = e.target;
     if (el.dataset.what) {
       let v = el.value;
