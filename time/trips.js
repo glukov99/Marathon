@@ -49,8 +49,13 @@
     // Just being at one place (one stay, no tap, no leaving or coming home) is not a trip: an unnamed home looked like
     // "out at an unnamed stop since 07:04".
     trips = trips.filter(t => t.manual || t.ready || t.out || t.back || new Set(t.visits.map(v => v.place.toLowerCase())).size > 1);
-    return trips.map(t => t.manual ? finishManual(t) : finish(t, t0)).concat(tasks(ms, t0)).sort((a, b) => b.start - a.start);
+    return trips.map(t => t.manual ? finishManual(t) : finish(t, t0)).filter(t => !holiday(t))
+      .concat(tasks(ms, t0)).sort((a, b) => b.start - a.start);
   }
+
+  /* Holidays are ignored (5 Nov 2026, Georgi): a finished trip with a stop at a place named Holiday, or one over 24 h,
+     is not how long an everyday thing takes. It is not listed and not counted. */
+  const holiday = t => !t.open && !t.manual && (t.end - t.start > 24 * H || (t.visits || []).some(v => /^holiday$/i.test(v.place)));
 
   /* Things done at home (cooking, bath time…): Start, then Stop. Starting another stops the one running.
      They count like trips (total only) and never open or close a trip. Over 12 h without Stop = forgotten, not counted. */
@@ -183,8 +188,7 @@
     const by = {};
     // Each thing counts once: a chain (drop-off → run) adds its legs, not itself; Georgi wants an average per thing (29 Oct 2026)
     const add = t => { if (t.what && !UNNAMED.test(t.what)) (by[t.what] = by[t.what] || []).push(t); };
-    // A weekend away is not how long a thing takes: trips over 24 h stay out of the averages.
-    trips.filter(t => !t.open && !(t.end - t.start > 24 * H)).forEach(t => { if (t.legs) t.legs.forEach(add); else add(t); });
+    trips.filter(t => !t.open).forEach(t => { if (t.legs) t.legs.forEach(add); else add(t); });
     const out = {};
     for (const [what, ts] of Object.entries(by)) {
       const o = { n: ts.length, parts: {} };

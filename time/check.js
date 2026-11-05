@@ -197,22 +197,22 @@ assert.ok(pf.readyFromAll && (d + 600 * M - pf.startBy) / M === 50);
   assert.equal(T.unnamed(V, P, [{ id: 'R', start: a0 + 81 * M, end: a0 + 117 * M }]).length, 0);
 }
 
-// 13c. 31 Oct–2 Nov 2026: a weekend away. Left Sat 13:40, stayed 70 km off (two long stays), home Mon 11:59 = one trip,
-// and it stays out of the averages.
+// 13c. 31 Oct–2 Nov 2026: a weekend away. Left Sat 13:40, stayed 70 km off (two long stays), home Mon 11:59: a holiday,
+// so it is not a trip at all (5 Nov 2026, "ignore holidays"); nor is a short one with a stop at a place named Holiday.
 {
   const a0 = Date.parse('2026-10-31T11:40:00Z'), Hm = 60 * M;
   const V = [{ id: 'h0', start: a0 - Hm, end: a0, lat: 42.1, lon: 24.7 }, { id: 's1', start: a0 + 3 * M, end: a0 + 22 * Hm, lat: 42.6, lon: 25.4 },
     { id: 's2', start: a0 + 22 * Hm + 4 * M, end: a0 + 46 * Hm, lat: 42.61, lon: 25.4 }, { id: 'h1', start: a0 + 46 * Hm + 19 * M, end: 0, lat: 42.1, lon: 24.7 }];
   const P = [{ name: 'Home', lat: 42.1, lon: 24.7, r: 150 }];
-  const ts = T.build(T.merge([], V, P, null, []), a0 + 50 * Hm).filter(t => !t.task);
-  assert.equal(ts.length, 1);
-  assert.equal(ts[0].start, a0); assert.equal(ts[0].end, a0 + 46 * Hm + 19 * M);
-  assert.ok(!ts[0].legs);
-  const named = Object.assign({}, ts[0], { what: 'Away', legs: null });
-  assert.deepEqual(T.stats([named]), {});
-  // still away now: the trip is open, not "no end"
+  assert.equal(T.build(T.merge([], V, P, null, []), a0 + 50 * Hm).filter(t => !t.task).length, 0);
+  // still away now: the trip is open (not "no end"), and shown until it is over
   const live = T.build(T.merge([], V.slice(0, 2).map(v => v.id === 's1' ? { ...v, end: 0 } : v), P, null, []), a0 + 20 * Hm).filter(t => !t.task);
   assert.ok(live.length === 1 && live[0].open && !live[0].unfinished);
+  // a day out to a place named Holiday: dropped too; the same day to an ordinary place stays
+  const day = [{ id: 'h0', start: a0 - Hm, end: a0, lat: 42.1, lon: 24.7 }, { id: 's1', start: a0 + 60 * M, end: a0 + 5 * Hm, lat: 42.6, lon: 25.4 },
+    { id: 'h1', start: a0 + 6 * Hm, end: 0, lat: 42.1, lon: 24.7 }];
+  assert.equal(T.build(T.merge([], day, P.concat({ name: 'Holiday', lat: 42.6, lon: 25.4, r: 150 }), null, []), a0 + 9 * Hm).length, 0);
+  assert.equal(T.build(T.merge([], day, P.concat({ name: 'Friends', lat: 42.6, lon: 25.4, r: 150 }), null, []), a0 + 9 * Hm).length, 1);
 }
 
 // 14. One stay alone (unnamed home, no taps) is not a trip
