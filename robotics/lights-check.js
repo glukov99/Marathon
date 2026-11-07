@@ -19,3 +19,25 @@ assert.equal(lightText({ ev: 'off', why: 'bright', day: 95 }), 'Lights off (brig
 assert.equal(lightText(rows[5]), 'Lights off (room empty)');
 assert.equal(lightText({ ev: 's' }), null, 'samples are drawn, not listed');
 console.log('lights panel ok');
+
+// Reports and the false-off flag
+const { falseOffs, boardRows, REPORTS } = require('./lights.js');
+const day2 = [
+  { at: at(700), ev: 'on', a: 1, p: 1 },
+  { at: at(720), ev: 'off', why: 'empty', a: 0, p: 0 },
+  { at: at(721), ev: 'in', a: 0, p: 1 },             // back in after 1 min: a false off
+  { at: at(722), ev: 'report', why: 'off-present' },  // and Georgi said so
+  { at: at(722.5), ev: 'on', a: 1, p: 1 },
+  { at: at(800), ev: 'off', why: 'empty', a: 0, p: 0 },
+  { at: at(810), ev: 'in', a: 0, p: 1 },             // 10 min later: a real exit and return
+  { at: at(830), ev: 'off', why: 'bright', a: 0, p: 1 },
+];
+assert.deepEqual(falseOffs(day2), [at(720)], 'only the off that someone walked back into within 2 min');
+// a report carries no state: it must not cut the lights-on band in two
+const withRep = [{ at: at(900), ev: 'on', a: 1 }, { at: at(905), ev: 'report', why: 'on-bright' }, { at: at(908), ev: 'off', a: 0 }];
+assert.deepEqual(lightSpans(boardRows(withRep), 'a', t0, t0 + 864e5), [[at(900), at(908)]]);
+assert.notDeepEqual(lightSpans(withRep, 'a', t0, t0 + 864e5), [[at(900), at(908)]], 'without the filter the report would cut it');
+assert.equal(lightText(day2[3]), 'You reported: turned off while I was there');
+assert.equal(Object.keys(REPORTS).length, 5);
+assert.ok(lightText({ ev: 'report', why: 'off-dark' }).includes('still dark'));
+console.log('lights reports ok');
