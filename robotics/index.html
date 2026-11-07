@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202611052202"></script>
+<script src="../shared/auth.js?v=202611071119"></script>
 <title>Robotics — Life hub</title>
 <style>
 :root{
@@ -75,12 +75,26 @@ button,input,textarea{font:inherit;color:inherit}
 .foot{margin-top:24px;font-size:12.5px;color:var(--faint)}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--paper);padding:7px 14px;border-radius:3px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;z-index:40}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.tag.late{color:var(--big)}
+.lnow{margin:6px 0 0}
+.lchart{width:100%;height:auto;display:block;margin-top:10px}
+.lchart .on{fill:var(--acc2)}.lchart .pr{fill:var(--acc)}
+.lchart .dl{fill:none;stroke:var(--ink);stroke-width:2}.lchart .sens{fill:none;stroke:var(--faint);stroke-width:1.2;stroke-dasharray:3 3}
+.lchart .lim{stroke:var(--rule);stroke-dasharray:6 4}.lchart .ax{stroke:var(--rule)}.lchart .now{stroke:var(--big);stroke-width:1}
+.lchart .lt{font-size:11px;fill:var(--faint)}
+.lkey{display:flex;gap:10px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--soft);margin-top:4px}
+.lkey .k{display:inline-block;width:14px;height:6px;border-radius:2px;margin-right:-4px}
+.lkey .on{background:var(--acc2)}.lkey .pr{background:var(--acc)}.lkey .dl{background:var(--ink);height:2px}.lkey .sens{border-top:1.5px dashed var(--faint);height:0}
+.levs{margin-top:10px;font-size:13.5px}.levs summary{cursor:pointer;color:var(--soft)}
+.lev{display:flex;gap:10px;padding:3px 0;border-top:1px solid var(--rule)}.lev span{color:var(--faint);min-width:42px;font-variant-numeric:tabular-nums}
+.llim{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:14px}
+.llim input{width:78px;padding:6px 8px;border:1px solid var(--rule);border-radius:10px;background:rgba(255,255,255,.04);font-size:16px;color:var(--ink)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202611052202">
+<link rel="stylesheet" href="../shared/theme.css?v=202611071119">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202611052202"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202611071119"></script>
 <div class="wrap">
   <header class="hero">
     <div class="k">Builds, parts, and what to learn next</div>
@@ -88,6 +102,7 @@ button,input,textarea{font:inherit;color:inherit}
   </header>
   <div class="tabs" role="tablist" id="tabs"></div>
   <section id="t-projects">
+    <div id="live" class="panel hidden" aria-live="polite"></div>
     <form class="panel add" data-add="projects" autocomplete="off"><div class="row">
       <input name="t" placeholder="New build, e.g. Plant watering" aria-label="New build"><button class="btn" type="submit">Add</button></div></form>
     <div id="pList"></div>
@@ -106,7 +121,8 @@ button,input,textarea{font:inherit;color:inherit}
   <div class="foot" id="store">Saved on this device</div>
 </div>
 <div class="toast" id="toast"></div>
-<script src="../shared/sync.js?v=202611052202"></script>
-<script src="app.js?v=202611052202"></script>
+<script src="../shared/sync.js?v=202611071119"></script>
+<script src="app.js?v=202611071119"></script>
+<script src="lights.js?v=202611071119"></script>
 </body>
 </html>
