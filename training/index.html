@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202611082301"></script>
+<script src="../shared/auth.js?v=202611082302"></script>
 <title>Season 2027 — Plovdiv, Bairi, Vitosha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -217,11 +217,11 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202611082301">
-<link rel="stylesheet" href="body.css?v=202611082301">
+<link rel="stylesheet" href="../shared/theme.css?v=202611082302">
+<link rel="stylesheet" href="body.css?v=202611082302">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202611082301"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202611082302"></script>
 <div class="wrap">
   <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
@@ -269,14 +269,14 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="plan.js?v=202611082301"></script>
-<script src="../shared/sync.js?v=202611082301"></script>
-<script src="../holidays/holidays-data.js?v=202611082301"></script>
-<script src="../shared/travel.js?v=202611082301"></script>
-<script src="coach.js?v=202611082301"></script>
-<script src="overrides.js?v=202611082301"></script>
-<script src="body-shapes.js?v=202611082301"></script>
-<script src="body.js?v=202611082301"></script>
+<script src="plan.js?v=202611082302"></script>
+<script src="../shared/sync.js?v=202611082302"></script>
+<script src="../holidays/holidays-data.js?v=202611082302"></script>
+<script src="../shared/travel.js?v=202611082302"></script>
+<script src="coach.js?v=202611082302"></script>
+<script src="overrides.js?v=202611082302"></script>
+<script src="body-shapes.js?v=202611082302"></script>
+<script src="body.js?v=202611082302"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -543,6 +543,7 @@ function renderCh(){
       <div class="ch-hist">${h.length?h.map((x,i)=>`${i===h.length-1?'<span class="best">':''}${esc(x.date.slice(5).split('-').reverse().join('.'))}: ${esc(x.v)}${i===h.length-1?'</span>':''} <button class="x" data-del="${state.tests.indexOf(x)}" aria-label="Delete result">✕</button>`).join(', '):'No result yet.'}</div>
       <div class="ch-add"><input type="date" value="${iso}" id="d-${t.k}" aria-label="Date"><input placeholder="${esc(t.u)}" id="v-${t.k}" aria-label="${esc(t.n)} result"><button class="btn" data-add="${t.k}">Add</button></div></div>`}).join('')}</div>`;
 }
+const mss=p=>{const t=Math.round(p*60);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
 function renderZones(){
   document.getElementById('tab-zones').innerHTML=`
   <div class="panel"><h3>Heart rate zones</h3><div class="pc"><p>HRmax 207, threshold HR 182.</p><div class="tw">
@@ -555,6 +556,8 @@ function renderZones(){
     <tr><td><span class="sw" style="background:var(--vert)"></span>Vert</td><td>by feel</td><td>Hike hard up, easy down</td></tr></table></div></div></div>
   <div class="panel"><h3>Paces</h3><div class="pc"><table>
     <tr><th>What</th><th>Pace</th></tr>
+    <tr><td>Your easy pace, for the km labels<br><small style="color:var(--faint)">from ${esc(PACE_FROM.easy)}</small></td><td>${mss(PACE.easy)}/km</td></tr>
+    <tr><td>Your hill pace, for the km labels<br><small style="color:var(--faint)">from ${esc(PACE_FROM.vert)}</small></td><td>${mss(PACE.vert)}/km</td></tr>
     <tr><td>Marathon pace (sub-4:30)</td><td>6:24/km</td></tr>
     <tr><td>10k goal (sub-50)</td><td>5:00/km</td></tr>
     <tr><td>800 m reps</td><td>5:15/km, 4:12 each</td></tr>

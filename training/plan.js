@@ -673,6 +673,20 @@ W.forEach((w,wi)=>w.days.forEach((items,d)=>{
    only: race weeks show the race, and the Bairi and Vitosha weeks are trail
    and mountain time, where week 1 says nothing about his pace. */
 const PACE={easy:7.17,rec:7.17,vert:8.5,mp:6.4,st:6.6,hard:6.4};
+/* Learned, not fixed (8 Nov 2026): the easy and hill paces come from his last 4 weeks of runs, which the
+   Training page saves on this device ('lifehub-acts'). Easy = road runs averaging under HR 162 (3 or more
+   needed); hills = trail runs with 150 m or more of climbing (2 or more). Too few runs: the week-1 figures. */
+const PACE_FROM={easy:'week 1 (25.1 km in 179 min)',vert:'week 1 (6.0 km in 51 min)'};
+(()=>{try{
+  const acts=JSON.parse((typeof localStorage!=='undefined'&&localStorage.getItem('lifehub-acts'))||'null')||[];
+  const cut=Date.now()-28*864e5;
+  const pick=f=>acts.filter(a=>a&&a.distance>=3000&&a.moving_time>0&&new Date(String(a.date).slice(0,10)+'T12:00')>=cut&&f(a));
+  const km=l=>l.reduce((s,a)=>s+a.distance,0)/1000, min=l=>l.reduce((s,a)=>s+a.moving_time,0)/60;
+  const easy=pick(a=>a.type==='Run'&&(!a.avg_hr||a.avg_hr<162));
+  if(easy.length>=3){const p=min(easy)/km(easy);if(p>5&&p<9.5){PACE.easy=PACE.rec=p;PACE_FROM.easy=`your last 4 weeks (${easy.length} runs, ${Math.round(km(easy))} km)`}}
+  const hill=pick(a=>/trail/i.test(a.type)&&(a.elev||0)>=150);
+  if(hill.length>=2){const p=min(hill)/km(hill);if(p>6&&p<12){PACE.vert=p;PACE_FROM.vert=`your last 4 weeks (${hill.length} hill runs)`}}
+}catch(e){}})();
 const runKmOf=x=>{
   const d=String(x.t).match(/^(?:Long (?:easy )?run|Dress rehearsal) (\d+(?:\.\d+)?) km\b/);
   if(d)return +d[1];
