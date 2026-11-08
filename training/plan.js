@@ -94,8 +94,8 @@ const V=(vert,m,x)=>S('vert',`Mladezhki Halm vert, ~${vert} m`,x||'Run up slowly
 const ST=(t,d,m,run)=>S('st',t,d,m,{key:1,then:'stretch',run});
 const HD=(t,d,m,run)=>S('hard',t,d,m,{key:1,then:'stretch',run});
 const MPS=(t,d,m,run)=>S('mp',t,d,m,{key:1,then:'stretch',run});
-const GA=(x,o)=>S('gym','Gym A: lower body and power',x||'50 min, after the run. Slow lowering on every lift. Pull block at the end.',50,{g:'A',ex:gym('A',o),then:'stretch'});
-const GB=(x,o)=>S('gym','Gym B: upper body',x||'30 min, home or gym.',30,{g:'B',ex:gym('B',o)});
+const GA=(x,o)=>S('gym','Gym A: lower body and power',x||'50 min, early, before drop-off and the run. Slow lowering on every lift. Pull block at the end.',50,{g:'A',ex:gym('A',o),then:'stretch'});
+const GB=(x,o)=>S('gym','Gym B: upper body',x||'30 min, early, before drop-off and the run. Upper body only, so the run keeps its legs.',30,{g:'B',ex:gym('B',o)});
 const GC=(v)=>S('gym','Hybrid session '+v,'25–30 min, low leg load. RPE 6–7.',28,{g:'C',ex:gym(v)});
 const CORE=()=>S('gym','Core + hips 25 min','Holds and control only. Light: legs must be fresh for Friday.',25,{ex:gym('core')});
 const SWIM=(m)=>S('swim',`Recovery swim ${m||'20–30'} min`,'Easy, any stroke. Loosens the legs. Not a workout.',25);
@@ -627,8 +627,8 @@ const YSLOT={
  beforeLong:{n:'Day before the long run',    why:'Light. No deep hip openers.',                 r:['bedtense']},
  afterLong: {n:'Day after the long run',     why:'Open up what the long run closed.',           r:['rest','restbetter']},
  lighter:   {n:'Lighter week',               why:'',                                            r:['athletes','between','recoverhard']},
- quality:   {n:'Monday: quality run + Gym A', why:'The stretch comes right after the gym; this one is before bed.', r:['bedeasy','bedletgo']},
- gymB:      {n:'Tuesday: Gym B',             why:'',                                            r:['recovery']},
+ quality:   {n:'Monday: quality run (+ gym)', why:'The stretch comes right after the gym; this one is before bed.', r:['bedeasy','bedletgo']},
+ gymB:      {n:'Tuesday: gym + easy run',    why:'',                                            r:['recovery']},
  sunday:    {n:'Sunday',                     why:'',                                            r:['between','athletes','bjj']},
  other:     {n:'Other days',                 why:'',                                            r:['recoverhard','restbetter','between']},
 };
@@ -646,6 +646,16 @@ function yogaSlot(w,d,items){
   if(d===6)return 'sunday';
   return 'other';
 }
+/* Gym first thing, then nursery drop-off, then the run (Georgi, 8 Nov 2026: "half of my day is gone
+   otherwise"). Heavy legs right before a quality run take its edge off, so from week 4 the pairs swap:
+   Gym B (upper body) on the quality-run morning, Gym A (legs) on the easy-run morning. Weeks 1-3 keep
+   their places, because saved moves and ticks point at a session by its place in the day. */
+W.forEach((w,wi)=>{
+  if(wi<3)return;
+  const a=w.days[0].findIndex(x=>x.g==='A'), b=w.days[1].findIndex(x=>x.g==='B');
+  if(a<0||b<0||!w.days[0].some(x=>x.key||x.long||x.z==='vert'))return;
+  const ga=w.days[0][a]; w.days[0][a]=w.days[1][b]; w.days[1][b]=ga;
+});
 W.forEach((w,wi)=>w.days.forEach((items,d)=>{
   const k=yogaSlot(w,d,items), Y=YSLOT[k], rt=Y.r[(wi+d)%Y.r.length], R=ROUTINE[rt];
   items.push(S('yoga','PM yoga: '+R.t,(Y.why?Y.why+' ':'')+'Video: '+R.video,routineMin(rt),{yc:'var(--easy)',link:ylink(R.video),rt,slot:k}));

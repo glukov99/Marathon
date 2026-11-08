@@ -79,16 +79,19 @@ const Coach=(()=>{
         let n=1;while(n<7){const a=lw.atl*Math.exp(-n/7),c=lw.ctl*Math.exp(-n/42);if(c-a>=-10&&a/c<=1.3)break;n++}
         // At least 3 easy days; 4 after a big unplanned climb, whose descent leaves the quads sore for ~72 h.
         n=Math.max(big.length?4:3,n);
-        const ops={moves:{},skips:{}}; let first=null; const gymA=[];
+        const ops={moves:{},skips:{}}; let first=null; const gymA=[], movedOn={};
         for(let j=0;j<n;j++){const d=add(today,j);
           on(d,withOps(st,ops)).forEach(r=>{if(done(r.k)||used.has(r.k))return;
             if(r.x.z==='vert'){ops.skips[r.k]='Other';return}
-            if(r.x.g==='A'){gymA.push(r.k);return}
+            const day0=r.k.split('-').slice(0,2).join('-'); // its planned day, e.g. w3-0
+            if(r.x.g==='A'){gymA.push([r.k,day0]);return}
             if(!hard(r.x))return;
             const to=freeDay(add(today,n),4,without(st,ops,r.k));
-            if(to){ops.moves[r.k]=iso(to);first=first||to}else ops.skips[r.k]='Other';
+            if(to){ops.moves[r.k]=iso(to);first=first||to;movedOn[day0]=movedOn[day0]||to}else ops.skips[r.k]='Other';
           })}
-        gymA.forEach(k=>{const to=first||freeDay(add(today,n),4,withOps(st,ops));if(to)ops.moves[k]=iso(to)});
+        // Gym A (legs) moves past the window too: with the hard session it shared a day with (weeks 1-3),
+        // else, now that it sits on easy days, to the first day after the window with no hard run.
+        gymA.forEach(([k,j])=>{const to=movedOn[j]||freeDay(add(today,n),4,without(st,ops,k))||first;if(to)ops.moves[k]=iso(to)});
         card('spike',`Ease off until ${fmt(add(today,n))}`,`Acute load ${Math.round(lw.atl)} against chronic ${Math.round(lw.ctl)} (ratio ${ratio.toFixed(1)}), form ${Math.round(form)}. That jump is where injuries come from. ${n} easy days first: hills skipped, the hard session moved.`,ops);
       }
     }
