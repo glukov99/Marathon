@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202611082257"></script>
+<script src="../shared/auth.js?v=202611082259"></script>
 <title>Meals — Life hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -94,15 +94,16 @@ ul.steps li{margin:5px 0}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202611082257">
+<link rel="stylesheet" href="../shared/theme.css?v=202611082259">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202611082257"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202611082259"></script>
 <div class="wrap">
     <header class="hero">
     <div class="k" id="hk"></div>
     <h1 id="hh">Today</h1>
     <div class="dtype" id="ht"></div>
+    <p class="sub" id="fuel" style="margin:6px 0 0"></p>
   </header>
   <nav role="tablist">
     <button role="tab" aria-selected="true" data-tab="today">Today</button>
@@ -120,8 +121,12 @@ ul.steps li{margin:5px 0}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="meals-data.js?v=202611082257"></script>
-<script src="../shared/sync.js?v=202611082257"></script>
+<script src="../training/plan.js?v=202611082259"></script>
+<script src="../holidays/holidays-data.js?v=202611082259"></script>
+<script src="../shared/travel.js?v=202611082259"></script>
+<script src="../training/overrides.js?v=202611082259"></script>
+<script src="meals-data.js?v=202611082259"></script>
+<script src="../shared/sync.js?v=202611082259"></script>
 <script>
 /* ============ state + storage ============ */
 const LKEY='lifehub-meals';
@@ -152,7 +157,10 @@ const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec
 function hero(){
   const t=new Date(),d=dIdx();
   document.getElementById('hk').textContent=M_FULL[d]+', '+t.getDate()+' '+MN[t.getMonth()];
-  const ht=document.getElementById('ht');ht.textContent=M_TYPE[d][0];ht.style.setProperty('--dc',M_TYPE[d][1]);
+  // The day type follows today's actual training (M_FUEL in meals-data.js); the fixed week is the fallback.
+  const F=M_fuel(t), ty=F?F.type:M_TYPE[d];
+  const ht=document.getElementById('ht');ht.textContent=ty[0];ht.style.setProperty('--dc',ty[1]);
+  document.getElementById('fuel').textContent=F?F.post+' '+F.dinner:'';
 }
 function mealRows(w){
   return [['Breakfast',w.b],['Snack',w.s1],['Lunch',w.l],['Snack',w.s2]].map(([s,m])=>`
@@ -175,7 +183,7 @@ function renderWeek(){
     <p class="sub">Same every week. Dinner is with the family and is not in the plan.</p></div>
     <div class="tw" style="padding:0 16px 12px"><table>
     <tr><th>Day</th><th>Breakfast</th><th>Lunch</th><th>Snacks</th></tr>
-    ${MW.map((w,i)=>`<tr class="${i===d?'today':''}"><td><span class="dot" style="--dc:${M_TYPE[i][1]}"></span>${M_DN[i]}</td><td>${esc(w.b.n)}</td><td>${esc(w.l.n)}</td><td>${esc(w.s1.n)}; ${esc(w.s2.n)}</td></tr>`).join('')}
+    ${MW.map((w,i)=>`<tr class="${i===d?'today':''}"><td><span class="dot" style="--dc:${((F=>F?F.type:M_TYPE[i])(M_fuel(new Date(Date.now()+(i-d)*864e5))))[1]}"></span>${M_DN[i]}</td><td>${esc(w.b.n)}</td><td>${esc(w.l.n)}</td><td>${esc(w.s1.n)}; ${esc(w.s2.n)}</td></tr>`).join('')}
     </table></div></div>
     <div class="panel"><h3>Bored? One swap at a time</h3><div class="pc"><ul class="steps">
       <li><b>Chicken</b> ↔ turkey fillet (пуешко филе). Same grill time.</li>

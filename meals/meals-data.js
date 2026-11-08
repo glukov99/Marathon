@@ -87,3 +87,29 @@ const STAPLES=[
   ['oil','Зехтин','Olive oil','']]]
 ];
 
+
+/* Fuel that follows the training (8 Nov 2026, Georgi's pattern: a small early breakfast, carbs after
+   the morning run, keto through the day, carbs at dinner when tomorrow is hard). The day type comes from
+   the sessions actually on that day after moves and skips, not from the weekday, so a quality run moved
+   to Thursday makes Thursday the carb day. Needs training/plan.js, training/overrides.js (and their
+   holidays and travel files); without them, null, and the page keeps M_TYPE.
+   M_fuel(date, state) -> {type:[label, colour], post, dinner} | null. */
+function M_fuel(date,state){
+  if(typeof OV==='undefined'||typeof W==='undefined')return null;
+  let st=state;if(!st)try{st=JSON.parse(localStorage.getItem('season-2027-gl')||'{}')||{}}catch(e){st={}}
+  OV.set(st);
+  const on=d=>{const x=new Date(d);x.setHours(0,0,0,0);const n=Math.round((x-START)/864e5);
+    if(n<0||n>=W.length*7)return null;return OV.day(Math.floor(n/7),n%7).filter(r=>!r.skip&&!r.out).map(r=>r.x)};
+  const today=on(date);if(!today)return null;
+  const tm=new Date(date);tm.setDate(tm.getDate()+1);const tom=on(tm)||[];
+  const run=x=>['easy','rec','st','hard','mp','vert','race'].includes(x.z)||(x.z==='test'&&/10k|5k|time trial/i.test(x.t));
+  const runs=today.filter(run),mins=runs.reduce((a,x)=>a+(x.m||0),0);
+  const long=runs.some(x=>x.long||x.race),key=runs.some(x=>x.key),vert=runs.some(x=>x.z==='vert');
+  const type=long?['Long run: most carbs','var(--big)']:key?['Quality day: more carbs','var(--big)']:vert?['Vert day: normal','var(--acc)']
+    :runs.length?['Normal day','var(--acc)']:['Rest day: fewer carbs','var(--rest)'];
+  const post=!runs.length?'No run today: no carb meal needed.'
+    :long||key||mins>=75?'After the run: a big carb meal (oats, bread, rice or fruit) within the hour.':'After the run: a normal carb breakfast.';
+  const hard=tom.find(x=>run(x)&&(x.long||x.key||x.race));
+  const dinner=hard?'Dinner: add carbs. Tomorrow is '+hard.t.charAt(0).toLowerCase()+hard.t.slice(1)+'.':'Lunch and dinner: keto.';
+  return {type,post,dinner};
+}
