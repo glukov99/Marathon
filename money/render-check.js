@@ -77,4 +77,23 @@ assert.ok(!/Temu/.test(out.view), 'an older month does not show it');
 
 ctx.tabs('monthly'); ctx.render();
 assert.ok(/a month/.test(out.sum), 'a year says what each figure is a month');
+/* Subscriptions and regular charges (subsFind, 8 Nov 2026), on made-up rows. */
+{
+  const src2 = fs.readFileSync(__dirname + '/app.js', 'utf8');
+  const subsFind = new Function(src2.slice(src2.indexOf('const SUB_SKIP'), src2.indexOf('function subsCard')) + ';return subsFind;')();
+  const r = (d, a, who, cat, desc) => ({ d, a, c: 'EUR', who, desc: desc || '', _k: 'exp', _cat: cat });
+  const today = new Date('2026-11-08T12:00'), rows = [];
+  ['06', '07', '08', '09', '10'].forEach(m => rows.push(r('2026-' + m + '-22', -23.99, 'Adobe *adobe, Dublin, IRL', 'GL Studio')));
+  rows.push(r('2026-11-02', -29.99, 'Adobe *adobe, Dublin, IRL', 'GL Studio'));
+  ['06', '07', '08', '09', '10'].forEach(m => rows.push(r('2026-' + m + '-05', -60 - +m, 'УниКредит Булбанк АД', 'Utilities', '1.Power Co 1234567890,Комунално плащане mBanking')));
+  ['05', '06', '07'].forEach(m => rows.push(r('2026-' + m + '-10', -9.99, 'Netflix', 'Subscriptions')));
+  for (let i = 1; i < 28; i += 3) ['06', '07', '08', '09'].forEach(m => rows.push(r('2026-' + m + '-' + String(i).padStart(2, '0'), -30, 'Kaufland', 'Groceries')));
+  const L = subsFind(rows, today), by = n => L.find(x => x.name.startsWith(n));
+  assert.ok(by('Adobe *adobe') && !/Dublin/.test(by('Adobe').name), 'a monthly charge is found, named without the address');
+  assert.ok(by('Adobe').up && Math.abs(by('Adobe').up - 23.99) < 0.01, 'and its price rise is flagged');
+  assert.ok(by('Power Co'), 'a bill paid through the bank is named by its real payee');
+  assert.ok(!by('Power Co').up, 'a higher electricity bill is not a price rise');
+  assert.ok(by('Netflix') && by('Netflix').stopped, 'nothing for 45 days: stopped');
+  assert.ok(!by('Kaufland'), 'groceries are not a subscription');
+}
 console.log('render ok: every tab builds');
