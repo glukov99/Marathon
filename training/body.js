@@ -89,7 +89,7 @@ function bhAcwr(){
 async function bhFetch(){
   try{const c=window.HubSync&&HubSync.cfg();if(!c||!c.url)return;
     const r=await fetch(c.url+(c.url.includes('?')?'&':'?')+'t='+encodeURIComponent(c.tok)+'&action=wellness&days=70');
-    const j=await r.json();if(j&&j.wellness){BH.well=j.wellness;try{localStorage.setItem('lifehub-wellness',JSON.stringify(j.wellness))}catch(e){}renderBody()}
+    const j=await r.json();if(j&&j.wellness){BH.well=j.wellness;try{localStorage.setItem('lifehub-wellness',JSON.stringify(j.wellness))}catch(e){}renderBody();if(window.renderCoach)renderCoach()}
   }catch(e){}
 }
 try{BH.well=JSON.parse(localStorage.getItem('lifehub-wellness')||'null')}catch(e){}

@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202611082206"></script>
+<script src="../shared/auth.js?v=202611082210"></script>
 <title>Season 2027 — Plovdiv, Bairi, Vitosha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -107,6 +107,11 @@ nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)
 .day-h{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:16px;color:var(--soft);display:flex;gap:8px;align-items:baseline}
 .day-h .dt{font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:400;color:var(--faint)}
 .day-h .away{font-size:12px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;color:var(--test)}
+.coachc{margin-top:12px;background:var(--card);border-radius:14px;border-left:3px solid var(--st);padding:12px 14px;box-shadow:var(--shadow)}
+.coachc b{display:block;font-size:15px}
+.coachc p{margin:4px 0 8px;font-size:13.5px;color:var(--soft)}
+.coachc ul{margin:0 0 10px;padding-left:18px;font-size:13.5px}
+.coachc .row{display:flex;gap:8px}
 .tripnote{padding:10px 16px;font-size:13.5px;border-bottom:1px solid var(--rule);border-left:3px solid var(--test);background:var(--card)}
 .tripnote.clash{border-left-color:var(--hard);color:var(--hard);font-weight:600}
 .day-h .hd{font-size:12px;font-family:'IBM Plex Sans',sans-serif;font-weight:600;color:var(--st)}
@@ -212,11 +217,11 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202611082206">
-<link rel="stylesheet" href="body.css?v=202611082206">
+<link rel="stylesheet" href="../shared/theme.css?v=202611082210">
+<link rel="stylesheet" href="body.css?v=202611082210">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202611082206"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202611082210"></script>
 <div class="wrap">
   <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
@@ -249,6 +254,7 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
       <button class="today" id="goNow">This week</button>
     </div>
     <div id="restBanner" class="banner hidden"><b>Rest until Sun 25 Oct.</b> Yoga and easy swims only. Base starts Mon 26 Oct.</div>
+    <div id="coach"></div>
     <div id="week"></div>
   </section>
 
@@ -263,13 +269,14 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="plan.js?v=202611082206"></script>
-<script src="../shared/sync.js?v=202611082206"></script>
-<script src="../holidays/holidays-data.js?v=202611082206"></script>
-<script src="../shared/travel.js?v=202611082206"></script>
-<script src="overrides.js?v=202611082206"></script>
-<script src="body-shapes.js?v=202611082206"></script>
-<script src="body.js?v=202611082206"></script>
+<script src="plan.js?v=202611082210"></script>
+<script src="../shared/sync.js?v=202611082210"></script>
+<script src="../holidays/holidays-data.js?v=202611082210"></script>
+<script src="../shared/travel.js?v=202611082210"></script>
+<script src="coach.js?v=202611082210"></script>
+<script src="overrides.js?v=202611082210"></script>
+<script src="body-shapes.js?v=202611082210"></script>
+<script src="body.js?v=202611082210"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -658,6 +665,31 @@ function runKmLine(wi,w){
   const plan=runPlanMin(w), over=plan?Math.round((r.min/plan-1)*100):0;
   return `<span class="wk-ran${over>10?' over':''}">${r.km} km run, ${r.min} of ${plan} min${over>10?` (+${over}%)`:''}</span>`;
 }
+/* The coach (coach.js): suggestions from wellness, runs and ticks, applied only on Accept (8 Nov 2026). */
+let ACTS=null; try{ACTS=JSON.parse(localStorage.getItem('lifehub-acts')||'null')}catch(e){}
+function coachList(){
+  if(!window.Coach)return [];
+  try{OV.set(state);return Coach.suggest({today:new Date(),well:(typeof BH!=='undefined'&&BH.well)||[],acts:ACTS||[],state})}
+  catch(e){return []}finally{OV.set(state)}
+}
+const opLines=ops=>Object.entries(ops.moves||{}).map(([k,d])=>{const x=OV.item(k);return x?`${esc(x.t)} → ${esc(OV.label(d))}`:''})
+  .concat(Object.keys(ops.skips||{}).map(k=>{const x=OV.item(k);return x?`${esc(x.t)} (${esc(OV.label(ownDay(k)))}) → skipped`:''})).filter(Boolean);
+function renderCoach(){
+  const el=document.getElementById('coach'); if(!el)return;
+  const list=coachList();
+  el.innerHTML=list.map(c=>{const lines=opLines(c.ops);
+    return `<div class="coachc"><b>${esc(c.title)}</b><p>${esc(c.why)}</p>${lines.length?`<ul>${lines.map(l=>`<li>${l}</li>`).join('')}</ul>`:''}
+      <div class="row">${lines.length?`<button class="btn" data-cok="${esc(c.id)}">Accept</button><button class="btn ghost" data-cno="${esc(c.id)}">Not now</button>`
+        :`<button class="btn ghost" data-cno="${esc(c.id)}">Got it</button>`}</div></div>`}).join('');
+}
+function coachAccept(id){
+  const c=coachList().find(x=>x.id===id); if(!c)return;
+  state.moves=state.moves||{};state.skips=state.skips||{};
+  Object.entries(c.ops.moves||{}).forEach(([k,d])=>{state.moves[k]=d;delete state.skips[k]});
+  Object.entries(c.ops.skips||{}).forEach(([k,r])=>{state.skips[k]=r;delete state.moves[k]});
+  save();renderAll();toast('Done. The watch gets it at the next push.');
+}
+function coachNo(id){state.coachNo=state.coachNo||{};state.coachNo[id]=OV.iso(new Date());save();renderCoach()}
 /* ============ Intervals.icu sync (via Apps Script) ============ */
 const SKEY='season-2027-sync';
 function syncCfg(){try{return JSON.parse(localStorage.getItem(SKEY)||'{}')}catch(e){return {}}}
@@ -683,6 +715,8 @@ async function runSync(manual){
   }catch(e){syMsg('Sync failed: could not reach Apps Script. This works on the GitHub Pages version, not inside Claude.');return}
   if(!data||data.error){syMsg('Sync failed: '+((data&&data.error)||'no data'));return}
   state.synced=state.synced||{};
+  ACTS=(data.activities||[]).filter(a=>a&&a.date).slice(-60);
+  try{localStorage.setItem('lifehub-acts',JSON.stringify(ACTS))}catch(e){}
   /* Every run counts towards the week's km, not only the ones that found a
      slot in the plan: an extra run used to vanish (Georgi ran 30 km in a
      22 km week and the page could not say so). Worked out again from the
@@ -720,10 +754,11 @@ async function runSync(manual){
   });
   const now=new Date(); c.last=now.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+now.toTimeString().slice(0,5)+', '+n+' new'; setSyncCfg(c);
   if(n||kmChanged){save();renderWeek()}
+  renderCoach();
   syMsg('Last sync: '+c.last+'.');
 }
 function autoSync(){if(syncCfg().url)runSync(false)}
-function renderAll(){if(window.renderBody)renderBody();renderHero();renderWeek();renderRaces();renderGym();renderYoga();renderCh();renderZones();renderCI()}
+function renderAll(){if(window.renderBody)renderBody();renderHero();renderCoach();renderWeek();renderRaces();renderGym();renderYoga();renderCh();renderZones();renderCI()}
 
 /* ============ events ============ */
 document.addEventListener('click',e=>{
@@ -743,6 +778,8 @@ document.addEventListener('click',e=>{
     if(!f||!t)return;state.away=state.away||[];state.away.push({from:f<t?f:t,to:f<t?t:f,n:n||'Away'});state.away.sort((a,c)=>a.from.localeCompare(c.from));
     awayForm=false;renderWeek();save();return}
   if(b.dataset.awaydel!=null){if(!confirm('Remove these away days?'))return;state.away.splice(+b.dataset.awaydel,1);renderWeek();save();return}
+  if(b.dataset.cok){coachAccept(b.dataset.cok);return}
+  if(b.dataset.cno){coachNo(b.dataset.cno);return}
   if(b.dataset.k){const k=b.dataset.k;state.checks[k]=!state.checks[k];if(!state.checks[k])delete state.checks[k];renderWeek();save();return}
   if(b.dataset.lighter){state.lighter=state.lighter||{};state.lighter[wsel]=!state.lighter[wsel];if(!state.lighter[wsel])delete state.lighter[wsel];renderWeek();save();return}
   if(b.dataset.lg){openLog=openLog===b.dataset.lg?null:b.dataset.lg;renderWeek();if(openLog){const i=document.getElementById('t-'+openLog);i&&i.focus()}return}
