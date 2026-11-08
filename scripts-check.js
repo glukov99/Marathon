@@ -45,3 +45,26 @@ fs.readdirSync(root).filter(d => d !== 'kit' && fs.existsSync(path.join(root, d,
 });
 assert.ok(/<script src="shared\/nav\.js/.test(fs.readFileSync(path.join(root, 'index.html'), 'utf8')), 'home has no menu');
 console.log('menu ok: every page loads it and is listed in it');
+
+/* No page may load two scripts that declare the same top-level name (8 Nov 2026). Meals started loading
+   training/plan.js for the fuel line, and both declared `const MN`: the browser refuses the second script
+   ("Identifier 'MN' has already been declared"), so the page rendered nothing while every other check
+   passed. Each page's scripts run here in order in one sandbox, as the browser runs them; any error but
+   that one is ignored (no DOM here), because the clash is raised before a script runs a single line. */
+const vm = require('vm');
+const pages = ['index.html'].concat(fs.readdirSync(root).filter(d => fs.existsSync(path.join(root, d, 'index.html'))).map(d => d + '/index.html'));
+pages.forEach(page => {
+  const html = fs.readFileSync(path.join(root, page), 'utf8'), dir = path.dirname(page);
+  const stub = new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : stub), apply: () => stub, construct: () => stub });
+  const ctx = vm.createContext({ document: stub, localStorage: { getItem: () => null, setItem() {} }, location: { search: '', hash: '', pathname: '/', href: '' },
+    navigator: stub, fetch: () => new Promise(() => {}), setTimeout() {}, setInterval() {}, addEventListener() {}, console: { log() {}, warn() {}, error() {} } });
+  ctx.window = ctx; ctx.self = ctx;
+  [...html.matchAll(/<script src="([^"?]+)[^"]*"><\/script>|<script>([\s\S]*?)<\/script>/g)].forEach(m => {
+    let src, from;
+    if (m[2] != null) { src = m[2]; from = 'the page'; }
+    else { if (/^https?:/.test(m[1])) return; const f = path.join(root, dir, m[1]); if (!fs.existsSync(f)) return; src = fs.readFileSync(f, 'utf8'); from = m[1]; }
+    try { vm.runInContext(src, ctx, { filename: from }); }
+    catch (e) { assert.ok(!/has already been declared/.test(e.message), page + ': ' + from + ': ' + e.message); }
+  });
+});
+console.log('names ok: no page declares a top-level name twice');
