@@ -19,6 +19,8 @@ const dshort = d => d ? new Date(d + 'T12:00').toLocaleDateString('en-GB', { day
 const apiUrl = () => ((window.HubSync && HubSync.cfg()) || {}).url || '';
 const token = () => { try { return localStorage.getItem(TKEY) || ''; } catch (e) { return ''; } };
 let data = null, tab = 'overview', filter = 'open';
+// A link can open a tab: business/#jobs (from the home page's brief).
+{ const h = typeof location !== 'undefined' ? location.hash.slice(1) : ''; if (['overview', 'jobs', 'year', 'invoices', 'clients', 'spend'].includes(h)) tab = h; }
 let bizYear = null, yearKind = 'exp', yearCat = null, yearCell = null;
 let chartYear = 'all';
 let jobFilter = 'open', jobEdit = null, cashSkip = [];
@@ -97,6 +99,28 @@ function prep(j) {
   return j;
 }
 
+/* Shoots the Time page saw with no booking behind them (shared/shoots.js), 8 Nov 2026. The Time data
+   comes from action=time, which the sign-in session (or the sync token on an older device) opens. */
+let shootTime = null, jobPrefill = null;
+const SHOOT_NO = 'lifehub-shoot-no';
+const shootNo = () => { try { return JSON.parse(localStorage.getItem(SHOOT_NO) || '{}') || {}; } catch (e) { return {}; } };
+async function loadShoots() {
+  const url = apiUrl(); if (!url) return;
+  const st = ((window.HubSync && HubSync.cfg()) || {}).tok;
+  try {
+    const j = await (await fetch(url + (url.includes('?') ? '&' : '?') + 'action=time&cmd=list' + (st ? '&t=' + encodeURIComponent(st) : ''))).json();
+    if (j && j.visits) { shootTime = j; if (data) render(); }
+  } catch (e) {}
+}
+function shootCard() {
+  if (typeof Shoots === 'undefined' || !shootTime || !data) return '';
+  return Shoots.unbooked(shootTime, data.bookings, new Date(), shootNo()).slice(0, 3).map(s => `<div class="card cashm">
+    <b>${esc(s.place)} on ${dshort(s.date)}</b>
+    <span class="svc">${s.mins} min there, from the Time page, and no booking for that day. Add one so it counts.</span>
+    <span class="st"><button class="mk go2" data-act="shootadd" data-d="${esc(s.date)}" data-p="${esc(s.place)}">Add booking</button>
+      <button class="mk" data-act="shootno" data-id="${esc(s.id)}">Not this</button></span></div>`).join('');
+}
+
 async function load() {
   const url = apiUrl(), tok = token();
   if (!url) { show('setup'); $('#setupMsg').textContent = 'Set up the Apps Script URL on the Training page first.'; return; }
@@ -115,6 +139,7 @@ async function load() {
   } catch (e) {
     $('#status').textContent = data ? 'Offline: showing saved data' : 'Could not load: ' + e.message;
   }
+  loadShoots();
 }
 function show(id) { $('#setup').classList.toggle('hidden', id !== 'setup'); $('#main').classList.toggle('hidden', id !== 'main'); }
 
@@ -555,7 +580,7 @@ function renderJobs() {
   const list = (sets[jobFilter] || []).slice().sort((a, b) =>
     (JOB_ORDER[a._s.k] - JOB_ORDER[b._s.k]) || (a.shoot < b.shoot ? -1 : 1));
 
-  $('#view').innerHTML = timeCard() + jobForm() + cashCard() +
+  $('#view').innerHTML = timeCard() + shootCard() + jobForm() + cashCard() +
     `<div class="chips">${Object.keys(sets).map(k =>
       `<button data-act="jfilter" data-f="${k}" aria-pressed="${jobFilter === k}">${names[k]} ${sets[k].length}</button>`).join('')}</div>` +
     (list.length ? `<div class="card">${list.map(jobRow).join('')}</div>` +
@@ -594,13 +619,14 @@ function jobForm() {
   const j = jobEdit ? (data.bookings || []).find(x => x.id === jobEdit) : null;
   // Open while editing, and while there is nothing else to show: a collapsed
   // form on an empty tab leaves a page with one line of text and nothing to press.
-  const open = j || !(data.bookings || []).length;
-  const v = k => esc(j ? (j[k] == null ? '' : j[k]) : '');
+  const pre = !j && jobPrefill;
+  const open = j || pre || !(data.bookings || []).length;
+  const v = k => esc(j ? (j[k] == null ? '' : j[k]) : pre && pre[k] != null ? pre[k] : '');
   return `<details class="card addj"${open ? ' open' : ''}>
     <summary><span>${j ? 'Editing ' + esc(j.client) : 'Add a booking'}</span></summary>
     <div class="bkf">
       <label>Client<input id="jClient" autocomplete="off" value="${v('client')}"></label>
-      <label>Shoot date<input id="jShoot" type="date" value="${j ? v('shoot') : today()}"></label>
+      <label>Shoot date<input id="jShoot" type="date" value="${j || pre ? v('shoot') : today()}"></label>
       <label>Type<select id="jType"><option value=""></option>
         ${types.map(t => `<option value="${esc(t)}"${j && j.type === t ? ' selected' : ''}>${esc(shortType(t))}</option>`).join('')}</select></label>
       <label>Location<input id="jLocation" autocomplete="off" value="${v('location')}"></label>
@@ -637,7 +663,7 @@ async function addJob() {
       ? (data.bookings || []).map(x => (x.id === was ? j.job : x))
       : (data.bookings || []).concat([j.job]);
     try { localStorage.setItem(CKEY, JSON.stringify(data)); } catch (e) {}
-    jobEdit = null;
+    jobEdit = null; jobPrefill = null;
     if (!was) timePick = j.job.id;
     $('#status').textContent = was ? q.client + ' updated' : q.client + ' booked for ' + dshort(q.shoot);
     render();
@@ -1238,6 +1264,9 @@ $('#view').addEventListener('click', e => {
   if (a === 'jcash') { setJob(b.dataset.id, 'paid', today()); return; }
   if (a === 'cashok') { cashConfirm(b.dataset.dep, b.dataset.d, b.dataset.ids); return; }
   if (a === 'cashno') { cashSkip.push(b.dataset.dep); render(); return; }
+  if (a === 'shootadd') { jobEdit = null; jobPrefill = { shoot: b.dataset.d, location: b.dataset.p }; render();
+    const f = document.querySelector('.addj'); if (f) f.scrollIntoView({ behavior: 'smooth' }); const c = $('#jClient'); if (c) c.focus(); return; }
+  if (a === 'shootno') { const n = shootNo(); n[b.dataset.id] = 1; try { localStorage.setItem(SHOOT_NO, JSON.stringify(n)); } catch (e) {} render(); return; }
   if (a === 'jdel') { delJob(b.dataset.id); return; }
   if (a === 'jinv') {
     const j = (data.bookings || []).find(x => x.id === b.dataset.id);
@@ -1282,7 +1311,7 @@ $('#tokSave').addEventListener('click', () => {
    file, the page used to die on the first line that touched it and render
    nothing at all. Now it fetches whatever is missing and carries on. */
 function boot() {
-  const need = { Invoices: 'invoices.js', Year: 'year.js', Charts: 'charts.js', CatPick: 'catpick.js' };
+  const need = { Invoices: 'invoices.js', Year: 'year.js', Charts: 'charts.js', CatPick: 'catpick.js', Shoots: 'shoots.js' };
   const missing = Object.keys(need).filter(k => !window[k]);
   if (!missing.length) return load();
   let left = missing.length;

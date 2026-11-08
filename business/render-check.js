@@ -4,24 +4,25 @@
 const fs = require('fs'), assert = require('assert'), path = require('path');
 const dir = __dirname;
 const shared = {};
-['year', 'charts', 'invoices'].forEach(f => new Function('window',
+['year', 'charts', 'invoices', 'shoots'].forEach(f => new Function('window',
   fs.readFileSync(path.join(dir, '../shared/' + f + '.js'), 'utf8'))(shared));
-const { Year, Charts, Invoices } = shared;
+const { Year, Charts, Invoices, Shoots } = shared;
 
 const src = fs.readFileSync(path.join(dir, 'app.js'), 'utf8');
 const body = src.slice(src.indexOf('const esc = '), src.indexOf("$('#tabs').addEventListener"));
 const out = {};
 const $ = () => ({ set innerHTML(v) { out.html = v; }, set textContent(v) {} , classList: { toggle() {} } });
 const ctx = {};
-new Function('ctx', 'Year', 'Charts', 'Invoices', '$', 'document', 'localStorage', 'fetch', 'CatPick',
+new Function('ctx', 'Year', 'Charts', 'Invoices', '$', 'document', 'localStorage', 'fetch', 'CatPick', 'Shoots',
   body + '\nctx.prep=prep;ctx.render=render;ctx.setData=d=>{data=d};' +
   'ctx.tabs=t=>{tab=t};ctx.filter=f=>{filter=f};ctx.out=()=>out;' +
   'ctx.workingDue=workingDue;ctx.jobState=jobState;ctx.jobGaps=jobGaps;ctx.edit=i=>{jobEdit=i};' +
   'ctx.subsetFor=subsetFor;ctx.cashMatches=cashMatches;' +
   'ctx.standing=standing;ctx.nextSteps=nextSteps;ctx.rateTrend=rateTrend;ctx.monthAvg=monthAvg;' +
+  'ctx.setShoot=t=>{shootTime=t};' +
   'ctx.hourRates=hourRates;ctx.tedit=i=>{timeEdit=i};ctx.cedit=n=>{clientEdit=n};')
   (ctx, Year, Charts, Invoices, $, { querySelectorAll: () => [] }, { getItem: () => null, setItem() {} },
-   () => Promise.reject(new Error('no network in the check')), { open() {} });
+   () => Promise.reject(new Error('no network in the check')), { open() {} }, Shoots);
 
 const tx = (d, a, desc, cat) => ({ k: 'k' + d + a, d, a, c: 'EUR', desc, who: '', cat: cat || '' });
 const j = ctx.prep({
@@ -282,4 +283,23 @@ assert.equal(st({ shoot: old, invoice: '7' }, { 7: { no: '7', _paid: {} } }).k, 
   ctx.setData(j);
 }
 
+/* Shoots the Time page saw with no booking (shared/shoots.js, 8 Nov 2026). */
+{
+  const at = (d, h, m) => new Date(d + 'T' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':00').getTime();
+  const day = new Date(); day.setDate(day.getDate() - 2); const d = day.toISOString().slice(0, 10);
+  const time = { places: [{ name: 'Drone shoot', lat: 42.10, lon: 24.70, r: 150 }, { name: 'Photoshoot', lat: 42.12, lon: 24.75, r: 150 },
+      { name: 'Gym', lat: 42.15, lon: 24.75, r: 150 }],
+    visits: [{ id: 'v1', lat: 42.1001, lon: 24.7001, start: at(d, 15, 39), end: at(d, 15, 48) },
+      { id: 'v2', lat: 42.1201, lon: 24.7501, start: at(d, 15, 50), end: at(d, 17, 6) },
+      { id: 'v3', lat: 42.1501, lon: 24.7501, start: at(d, 7, 0), end: at(d, 8, 30) }] };
+  const u = Shoots.unbooked(time, [], new Date(), {});
+  assert.strictEqual(u.length, 1, 'two stops on one day are one shoot');
+  assert.strictEqual(u[0].mins, 85, 'their time adds up');
+  assert.ok(/Drone shoot/.test(u[0].place) && /Photoshoot/.test(u[0].place), 'both places named');
+  assert.strictEqual(Shoots.unbooked(time, [{ shoot: d }], new Date(), {}).length, 0, 'a booked day is not offered');
+  assert.strictEqual(Shoots.unbooked(time, [], new Date(), { ['shoot:' + d]: 1 }).length, 0, 'Not this hides it');
+  ctx.setData(j); ctx.setShoot(time); ctx.tabs('jobs'); ctx.render();
+  assert.ok(/data-act="shootadd"/.test(out.html) && /85 min there/.test(out.html), 'the Jobs tab offers it');
+  ctx.setShoot(null); ctx.setData(j);
+}
 console.log('render ok: every tab builds, due dates land on working days, the floor, steps and clock add up');

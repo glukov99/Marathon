@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="shared/icons/apple-touch-icon.png">
-<script src="shared/auth.js?v=202611082254"></script>
+<script src="shared/auth.js?v=202611082257"></script>
 <title>Life hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -129,10 +129,10 @@ ul.steps li{margin:5px 0}
 :root{--rec:#6E9DC2;--easy:#2F7F60;--mp:#B98A22;--st:#C9702A;--hard:#8E2521;--vert:#6B4E8F;--gym:#4F5F69;--test:#1F6F8B;--swim:#3C8FA6;--race:#1B1E1A}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rec:#7FB0D6;--easy:#4FAE88;--mp:#D9AA45;--st:#E08A45;--hard:#D2584F;--vert:#A68BD0;--gym:#93A6B2;--test:#4FAACB;--swim:#5BB4CC;--race:#E8EBE5}}
 </style>
-<link rel="stylesheet" href="shared/theme.css?v=202611082254">
+<link rel="stylesheet" href="shared/theme.css?v=202611082257">
 </head>
 <body>
-<div id="lhn"></div><script src="shared/nav.js?v=202611082254"></script>
+<div id="lhn"></div><script src="shared/nav.js?v=202611082257"></script>
 <div class="wrap">
   <div class="panel hidden" id="ebCard"><div class="card-h"><h3>Bank approval</h3></div><div class="pc">
     <p class="sub" id="ebMsg"></p>
@@ -172,16 +172,17 @@ ul.steps li{margin:5px 0}
     <p class="sub">Same URL and token as the Intervals.icu sync. Enter them once on each device.</p></div></div>
   <div class="foot">Ticks here are the same as in Training.</div>
 </div>
-<script src="shared/invoices.js?v=202611082254"></script>
-<script src="training/plan.js?v=202611082254"></script>
-<script src="shared/sync.js?v=202611082254"></script>
-<script src="meals/meals-data.js?v=202611082254"></script>
-<script src="holidays/holidays-data.js?v=202611082254"></script>
-<script src="shared/travel.js?v=202611082254"></script>
-<script src="training/coach.js?v=202611082254"></script>
-<script src="training/overrides.js?v=202611082254"></script>
-<script src="heat/icons.js?v=202611082254"></script>
-<script src="car/car-data.js?v=202611082254"></script>
+<script src="shared/invoices.js?v=202611082257"></script>
+<script src="training/plan.js?v=202611082257"></script>
+<script src="shared/sync.js?v=202611082257"></script>
+<script src="meals/meals-data.js?v=202611082257"></script>
+<script src="holidays/holidays-data.js?v=202611082257"></script>
+<script src="shared/travel.js?v=202611082257"></script>
+<script src="shared/shoots.js?v=202611082257"></script>
+<script src="training/coach.js?v=202611082257"></script>
+<script src="training/overrides.js?v=202611082257"></script>
+<script src="heat/icons.js?v=202611082257"></script>
+<script src="car/car-data.js?v=202611082257"></script>
 <script>
 const TKEY='season-2027-gl';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -358,6 +359,13 @@ people();
     if(!jobs.length) lines+='<p class="sub">No shoot waiting to be delivered.</p>';
     if(owed>0.01) lines+='<p class="sub">'+open.length+' invoice'+(open.length===1?'':'s')+
       ' with no payment found, '+eur(owed)+'.</p>';
+    // Brief: shoots the Time page saw with no booking (shared/shoots.js), the same list as the Jobs tab.
+    if(typeof Shoots!=='undefined'){let st='';try{st=(JSON.parse(localStorage.getItem('season-2027-sync')||'null')||{}).tok||''}catch(e){}
+      fetch(url+(url.includes('?')?'&':'?')+'action=time&cmd=list'+(st?'&t='+encodeURIComponent(st):'')).then(r=>r.json()).then(t=>{
+        let no={};try{no=JSON.parse(localStorage.getItem('lifehub-shoot-no')||'{}')||{}}catch(e){}
+        const u=t&&t.visits?Shoots.unbooked(t,j.bookings,new Date(),no):[];
+        if(u.length)briefSet('shoot','<div class="note"><b>'+u[0].place.replace(/[<>&]/g,'')+' on '+day(u[0].date)+'</b> has no booking'+(u.length>1?' (and '+(u.length-1)+' more)':'')+'. <a href="business/#jobs">Add it</a></div>');
+      }).catch(()=>{});}
     if(late.length||owed>0.01) briefSet('biz','<div class="note"><b>Business:</b> '+[late.length?late.length+' shoot'+(late.length===1?'':'s')+' past delivery':'',
       owed>0.01?open.length+' invoice'+(open.length===1?'':'s')+' unpaid ('+eur0(owed)+')':''].filter(Boolean).join(' · ')+'. <a href="business/">Business</a></div>');
     $b.innerHTML='<div class="card-h"><h3>Business</h3><a href="business/">Open</a></div>'+
