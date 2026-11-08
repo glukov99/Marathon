@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="../shared/icons/apple-touch-icon.png">
-<script src="../shared/auth.js?v=202611071131"></script>
+<script src="../shared/auth.js?v=202611082206"></script>
 <title>Season 2027 — Plovdiv, Bairi, Vitosha</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -212,11 +212,11 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </style>
 <style>
 </style>
-<link rel="stylesheet" href="../shared/theme.css?v=202611071131">
-<link rel="stylesheet" href="body.css?v=202611071131">
+<link rel="stylesheet" href="../shared/theme.css?v=202611082206">
+<link rel="stylesheet" href="body.css?v=202611082206">
 </head>
 <body>
-<div id="lhn"></div><script src="../shared/nav.js?v=202611071131"></script>
+<div id="lhn"></div><script src="../shared/nav.js?v=202611082206"></script>
 <div class="wrap">
   <section id="bodyhub" aria-label="Body and readiness"></section>
   <header class="hero">
@@ -263,13 +263,13 @@ td{padding:7px 8px 7px 0;border-bottom:1px solid var(--rule);vertical-align:top}
 </div>
 <div class="toast" id="toast">Saved</div>
 
-<script src="plan.js?v=202611071131"></script>
-<script src="../shared/sync.js?v=202611071131"></script>
-<script src="../holidays/holidays-data.js?v=202611071131"></script>
-<script src="../shared/travel.js?v=202611071131"></script>
-<script src="overrides.js?v=202611071131"></script>
-<script src="body-shapes.js?v=202611071131"></script>
-<script src="body.js?v=202611071131"></script>
+<script src="plan.js?v=202611082206"></script>
+<script src="../shared/sync.js?v=202611082206"></script>
+<script src="../holidays/holidays-data.js?v=202611082206"></script>
+<script src="../shared/travel.js?v=202611082206"></script>
+<script src="overrides.js?v=202611082206"></script>
+<script src="body-shapes.js?v=202611082206"></script>
+<script src="body.js?v=202611082206"></script>
 <script>
 /* ============ state ============ */
 const LKEY='season-2027-gl';
@@ -364,11 +364,13 @@ function renderWeek(){
   const days=w.days.map((items,d)=>{
     const dt=dayDate(wsel,d); const isT=dt.getTime()===t0.getTime();
     const trip=Travel.tripOn(dt);
-    const hard=!W[wsel].light&&!lt&&items.some(x=>x.key||x.long||x.z==='vert'||x.race);
     const tot0=tot,done0=done;
     const L=OV.day(wsel,d);
+    // From what is on the day after moves and skips, not the base plan (8 Nov 2026).
+    const hard=!W[wsel].light&&!lt&&L.some(r=>!r.skip&&!r.out&&(r.x.key||r.x.long||r.x.z==='vert'||r.x.race));
     const rows=L.map((r,i)=>{ const x=r.x, k=r.k;
-      if(r.skip||r.out)return goneRow(r);
+      if(r.out)return ''; // moved away: it shows on its new day only, no ghost row (8 Nov 2026)
+      if(r.skip)return goneRow(r);
       const on=!!state.checks[k]; tot++; if(on)done++; if(x.z==='yoga'){if(on)yd++}else pm+=x.m||0;
       const lg=state.logs[k]; const canLog=x.z!=='rest'&&x.z!=='yoga';
       const str=x.z==='gym'||(x.z==='test'&&!/10k|5k|time trial/i.test(x.t)); // strength: effort and loads, not distance
@@ -383,7 +385,6 @@ function renderWeek(){
         ${x.then&&!L.slice(i+1).some(y=>!y.skip&&!y.out&&y.x.then===x.then)?`<div class="d">${ROUTINE[x.then].then}: ${ROUTINE[x.then].t.toLowerCase()}, ${routineMin(x.then)} min. Follow the video, the watch records it.</div><a class="lg-t" href="${ylink(ROUTINE[x.then].video)}" target="_blank" rel="noopener">Open the video</a>`:''}
         ${lgTxt?`<div class="logged">Logged: ${esc(lgTxt)}</div>`:''}
         ${x.link?`<a class="lg-t" href="${x.link}" target="_blank" rel="noopener">Open on YouTube</a>`:''}
-        ${r.from?`<div class="ovnote">Moved here from ${esc(OV.label(r.from))}${r.auto?': first gym day after the trip':''}</div>`:''}
         ${canLog?`<button class="lg-t" data-lg="${k}">${openLog===k?'Close':(lg?'Edit log':'Log it')}</button>`:''}
         ${ovButtons(r)}
         ${openLog===k?`<div class="lg">

@@ -53,8 +53,11 @@ const OV=(()=>{
       const k=key(wj,dj,i);
       if(target(k)===s)inc.push({k,x:ad(x),from:iso(dayDate(wj,dj)),auto:!(st.moves&&st.moves[k])});
     })));
-    const yi=own.findIndex(r=>r.x.z==='yoga'); // moved-in sessions go before the evening yoga
-    return yi<0?own.concat(inc):own.slice(0,yi).concat(inc,own.slice(yi));
+    /* A moved-in session takes its natural place, as if planned there (Georgi, 8 Nov 2026):
+       runs first, then tests and strength, swim, rest, the evening yoga last. Stable within a rank. */
+    const rank=x=>['easy','rec','st','hard','mp','vert','race'].includes(x.z)||(x.z==='test'&&/10k|5k|time trial/i.test(x.t))?0
+      :x.z==='test'||x.z==='gym'?1:x.z==='swim'?2:x.z==='rest'?3:x.z==='yoga'?4:2;
+    return own.concat(inc).map((r,i)=>[r,i]).sort((a,b)=>rank(a[0].x)-rank(b[0].x)||a[1]-b[1]).map(p=>p[0]);
   }
   const label=s=>{const d=fromIso(s);return DN[(d.getDay()+6)%7]+' '+fd(d)};
   return {set,day,key,item,iso,fromIso,label,reasons,wd};

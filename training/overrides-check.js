@@ -21,6 +21,12 @@ assert.strictEqual(s[1], 'out:Test: 2k row');
 const wed = t(1, 2, { moves: { 'w2-0-1': '2026-11-04' } });
 assert(wed.includes('in:Test: 2k row') && /^PM yoga/.test(wed[wed.length - 1]), 'moved in, before the yoga');
 
+// A moved-in session takes its natural place (8 Nov 2026): this week's real moves, Thursday 12 Nov.
+const thu12 = t(2, 3, { moves: { 'w3-0-0': '2026-11-12', 'w3-0-1': '2026-11-12', 'w3-3-0': '2026-11-11' } }).filter(x => !/^out:/.test(x));
+assert(/^in:Sub-threshold/.test(thu12[0]), 'the run comes first: ' + thu12.join(' | '));
+assert(/^PM yoga/.test(thu12[thu12.length - 1]), 'the evening yoga stays last');
+assert(thu12.findIndex(x => /Gym A/.test(x)) > 0 && thu12.findIndex(x => /Core/.test(x)) > 0, 'strength after the run');
+
 // Away 2–4 Nov: runs stay, gym becomes bodyweight, the test moves to the first gym day back (Thu 5 Nov, core).
 const away = { away: [{ from: '2026-11-02', to: '2026-11-04', n: 'Away' }] };
 s = t(1, 0, away);
