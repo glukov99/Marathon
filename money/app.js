@@ -524,6 +524,9 @@ function renderBudget() {
   const hand = open ? handAll.filter(e => e.d >= R0.cur.period.from) : [];
   const extra = pKnown.concat(hand.map(e => ({ d: e.d, a: e.a, c: 'EUR', _cat: e.cat || '' })));
   const R = extra.length ? Budget.run(data.tx, bset, month, extra) : R0, s = R.s, c = R.cur, p = c.period;
+  // For the home page's brief (8 Nov 2026): what is left in the day-to-day budgets, saved on this device.
+  if (p.open) try { localStorage.setItem('lifehub-budget-now', JSON.stringify({ at: Date.now(), to: p.to,
+    left: c.list.filter(l => l.kind === 'want' || l.kind === 'unassigned').map(l => [l.name, Math.round(l.available)]) })); } catch (e) {}
   const when = `${D(p.from)} – ${p.to ? D(p.to) : 'next salary'}`;
   const neg = v => (v < -0.004 ? 'exp' : '');
   $('#sum').innerHTML =

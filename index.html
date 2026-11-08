@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="shared/icons/apple-touch-icon.png">
-<script src="shared/auth.js?v=202611082251"></script>
+<script src="shared/auth.js?v=202611082254"></script>
 <title>Life hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -129,10 +129,10 @@ ul.steps li{margin:5px 0}
 :root{--rec:#6E9DC2;--easy:#2F7F60;--mp:#B98A22;--st:#C9702A;--hard:#8E2521;--vert:#6B4E8F;--gym:#4F5F69;--test:#1F6F8B;--swim:#3C8FA6;--race:#1B1E1A}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rec:#7FB0D6;--easy:#4FAE88;--mp:#D9AA45;--st:#E08A45;--hard:#D2584F;--vert:#A68BD0;--gym:#93A6B2;--test:#4FAACB;--swim:#5BB4CC;--race:#E8EBE5}}
 </style>
-<link rel="stylesheet" href="shared/theme.css?v=202611082251">
+<link rel="stylesheet" href="shared/theme.css?v=202611082254">
 </head>
 <body>
-<div id="lhn"></div><script src="shared/nav.js?v=202611082251"></script>
+<div id="lhn"></div><script src="shared/nav.js?v=202611082254"></script>
 <div class="wrap">
   <div class="panel hidden" id="ebCard"><div class="card-h"><h3>Bank approval</h3></div><div class="pc">
     <p class="sub" id="ebMsg"></p>
@@ -172,15 +172,16 @@ ul.steps li{margin:5px 0}
     <p class="sub">Same URL and token as the Intervals.icu sync. Enter them once on each device.</p></div></div>
   <div class="foot">Ticks here are the same as in Training.</div>
 </div>
-<script src="shared/invoices.js?v=202611082251"></script>
-<script src="training/plan.js?v=202611082251"></script>
-<script src="shared/sync.js?v=202611082251"></script>
-<script src="meals/meals-data.js?v=202611082251"></script>
-<script src="holidays/holidays-data.js?v=202611082251"></script>
-<script src="shared/travel.js?v=202611082251"></script>
-<script src="training/overrides.js?v=202611082251"></script>
-<script src="heat/icons.js?v=202611082251"></script>
-<script src="car/car-data.js?v=202611082251"></script>
+<script src="shared/invoices.js?v=202611082254"></script>
+<script src="training/plan.js?v=202611082254"></script>
+<script src="shared/sync.js?v=202611082254"></script>
+<script src="meals/meals-data.js?v=202611082254"></script>
+<script src="holidays/holidays-data.js?v=202611082254"></script>
+<script src="shared/travel.js?v=202611082254"></script>
+<script src="training/coach.js?v=202611082254"></script>
+<script src="training/overrides.js?v=202611082254"></script>
+<script src="heat/icons.js?v=202611082254"></script>
+<script src="car/car-data.js?v=202611082254"></script>
 <script>
 const TKEY='season-2027-gl';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -192,6 +193,11 @@ const wI=Math.floor((t0-START)/864e5/7);
 const inSeason=t0>=START&&wI<W.length;
 const dur=m=>!m?'':(m>=60?Math.floor(m/60)+'h'+(m%60?String(m%60).padStart(2,'0'):''):m+' min');
 
+/* The morning brief (8 Nov 2026): the notes under "Today", one line each from every page that has
+   something to say. Pages that load later (money, business, promo) add theirs when they arrive. */
+const BRIEF={};
+function briefSet(k,h){BRIEF[k]=h||'';const el=document.getElementById('alerts');
+  if(el)el.innerHTML=['coach','biz','shoot','promo','money','car','base'].map(x=>BRIEF[x]||'').join('');}
 function hero(){
   const now=new Date();
   document.getElementById('hk').textContent=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][dI]+', '+now.getDate()+' '+MN[now.getMonth()];
@@ -201,7 +207,7 @@ function hero(){
   let al='';
   if(dI===5)al+=`<div class="note"><b>Order from eBag today</b> for Sunday delivery. <a href="meals/">Shopping list</a></div>`;
   if(dI===6)al+=`<div class="note"><b>Prep day.</b> Rice, potatoes, garlic yoghurt: 30 min. <a href="meals/">Prep steps</a></div>`;
-  document.getElementById('alerts').innerHTML=al;
+  briefSet('base',al);
 }
 
 function season(){
@@ -352,6 +358,8 @@ people();
     if(!jobs.length) lines+='<p class="sub">No shoot waiting to be delivered.</p>';
     if(owed>0.01) lines+='<p class="sub">'+open.length+' invoice'+(open.length===1?'':'s')+
       ' with no payment found, '+eur(owed)+'.</p>';
+    if(late.length||owed>0.01) briefSet('biz','<div class="note"><b>Business:</b> '+[late.length?late.length+' shoot'+(late.length===1?'':'s')+' past delivery':'',
+      owed>0.01?open.length+' invoice'+(open.length===1?'':'s')+' unpaid ('+eur0(owed)+')':''].filter(Boolean).join(' · ')+'. <a href="business/">Business</a></div>');
     $b.innerHTML='<div class="card-h"><h3>Business</h3><a href="business/">Open</a></div>'+
       '<div class="pc">'+lines+'</div>';
     $b.classList.remove('hidden');
@@ -370,8 +378,29 @@ document.addEventListener('click',e=>{const b=e.target.closest('button[data-coff
   document.getElementById('trS').textContent=(st.dest?st.dest+' · ':'')+(st.status||'Idea')+' · '+d+' '+MN[m-1];})();
 function carCard(){const u=C_upcoming()[0];if(!u)return;const n=C_days(u.d);
   document.getElementById('carN').textContent=n<=0?'Car: due now':'Car: '+n+' days';
-  document.getElementById('carS').textContent=(u.car?u.car.split(' ')[0]+' · ':'')+u.n;}
+  document.getElementById('carS').textContent=(u.car?u.car.split(' ')[0]+' · ':'')+u.n;
+  briefSet('car',n<=14?`<div class="note"><b>Car: ${esc(u.n)}</b> ${n<=0?'is due now':'in '+n+' day'+(n===1?'':'s')}${u.car?' ('+esc(u.car.split(' ')[0])+')':''}. <a href="car/">Car</a></div>`:'');}
 carCard();
+/* Brief: the training coach's suggestions, from the wellness and runs the Training page saved here. */
+function briefCoach(){if(!window.Coach||!inSeason)return;
+  let well=[],acts=[];try{well=JSON.parse(localStorage.getItem('lifehub-wellness')||'[]')||[];acts=JSON.parse(localStorage.getItem('lifehub-acts')||'[]')||[]}catch(e){}
+  let L=[];try{L=Coach.suggest({today:new Date(),well,acts,state:tGet()})}catch(e){}finally{OV.set(tGet())}
+  briefSet('coach',L.length?`<div class="note"><b>Training: ${esc(L[0].title)}</b>${L.length>1?' and '+(L.length-1)+' more':''}. <a href="training/">Review</a></div>`:'');}
+briefCoach();
+/* Brief: day-to-day budgets left, as the Money page last worked them out on this device (under 3 days old). */
+(function(){let b=null;try{b=JSON.parse(localStorage.getItem('lifehub-budget-now')||'null')}catch(e){}
+  if(!b||Date.now()-b.at>3*864e5)return;
+  const pick=(b.left||[]).filter(([n])=>['Fun','Eating out','Unassigned'].includes(n));if(!pick.length)return;
+  const e0=v=>(v<0?'\u2212':'')+'\u20ac'+Math.abs(v);
+  briefSet('money',`<div class="note"><b>Left until payday:</b> ${pick.map(([n,v])=>`${esc(n)} <span${v<0?' style="color:var(--big)"':''}>${e0(v)}</span>`).join(' · ')}. <a href="money/#budget">Budget</a></div>`);})();
+/* Brief: promo codes that end within 7 days, fresh from the sync. */
+(async function(){if(!window.HubSync||!HubSync.on())return;
+  const r=await HubSync.pull('lifehub-promo');const cards=((r&&r.data&&r.data.cards)||[]).filter(c=>!c.gone&&c.exp);
+  const ts=t0.getFullYear()+'-'+String(t0.getMonth()+1).padStart(2,'0')+'-'+String(t0.getDate()).padStart(2,'0');
+  const in7=new Date(t0);in7.setDate(in7.getDate()+7);const lim=in7.toISOString().slice(0,10);
+  const soon=cards.filter(c=>c.exp>=ts&&c.exp<=lim).sort((a,b)=>a.exp.localeCompare(b.exp));if(!soon.length)return;
+  const fd=s=>{const [y,m,d]=s.split('-').map(Number);return d+' '+MN[m-1]};
+  briefSet('promo',`<div class="note"><b>Promo code${soon.length>1?'s':''} ending:</b> ${soon.slice(0,3).map(c=>`${esc(c.vendor||'?')} (${esc(c.code||'')}) ${fd(c.exp)}`).join(' · ')}. <a href="promo/">Promo</a></div>`);})().catch(()=>{});
 /* Heating, from the same brain the Heating page talks to (action=heat). Rooms at a
    glance, and the modes worth a tap from here. Holiday needs a return date, so it
    links to the Heating page instead. Hidden until data arrives, like Money. */

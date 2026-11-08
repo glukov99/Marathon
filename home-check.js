@@ -18,14 +18,14 @@ new Function('window', fs.readFileSync(__dirname + '/shared/invoices.js', 'utf8'
 const panels = {};
 const node = () => ({ set innerHTML(v) { panels.last = v; }, classList: { remove() {} } });
 const calls = [];
-const out = {};
-new Function('document', 'localStorage', 'fetch', 'MN', 'Invoices', 'out', src + '\n')(
+const out = {}, brief = {};
+new Function('document', 'localStorage', 'fetch', 'MN', 'Invoices', 'out', 'briefSet', src + '\n')(
   { getElementById: id => (out[id] = out[id] || { set innerHTML(v) { out[id + 'H'] = v; },
       classList: { remove() {} } }) },
   { getItem: k => (k === 'lifehub-money-token' ? 'x' : '{"url":"https://example.invalid/exec"}') },
   (u) => { calls.push(u); return Promise.resolve({ json: () => Promise.resolve(fake(u)) }); },
   ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-  shared.Invoices, out);
+  shared.Invoices, out, (k, h) => { brief[k] = h; });
 
 const month = new Date().toISOString().slice(0, 7);
 function fake(u) {
@@ -56,5 +56,6 @@ setTimeout(() => {
   assert.ok(/Next client/.test(z), 'and the next one due');
   assert.ok(/1 invoice with no payment found, €500\.00/.test(z),
     'the paid one is not chased and the cancelled one is not counted');
-  console.log('home ok: money and business panels read right');
+  assert.ok(/Business:.*1 shoot past delivery.*1 invoice unpaid/.test(brief.biz || ''), 'the brief names the late shoot and the unpaid invoice: ' + brief.biz);
+console.log('home ok: money and business panels read right');
 }, 20);
