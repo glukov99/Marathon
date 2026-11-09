@@ -1,6 +1,6 @@
 /* The lights panel: spans for the day chart and the event wording. Run: node robotics/lights-check.js */
 const assert = require('assert');
-const { lightSpans, lightText, LIGHTS_GAP } = require('./lights.js');
+const { lightSpans, lightText, lowBlinds, LIGHTS_GAP } = require('./lights.js');
 const M = 60e3, t0 = Date.parse('2026-11-07T00:00:00'), at = m => t0 + m * M;
 const rows = [
   { at: at(600), ev: 'in', p: 1, a: 0 }, { at: at(601), ev: 'on', p: 1, a: 1, day: 42.4 },
@@ -40,4 +40,9 @@ assert.notDeepEqual(lightSpans(withRep, 'a', t0, t0 + 864e5), [[at(900), at(908)
 assert.equal(lightText(day2[3]), 'You reported: turned off while I was there');
 assert.equal(Object.keys(REPORTS).length, 5);
 assert.ok(lightText({ ev: 'report', why: 'off-dark' }).includes('still dark'));
+// blinds (9 Nov 2026): schedule rows are listed, low battery at 10% or less
+assert.equal(lightText({ ev: 'blind', why: 'open' }), 'Blinds opened (schedule)');
+assert.equal(lightText({ ev: 'blind', why: 'missed close' }), 'Blinds did not close: no Wi-Fi or Tuya for 15 min');
+assert.deepEqual(lowBlinds({ left: { pct: 80 }, right: { pct: 10 } }), ['right 10%']);
+assert.deepEqual(lowBlinds(undefined), []);
 console.log('lights reports ok');

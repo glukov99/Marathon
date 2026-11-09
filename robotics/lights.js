@@ -18,6 +18,12 @@ const REPORTS = {
 };
 
 const boardRows = rows => rows.filter(r => r.ev !== 'report'); // Georgi's reports carry no state
+const BLIND_LOW = 10; // %: the blind motors need charging at or below this (9 Nov 2026)
+
+// Blinds whose last battery reading is at or below BLIND_LOW, as "left 8%".
+function lowBlinds(blinds) {
+  return Object.entries(blinds || {}).filter(([, b]) => b && b.pct <= BLIND_LOW).map(([k, b]) => `${k} ${b.pct}%`);
+}
 
 // Piecewise state from the board's rows: each row's flag holds until the next (or LIGHTS_GAP).
 function lightSpans(rows, flag, from, to) {
@@ -54,12 +60,14 @@ function lightText(r) {
   if (r.ev === 'pause') return 'Paused: lights changed by hand';
   if (r.ev === 'resume') return 'Automatic again';
   if (r.ev === 'boot') return 'Board started';
+  if (r.ev === 'blind') return r.why === 'open' ? 'Blinds opened (schedule)' : r.why === 'close' ? 'Blinds closed (schedule)'
+    : `Blinds ${r.why.replace('missed ', 'did not ')}: no Wi-Fi or Tuya for 15 min`;
   return null; // 's' = a sample, drawn but not listed
 }
 
 function dayStart(ms) { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); }
 
-if (typeof module !== 'undefined') module.exports = { lightSpans, lightText, dayStart, falseOffs, boardRows, REPORTS, LIGHTS_GAP, FALSE_OFF };
+if (typeof module !== 'undefined') module.exports = { lightSpans, lightText, dayStart, falseOffs, boardRows, lowBlinds, BLIND_LOW, REPORTS, LIGHTS_GAP, FALSE_OFF };
 
 if (typeof document !== 'undefined') (function () {
   const box = document.getElementById('live'); if (!box) return;
@@ -109,6 +117,9 @@ if (typeof document !== 'undefined') (function () {
     const lastS = [...rows].reverse().find(r => r.lux != null);
     const fo = falseOffs(all), foDay = fo.filter(t => t >= from && t < to);
     const reports = all.filter(r => r.ev === 'report' && r.at >= from && r.at < to);
+    const bl = data.blinds || {}, low = lowBlinds(bl);
+    const blindLine = Object.keys(bl).length ? `<p class="sub">Blinds battery: ${['left', 'right'].filter(k => bl[k]).map(k => `${k} ${bl[k].pct}%`).join(' · ')}
+      · opens 08:00, closes 17:00</p>` : '';
     const evs = all.filter(r => r.at >= from && r.at < to && lightText(r)).reverse();
     const ev = r => {
       const flag = r.ev === 'off' && fo.includes(r.at);
@@ -118,7 +129,9 @@ if (typeof document !== 'undefined') (function () {
     box.innerHTML = `
       <div class="ttl"><b>Living room lights · live</b><span class="tag${old ? ' late' : ''}">${last ? 'last report ' + hm(last.at) : 'no report yet'}</span></div>
       ${last ? `<p class="sub lnow">Lights <b>${last.a ? 'on' : 'off'}</b>${last.z ? ' · paused by hand' : ''} · ${last.p ? 'someone there' : 'nobody there'}${lastS ? ` · daylight ≈ ${Math.round(lastS.day)} lux (sensor ${Math.round(lastS.lux)})` : ''}</p>` : '<p class="sub">The board has not reported yet.</p>'}
+      ${low.length ? `<p class="warn">Blinds battery low: ${esc(low.join(', '))}. Charge ${low.length > 1 ? 'them' : 'it'}.</p>` : ''}
       ${old && last ? '<p class="warn">No report for over 25 minutes: the board may be off or offline.</p>' : ''}
+      ${blindLine}
       ${foDay.length || reports.length ? `<p class="warn">${[foDay.length && `${foDay.length} likely false off${foDay.length > 1 ? 's' : ''}`, reports.length && `${reports.length} reported by you`].filter(Boolean).join(' · ')} on this day.</p>` : ''}
       <div class="chips"><button data-ld="0" aria-pressed="${day === 0}">Today</button><button data-ld="1" aria-pressed="${day === 1}">Yesterday</button><button data-ld="r">Refresh</button></div>
       ${chart(rows, reports, foDay, from, to, s)}
