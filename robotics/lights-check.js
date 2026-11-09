@@ -45,4 +45,5 @@ assert.equal(lightText({ ev: 'blind', why: 'open' }), 'Blinds opened (schedule)'
 assert.equal(lightText({ ev: 'blind', why: 'missed close' }), 'Blinds did not close: no Wi-Fi or Tuya for 15 min');
 assert.deepEqual(lowBlinds({ left: { pct: 80 }, right: { pct: 10 } }), ['right 10%']);
 assert.deepEqual(lowBlinds(undefined), []);
+assert.equal(lightText({ ev: 'blind', why: 'phone' }), 'Blinds moved from the phone');
 console.log('lights reports ok');

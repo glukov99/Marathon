@@ -61,6 +61,7 @@ function lightText(r) {
   if (r.ev === 'resume') return 'Automatic again';
   if (r.ev === 'boot') return 'Board started';
   if (r.ev === 'blind') return r.why === 'open' ? 'Blinds opened (schedule)' : r.why === 'close' ? 'Blinds closed (schedule)'
+    : r.why === 'phone' ? 'Blinds moved from the phone'
     : `Blinds ${r.why.replace('missed ', 'did not ')}: no Wi-Fi or Tuya for 15 min`;
   return null; // 's' = a sample, drawn but not listed
 }
