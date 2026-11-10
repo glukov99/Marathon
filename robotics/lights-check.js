@@ -47,4 +47,5 @@ assert.deepEqual(lowBlinds({ left: { pct: 80 }, right: { pct: 10 } }), ['right 1
 assert.deepEqual(lowBlinds(undefined), []);
 assert.equal(lightText({ ev: 'blind', why: 'phone' }), 'Blinds moved from the phone');
 assert.equal(lightText({ ev: 'scene', why: 'night' }), 'Hall lights: red (night), a bulb came on');
+assert.equal(lightText({ ev: 'scene', why: 'living evening' }), 'Living room: warm white (time of day)');
 console.log('lights reports ok');

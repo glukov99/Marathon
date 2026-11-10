@@ -60,6 +60,7 @@ function lightText(r) {
   if (r.ev === 'pause') return 'Paused: lights changed by hand';
   if (r.ev === 'resume') return 'Automatic again';
   if (r.ev === 'boot') return 'Board started';
+  if (r.ev === 'scene' && r.why.startsWith('living ')) return `Living room: ${{ 'living night': 'red', 'living day': 'white, full', 'living evening': 'warm white' }[r.why] || r.why} (time of day)`;
   if (r.ev === 'scene') return `Hall lights: ${{ night: 'red (night)', morning: '5000 K 50% (morning)', day: '4500 K 100% (day)' }[r.why] || r.why}, a bulb came on`;
   if (r.ev === 'blind') return r.why === 'open' ? 'Blinds opened (schedule)' : r.why === 'close' ? 'Blinds closed (schedule)'
     : r.why === 'phone' ? 'Blinds moved from the phone'
