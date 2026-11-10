@@ -60,6 +60,7 @@ function lightText(r) {
   if (r.ev === 'pause') return 'Paused: lights changed by hand';
   if (r.ev === 'resume') return 'Automatic again';
   if (r.ev === 'boot') return 'Board started';
+  if (r.ev === 'scene') return `Hall lights: ${{ night: 'red (night)', morning: '5000 K 50% (morning)', day: '4500 K 100% (day)' }[r.why] || r.why}, a bulb came on`;
   if (r.ev === 'blind') return r.why === 'open' ? 'Blinds opened (schedule)' : r.why === 'close' ? 'Blinds closed (schedule)'
     : r.why === 'phone' ? 'Blinds moved from the phone'
     : `Blinds ${r.why.replace('missed ', 'did not ')}: no Wi-Fi or Tuya for 15 min`;
