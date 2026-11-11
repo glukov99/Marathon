@@ -51,11 +51,16 @@
     const heating = on && r.temp != null && r.target != null && r.temp < r.target - 0.2;
     const t = r.temp != null ? r.temp.toFixed(1).split('.') : ['–', ''];
     const man = st.override && st.override[r.key] && st.override[r.key].until > Date.now();
-    const badge = man ? 'Manual' : !on ? 'Off' : heating ? 'Heating' : 'Holding';
+    // No temperature from the heater = it is offline (11 Nov 2026: Sammy's room stayed cold under "Holding").
+    const dead = r.temp == null;
+    const badge = dead ? 'Offline' : man ? 'Manual' : !on ? 'Off' : heating ? 'Heating' : 'Holding';
+    const since = r.offline ? new Date(r.offline).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
     if (pend[r.key] === undefined) pend[r.key] = r.target != null ? r.target : 20;
     const pv = pend[r.key];
     return '<article class="room ' + (on ? '' : 'off ') + (heating ? 'heating' : '') + '" style="--glow:' + glow + ';--gi:' + (on ? (heating ? .6 : .42) : .16) + '">' +
-      '<div class="top"><h2>' + r.name + '</h2><span class="badge">' + badge + '</span></div>' +
+      '<div class="top"><h2>' + r.name + '</h2><span class="badge' + (dead ? ' bad' : '') + '">' + badge + '</span></div>' +
+      (dead ? '<p class="offnote">The heater is not reporting' + (since ? ' since ' + since : '') + ', so it cannot take the target. ' +
+        'Switch it off and on at the heater. If it stays offline, set up its Wi-Fi again in the Adax app.</p>' : '') +
       '<div class="orbwrap"><div class="orb"><div class="t">' + t[0] + (t[1] ? '<small>.' + t[1] + '°</small>' : '') + '</div>' +
       '<div class="tg">' + (on ? 'Target ' + r.target + '°' : 'Heating off') + '</div></div></div>' +
       '<div class="why">' + ((r.want && r.want.why) || '') + '</div>' +
