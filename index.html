@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Life hub">
 <link rel="apple-touch-icon" href="shared/icons/apple-touch-icon.png">
-<script src="shared/auth.js?v=202611110758"></script>
+<script src="shared/auth.js?v=202611110807"></script>
 <title>Life hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -129,10 +129,10 @@ ul.steps li{margin:5px 0}
 :root{--rec:#6E9DC2;--easy:#2F7F60;--mp:#B98A22;--st:#C9702A;--hard:#8E2521;--vert:#6B4E8F;--gym:#4F5F69;--test:#1F6F8B;--swim:#3C8FA6;--race:#1B1E1A}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--rec:#7FB0D6;--easy:#4FAE88;--mp:#D9AA45;--st:#E08A45;--hard:#D2584F;--vert:#A68BD0;--gym:#93A6B2;--test:#4FAACB;--swim:#5BB4CC;--race:#E8EBE5}}
 </style>
-<link rel="stylesheet" href="shared/theme.css?v=202611110758">
+<link rel="stylesheet" href="shared/theme.css?v=202611110807">
 </head>
 <body>
-<div id="lhn"></div><script src="shared/nav.js?v=202611110758"></script>
+<div id="lhn"></div><script src="shared/nav.js?v=202611110807"></script>
 <div class="wrap">
   <div class="panel hidden" id="ebCard"><div class="card-h"><h3>Bank approval</h3></div><div class="pc">
     <p class="sub" id="ebMsg"></p>
@@ -172,17 +172,17 @@ ul.steps li{margin:5px 0}
     <p class="sub">Same URL and token as the Intervals.icu sync. Enter them once on each device.</p></div></div>
   <div class="foot">Ticks here are the same as in Training.</div>
 </div>
-<script src="shared/invoices.js?v=202611110758"></script>
-<script src="training/plan.js?v=202611110758"></script>
-<script src="shared/sync.js?v=202611110758"></script>
-<script src="meals/meals-data.js?v=202611110758"></script>
-<script src="holidays/holidays-data.js?v=202611110758"></script>
-<script src="shared/travel.js?v=202611110758"></script>
-<script src="shared/shoots.js?v=202611110758"></script>
-<script src="training/coach.js?v=202611110758"></script>
-<script src="training/overrides.js?v=202611110758"></script>
-<script src="heat/icons.js?v=202611110758"></script>
-<script src="car/car-data.js?v=202611110758"></script>
+<script src="shared/invoices.js?v=202611110807"></script>
+<script src="training/plan.js?v=202611110807"></script>
+<script src="shared/sync.js?v=202611110807"></script>
+<script src="meals/meals-data.js?v=202611110807"></script>
+<script src="holidays/holidays-data.js?v=202611110807"></script>
+<script src="shared/travel.js?v=202611110807"></script>
+<script src="shared/shoots.js?v=202611110807"></script>
+<script src="training/coach.js?v=202611110807"></script>
+<script src="training/overrides.js?v=202611110807"></script>
+<script src="heat/icons.js?v=202611110807"></script>
+<script src="car/car-data.js?v=202611110807"></script>
 <script>
 const TKEY='season-2027-gl';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -198,7 +198,7 @@ const dur=m=>!m?'':(m>=60?Math.floor(m/60)+'h'+(m%60?String(m%60).padStart(2,'0'
    something to say. Pages that load later (money, business, promo) add theirs when they arrive. */
 const BRIEF={};
 function briefSet(k,h){BRIEF[k]=h||'';const el=document.getElementById('alerts');
-  if(el)el.innerHTML=['heat','coach','biz','shoot','promo','money','car','base'].map(x=>BRIEF[x]||'').join('');}
+  if(el)el.innerHTML=['sys','heat','coach','biz','shoot','promo','money','car','base'].map(x=>BRIEF[x]||'').join('');}
 function hero(){
   const now=new Date();
   document.getElementById('hk').textContent=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][dI]+', '+now.getDate()+' '+MN[now.getMonth()];
@@ -409,6 +409,11 @@ briefCoach();
   const soon=cards.filter(c=>c.exp>=ts&&c.exp<=lim).sort((a,b)=>a.exp.localeCompare(b.exp));if(!soon.length)return;
   const fd=s=>{const [y,m,d]=s.split('-').map(Number);return d+' '+MN[m-1]};
   briefSet('promo',`<div class="note"><b>Promo code${soon.length>1?'s':''} ending:</b> ${soon.slice(0,3).map(c=>`${esc(c.vendor||'?')} (${esc(c.code||'')}) ${fd(c.exp)}`).join(' · ')}. <a href="promo/">Promo</a></div>`);})().catch(()=>{});
+/* The watchdog (11 Nov 2026): what the hourly self-check could not fix. The heater line is the heat panel's own. */
+(function sys(){if(!window.HubSync||!HubSync.on())return;const c=HubSync.cfg();
+  fetch(c.url+(c.url.includes('?')?'&':'?')+'t='+encodeURIComponent(c.tok)+'&action=watch').then(r=>r.json()).then(j=>{
+    const bad=(j&&j.checks||[]).filter(x=>!x.ok&&x.key!=='heater');
+    briefSet('sys',bad.length?`<div class="note"><b>Not working: ${bad.map(x=>esc(x.name)).join(', ')}.</b> ${esc(bad[0].msg)}</div>`:'');}).catch(()=>{});})();
 /* Heating, from the same brain the Heating page talks to (action=heat). Rooms at a
    glance, and the modes worth a tap from here. Holiday needs a return date, so it
    links to the Heating page instead. Hidden until data arrives, like Money. */

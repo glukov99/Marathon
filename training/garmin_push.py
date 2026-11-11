@@ -48,6 +48,17 @@ END = {'reps': {'conditionTypeId': 10, 'conditionTypeKey': 'reps', 'displayOrder
        'time': {'conditionTypeId': 2, 'conditionTypeKey': 'time', 'displayOrder': 2, 'displayable': True}}
 
 
+def ping(ok, msg):
+    """Heartbeat for the Life hub watchdog (11 Nov 2026): it emails Georgi when no good push came for 30 h."""
+    import urllib.parse, urllib.request
+    try:
+        tok = subprocess.check_output(['security', 'find-generic-password', '-a', 'lifehub', '-s', 'lifehub-money-token', '-w'], text=True).strip()
+        q = urllib.parse.urlencode({'action': 'money', 'ping': 'garmin', 'ok': '1' if ok else '0', 'msg': msg[:200], 'mt': tok})
+        urllib.request.urlopen(f'{EXEC}?{q}', timeout=60).read()
+    except Exception as e:
+        print('ping: not sent:', str(e)[:200])
+
+
 def plan(state=None):
     """The plan as the page shows it. state = {'season', 'holidays'} from overrides(); {} = the base plan."""
     return json.loads(subprocess.check_output(['node', '-e', EXPORT, str(PLAN.parent)], input=json.dumps(state or {}), text=True))
@@ -322,4 +333,10 @@ if __name__ == '__main__':
     a.add_argument('--days', type=int, default=14)
     a.add_argument('--dry', action='store_true')
     o = a.parse_args()
-    {'login': login, 'check': check}.get(o.cmd, lambda: push(o.start, o.days, o.dry))()
+    if o.cmd != 'push' or o.dry:
+        {'login': login, 'check': check}.get(o.cmd, lambda: push(o.start, o.days, o.dry))()
+    else:
+        try:
+            push(o.start, o.days, False); ping(True, '')
+        except BaseException as e:
+            ping(False, str(e)); raise
