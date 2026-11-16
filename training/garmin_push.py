@@ -23,7 +23,7 @@ EXEC = 'https://script.google.com/macros/s/AKfycbw1gz9r2XR6JdtRvGySrBb4BfVKQ8wvr
 PREFIX = 'LH '
 YOGA_POSES = Path(__file__).with_name('garmin-yoga-poses.json')  # keys from connect.garmin.com/web-data/exercises/Yoga.json, Oct 2026
 EXPORT = r"""
-const fs=require('fs'), dir=process.argv[1], S=JSON.parse(fs.readFileSync(0,'utf8')||'{}');
+const fs=require('fs'), dir=process.argv[1], S=JSON.parse(fs.readFileSync(process.argv[2],'utf8')||'{}');
 const hol=JSON.stringify(S.holidays||{}), localStorage={getItem:k=>k==='lifehub-holidays'?hol:null};
 const src=['plan.js','../holidays/holidays-data.js','../shared/travel.js','overrides.js'].map(f=>fs.readFileSync(dir+'/'+f,'utf8')).join(';\n');
 const P=new Function('localStorage',src+';return {W,EX,START,ROUTINE,OV}')(localStorage);
@@ -61,7 +61,11 @@ def ping(ok, msg):
 
 def plan(state=None):
     """The plan as the page shows it. state = {'season', 'holidays'} from overrides(); {} = the base plan."""
-    return json.loads(subprocess.check_output(['node', '-e', EXPORT, str(PLAN.parent)], input=json.dumps(state or {}), text=True))
+    # The state goes in a temp file, not stdin: under launchd, Node's read of the pipe failed with EAGAIN (16 Nov 2026).
+    import tempfile
+    with tempfile.NamedTemporaryFile('w', suffix='.json') as f:
+        json.dump(state or {}, f); f.flush()
+        return json.loads(subprocess.check_output(['node', '-e', EXPORT, str(PLAN.parent), f.name], text=True))
 
 
 def overrides():
