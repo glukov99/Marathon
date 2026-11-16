@@ -10,8 +10,8 @@
    Run: node scripts-check.js */
 const fs = require('fs'), path = require('path'), assert = require('assert');
 const root = __dirname;
-const SHARED = ['Year', 'Charts', 'Invoices', 'CatPick', 'HubSync'];
-const FILE = { Year: 'year.js', Charts: 'charts.js', Invoices: 'invoices.js',
+const SHARED = ['Year', 'Charts', 'Invoices', 'CatPick', 'HubSync', 'Subs'];
+const FILE = { Year: 'year.js', Charts: 'charts.js', Invoices: 'invoices.js', Subs: 'subs.js',
   CatPick: 'catpick.js', HubSync: 'sync.js' };
 
 // page html -> the javascript that runs on it (inline, plus its own app.js)

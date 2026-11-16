@@ -1,0 +1,8 @@
+{
+  "about": "The hub's rules, for Shika (INTELLIGENCE.md phase A, 16 Nov 2026). A new smart feature reaches Shika by one entry here. files: loaded in order from the site; call: a function (data, today) -> findings; data: what the rule needs (money = action=money, biz = &biz=go, time = action=time&cmd=list).",
+  "rules": [
+    {"name": "shoots", "files": ["shared/shoots.js", "shared/findings.js"], "call": "Findings.shoots", "data": ["time", "biz"]},
+    {"name": "unpaid", "files": ["shared/invoices.js", "shared/findings.js"], "call": "Findings.unpaid", "data": ["biz"]},
+    {"name": "subs-up", "files": ["shared/subs.js", "shared/findings.js"], "call": "Findings.subsUp", "data": ["money"]}
+  ]
+}

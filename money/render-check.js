@@ -4,9 +4,9 @@
    Run: node money/render-check.js */
 const fs = require('fs'), assert = require('assert'), path = require('path');
 const shared = {};
-['year', 'charts', 'budget'].forEach(f => new Function('window',
+['year', 'charts', 'budget', 'subs'].forEach(f => new Function('window',
   fs.readFileSync(path.join(__dirname, '../shared/' + f + '.js'), 'utf8'))(shared));
-const { Year, Charts, Budget } = shared;
+const { Year, Charts, Budget, Subs } = shared;
 
 const src = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
 const body = src.slice(src.indexOf('const esc = '), src.indexOf("$('#mPrev').addEventListener"));
@@ -14,10 +14,10 @@ const out = {};
 const node = sel => { const id = String(sel).replace('#', ''); return ({ set innerHTML(v) { out[id] = v; }, set textContent(v) { out[id] = v; },
   classList: { toggle() {} }, querySelectorAll: () => [] }); };
 const ctx = {};
-new Function('ctx', 'Year', 'Charts', 'Budget', '$', 'document', 'localStorage', 'window',
+new Function('ctx', 'Year', 'Charts', 'Budget', 'Subs', '$', 'document', 'localStorage', 'window',
   body + '\nctx.render=render;ctx.prep=prep;ctx.setData=d=>{data=d};' +
   'ctx.tabs=t=>{tab=t};ctx.setMonth=m=>{month=m};')
-  (ctx, Year, Charts, Budget, node, { querySelectorAll: () => [], querySelector: node },
+  (ctx, Year, Charts, Budget, Subs, node, { querySelectorAll: () => [], querySelector: node },
    { getItem: () => null, setItem() {} }, {});
 
 const row = (d, a, cat, acc) => ({ k: 'k' + d + a, d, a, c: 'EUR', cat, acc: acc || 'Main',
@@ -79,8 +79,7 @@ ctx.tabs('monthly'); ctx.render();
 assert.ok(/a month/.test(out.sum), 'a year says what each figure is a month');
 /* Subscriptions and regular charges (subsFind, 8 Nov 2026), on made-up rows. */
 {
-  const src2 = fs.readFileSync(__dirname + '/app.js', 'utf8');
-  const subsFind = new Function(src2.slice(src2.indexOf('const SUB_SKIP'), src2.indexOf('function subsCard')) + ';return subsFind;')();
+  const subsFind = Subs.find;
   const r = (d, a, who, cat, desc) => ({ d, a, c: 'EUR', who, desc: desc || '', _k: 'exp', _cat: cat });
   const today = new Date('2026-11-08T12:00'), rows = [];
   ['06', '07', '08', '09', '10'].forEach(m => rows.push(r('2026-' + m + '-22', -23.99, 'Adobe *adobe, Dublin, IRL', 'GL Studio')));
